@@ -82,12 +82,3 @@ python3 notebooks/ssv_multi3dgs_campaign.py train-command --config-file configs/
 
 ---
 
-## 🛠️ Prerequisites & Environmental Bindings
-
-- **Host Machine**: `coruscant`
-- **User account**: `kothari1`
-- **Data Directory**: `/data/kothari1/singer_figs_data/` *(All large files, checkpoints, and models must live here to keep `/home` free)*
-- **Python Version**: `3.10` (strictly executed inside Docker containers to maintain Nerfstudio + PyTorch dependencies)
-
-> [!WARNING]
-> **Avoid `/home` Storage Depletion**: `/home/kothari1` is near capacity. Always use the provided workspace symlinks `FiGS-Standalone/3dgs` and `SINGER/cohorts` which automatically route heavy files to the dedicated `/data` drive storage.
