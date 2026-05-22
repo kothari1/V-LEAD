@@ -15,12 +15,14 @@ FiGS-Standalone/
 │   │   └── gsplat_semantic.py          # GSplat class — rendering engine
 │   ├── control/
 │   │   ├── vehicle_rate_mpc.py         # VehicleRateMPC — default MPC controller
+│   │   ├── velocity_controller.py      # VelocityController — cascaded P-controller: (vx,vy,vz,ψ̇) → body rates
 │   │   └── base_controller.py          # BaseController abstract class
 │   ├── dynamics/
 │   │   ├── model_equations.py          # ACADOS ODE quadcopter model
 │   │   └── model_specifications.py     # Frame parameter parsing
 │   ├── tsampling/
-│   │   └── rrt_datagen_v10.py          # RRT-based trajectory generation
+│   │   ├── build_rrt_dataset.py        # RRT* dataset builder — generates collision-free trajectories toward semantic targets
+│   │   └── rrt_datagen_v10.py          # RRT* core algorithm (used by build_rrt_dataset.py)
 │   ├── tsplines/
 │   │   └── min_snap.py                 # Minimum-snap trajectory optimization
 │   ├── utilities/
@@ -44,7 +46,7 @@ FiGS-Standalone/
 │   ├── perception/
 │   │   └── perception_mode.yml         # CRITICAL: controls what the sim renders
 │   └── method/                         # SINGER data-gen parameters (used by SINGER)
-├── 3dgs/                               # Symlink → /data/kothari1/singer_figs_data/3dgs
+├── 3dgs/                               # Symlink → /data/kothari1/singer_figs_data/3dgs  ⚠ must be created: ln -s /data/kothari1/singer_figs_data/3dgs 3dgs
 │   └── workspace/
 │       ├── {scene_name}/               # SfM data + transforms.json
 │       └── outputs/{scene_name}/       # Trained model checkpoints
