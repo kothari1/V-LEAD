@@ -36,6 +36,7 @@ Outputs:
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import sys
 import time
@@ -99,9 +100,17 @@ def _relabel_one(rollout_cfg: dict,
     goal_pos_xy = expert.Xro[0:2, -1].astype(np.float64)
     controller.reset(goal_pos_xy=goal_pos_xy)
     t0 = time.time()
-    Tpol, Xpol, Upol, Imgs, Tsol, _ = sim.simulate(
-        controller, expert.t0, expert.tf, expert.x0,
-    )
+    try:
+        Tpol, Xpol, Upol, Imgs, Tsol, _ = sim.simulate(
+            controller, expert.t0, expert.tf, expert.x0,
+        )
+    finally:
+        # Free the 3DGS scene from GPU memory before the next rollout loads
+        # its own scene, otherwise the second Simulator load triggers OOM.
+        del sim
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
     wall_time = time.time() - t0
 
     if "rgb" not in Imgs:
