@@ -83,22 +83,24 @@ def _make_loaders(cfg: dict, processed_root: Path):
         **ds_kw,
     )
     pin = torch.cuda.is_available()
+    nw_train = int(cfg["train"].get("num_workers", 0))
+    nw_val   = min(2, nw_train)
     train_dl = DataLoader(
         train_ds,
         batch_size=cfg["train"]["batch_size"],
         shuffle=True,
-        num_workers=cfg["train"].get("num_workers", 4),
-        pin_memory=pin,
+        num_workers=nw_train,
+        pin_memory=pin and nw_train > 0,
         drop_last=True,
         collate_fn=_collate,
-        persistent_workers=cfg["train"].get("num_workers", 4) > 0,
+        persistent_workers=nw_train > 0,
     )
     val_dl = DataLoader(
         val_ds,
         batch_size=cfg["train"]["batch_size"],
         shuffle=False,
-        num_workers=min(2, cfg["train"].get("num_workers", 4)),
-        pin_memory=pin,
+        num_workers=nw_val,
+        pin_memory=pin and nw_val > 0,
         drop_last=False,
         collate_fn=_collate,
     )
