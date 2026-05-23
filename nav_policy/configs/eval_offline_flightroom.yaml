@@ -1,6 +1,6 @@
 # Offline evaluation on the flightroom validation set.
 
-checkpoint: data/checkpoints_modal/bc_best.pt
+# checkpoint is passed via --checkpoint CLI arg (not read from config)
 output_dir: data/eval/flightroom_bc_offline
 processed_root: data/processed_flightroom
 split: val
