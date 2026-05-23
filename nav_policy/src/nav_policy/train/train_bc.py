@@ -110,7 +110,7 @@ def _make_loaders(cfg: dict, processed_root: Path):
         drop_last=False,
         collate_fn=_collate,
     )
-    return train_ds, val_ds, train_dl, val_dl
+    return train_ds, val_ds, train_dl, val_dl, train_sampler
 
 
 def _build_model(cfg: dict) -> RGBVelocityPolicy:
@@ -229,7 +229,7 @@ def train(config_path: Path,
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[device] {device}  cuda_available={torch.cuda.is_available()}")
 
-    train_ds, val_ds, train_dl, val_dl = _make_loaders(cfg, processed_root)
+    train_ds, val_ds, train_dl, val_dl, train_sampler = _make_loaders(cfg, processed_root)
     stats = train_ds.stats
     print(f"[data] train={len(train_ds)}  val={len(val_ds)}  "
           f"T={train_ds.T}  H={train_ds.H}  S={train_ds.image_size}")
