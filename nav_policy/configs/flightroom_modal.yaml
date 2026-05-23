@@ -57,5 +57,6 @@ train:
   grad_clip: 1.0
   checkpoint_dir: "/data/checkpoints_flightroom"
   log_every: 50
-  val_every_epoch: 1
+
+  early_stopping_patience: 3   # stop if val_mse_overall does not improve for 3 epochs
   seed: 0
