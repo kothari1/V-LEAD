@@ -11,6 +11,8 @@
 data:
   raw_root: "data/raw"
   processed_root: "data/processed_flightroom"
+  cache_blobs_in_memory: false
+  cache_lru_size: 64
 
   # Training data: short 2-second domain-randomised segments + two full-rollout runs.
   train_runs:
@@ -50,7 +52,7 @@ model:
 
 train:
   batch_size: 16
-  num_workers: 4
+  num_workers: 2
   epochs: 15
   color_jitter: true
   lr: 3.0e-4

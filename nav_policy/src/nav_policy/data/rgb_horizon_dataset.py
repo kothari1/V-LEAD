@@ -28,6 +28,7 @@ Color jitter (training only):
 from __future__ import annotations
 
 import json
+from collections import OrderedDict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -49,7 +50,8 @@ class RGBHorizonDataset(Dataset):
     def __init__(self,
                  processed_root: Path,
                  split: str = "train",
-                 cache_blobs_in_memory: bool = True,
+                 cache_blobs_in_memory: bool = False,
+                 cache_lru_size: int = 64,
                  use_color_jitter: bool = False,
                  zero_goal_heading: bool = False,
                  goal_input_dim: int = 2,
@@ -106,17 +108,34 @@ class RGBHorizonDataset(Dataset):
             raise ValueError(f"goal_distance_scale must be > 0; got {goal_distance_scale}")
         self._goal_distance_scale: float = float(goal_distance_scale)
 
-        self._cache_blobs: Optional[Dict[str, Dict]] = {} if cache_blobs_in_memory else None
+        # Preloading every cache (rgb + labels) works for small datasets but will
+        # OOM on flightroom-scale data (~2500 caches, tens of GB of uint8 RGB).
+        # Default is lazy load with a small LRU so repeated windows from the same
+        # trajectory do not re-read disk every step.
+        self._cache_blobs: Optional[Dict[str, Dict]] = (
+            {} if cache_blobs_in_memory else None
+        )
+        self._lru: Optional[OrderedDict[str, Dict]] = (
+            None if cache_blobs_in_memory else OrderedDict()
+        )
+        self._lru_max = max(1, int(cache_lru_size))
         if cache_blobs_in_memory:
             seen: set[str] = set()
-            for s in self.samples:
-                if s["cache"] not in seen:
-                    seen.add(s["cache"])
-                    blob = torch.load(
-                        self.processed_root / s["cache"],
-                        weights_only=False, map_location="cpu",
+            unique = sorted({s["cache"] for s in self.samples})
+            print(
+                f"[RGBHorizonDataset] preloading {len(unique)} caches "
+                f"for split='{split}' into RAM...",
+                flush=True,
+            )
+            for rel in unique:
+                if rel not in seen:
+                    seen.add(rel)
+                    self._cache_blobs[rel] = torch.load(
+                        self.processed_root / rel,
+                        weights_only=False,
+                        map_location="cpu",
                     )
-                    self._cache_blobs[s["cache"]] = blob
+            print(f"[RGBHorizonDataset] split='{split}' preload done.", flush=True)
 
     def __len__(self) -> int:
         return len(self.samples)
@@ -124,9 +143,17 @@ class RGBHorizonDataset(Dataset):
     def _load_blob(self, rel: str) -> Dict:
         if self._cache_blobs is not None:
             return self._cache_blobs[rel]
-        return torch.load(
+        assert self._lru is not None
+        if rel in self._lru:
+            self._lru.move_to_end(rel)
+            return self._lru[rel]
+        blob = torch.load(
             self.processed_root / rel, weights_only=False, map_location="cpu"
         )
+        self._lru[rel] = blob
+        if len(self._lru) > self._lru_max:
+            self._lru.popitem(last=False)
+        return blob
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, Dict]:
         s = self.samples[idx]

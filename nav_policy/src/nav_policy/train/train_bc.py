@@ -62,18 +62,26 @@ def _make_loaders(cfg: dict, processed_root: Path):
     zero_goal = bool(cfg["train"].get("zero_goal_heading", False))
     goal_input_dim = int(cfg["model"].get("goal_input_dim", 2))
     goal_distance_scale = float(cfg["model"].get("goal_distance_scale", 5.0))
-    train_ds = RGBHorizonDataset(processed_root, split="train",
-                                 cache_blobs_in_memory=True,
-                                 use_color_jitter=use_jitter,
-                                 zero_goal_heading=zero_goal,
-                                 goal_input_dim=goal_input_dim,
-                                 goal_distance_scale=goal_distance_scale)
-    val_ds = RGBHorizonDataset(processed_root, split="val",
-                               cache_blobs_in_memory=True,
-                               use_color_jitter=False,    # never augment validation
-                               zero_goal_heading=zero_goal,
-                               goal_input_dim=goal_input_dim,
-                               goal_distance_scale=goal_distance_scale)
+    data_cfg = cfg.get("data", {})
+    cache_in_mem = bool(data_cfg.get("cache_blobs_in_memory", False))
+    cache_lru = int(data_cfg.get("cache_lru_size", 64))
+    ds_kw = dict(
+        cache_blobs_in_memory=cache_in_mem,
+        cache_lru_size=cache_lru,
+        zero_goal_heading=zero_goal,
+        goal_input_dim=goal_input_dim,
+        goal_distance_scale=goal_distance_scale,
+    )
+    train_ds = RGBHorizonDataset(
+        processed_root, split="train",
+        use_color_jitter=use_jitter,
+        **ds_kw,
+    )
+    val_ds = RGBHorizonDataset(
+        processed_root, split="val",
+        use_color_jitter=False,
+        **ds_kw,
+    )
     pin = torch.cuda.is_available()
     train_dl = DataLoader(
         train_ds,
