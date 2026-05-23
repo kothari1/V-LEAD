@@ -33,7 +33,7 @@ import yaml
 from torch.utils.data import DataLoader
 
 from nav_policy.data.normalization import CommandStats
-from nav_policy.data.rgb_horizon_dataset import RGBHorizonDataset
+from nav_policy.data.rgb_horizon_dataset import CacheBucketSampler, RGBHorizonDataset
 from nav_policy.model.losses import bc_loss, per_component_mse
 from nav_policy.model.rgb_velocity_policy import RGBVelocityPolicy, count_parameters
 
@@ -85,10 +85,16 @@ def _make_loaders(cfg: dict, processed_root: Path):
     pin = torch.cuda.is_available()
     nw_train = int(cfg["train"].get("num_workers", 0))
     nw_val   = min(2, nw_train)
+    # Use CacheBucketSampler so each cache file is loaded once per epoch
+    # instead of once per sample.  This reduces disk reads by ~46x for the
+    # flightroom dataset (2640 cache files, 121k windows).
+    train_sampler = CacheBucketSampler(
+        train_ds, seed=int(cfg["train"].get("seed", 0))
+    )
     train_dl = DataLoader(
         train_ds,
         batch_size=cfg["train"]["batch_size"],
-        shuffle=True,
+        sampler=train_sampler,          # replaces shuffle=True
         num_workers=nw_train,
         pin_memory=pin and nw_train > 0,
         drop_last=True,
@@ -258,6 +264,7 @@ def train(config_path: Path,
 
     best_val = math.inf
     for epoch in range(int(cfg["train"]["epochs"])):
+        train_sampler.set_epoch(epoch)   # reshuffle cache order each epoch
         header = f"[epoch {epoch + 1:>3d}]"
         tr = _run_epoch(
             model, train_dl, stats, device,

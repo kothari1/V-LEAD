@@ -30,10 +30,11 @@ from __future__ import annotations
 import json
 from collections import OrderedDict
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 
+import numpy as np
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, Sampler
 from torchvision.transforms import ColorJitter
 
 from nav_policy.data.normalization import (
@@ -204,3 +205,61 @@ class RGBHorizonDataset(Dataset):
         rgb = imagenet_normalize(rgb_window, mean=self.imagenet_mean, std=self.imagenet_std)
         u_star = self.stats.standardize(u_raw)
         return rgb, goal, u_star, {"u_raw": u_raw, "k": k, "cache": s["cache"]}
+
+
+class CacheBucketSampler(Sampler):
+    """
+    Memory-efficient sampler for large lazy-loaded datasets.
+
+    Problem with random shuffling on disk-backed datasets:
+        Each window (sample) may come from a different cache file.  With
+        121k windows across 2640 caches, a standard RandomSampler causes
+        ~121k cache loads per epoch — one per sample — even with an LRU,
+        because the LRU is too small to cover the whole dataset.
+
+    Solution — bucket by cache, shuffle at cache level:
+        1. Shuffle the list of unique cache files each epoch.
+        2. Within each cache, shuffle the order of its windows.
+        3. Yield sample indices in that order.
+
+        Result: each cache file is loaded exactly ONCE per epoch (≈2640
+        loads) rather than once per sample (≈121k loads).  This gives a
+        ~46x reduction in disk reads for the flightroom dataset.
+
+    Batches formed from this order will draw from 2-4 consecutive caches,
+    providing adequate within-batch diversity while keeping I/O minimal.
+
+    Usage:
+        sampler = CacheBucketSampler(train_ds, seed=cfg["train"]["seed"])
+        sampler.set_epoch(epoch)   # call before each epoch for different ordering
+        train_dl = DataLoader(train_ds, batch_size=128, sampler=sampler, ...)
+    """
+
+    def __init__(self, dataset: "RGBHorizonDataset", seed: int = 0) -> None:
+        # Group dataset indices by their cache file.
+        groups: Dict[str, List[int]] = {}
+        for idx, s in enumerate(dataset.samples):
+            key = s["cache"]
+            if key not in groups:
+                groups[key] = []
+            groups[key].append(idx)
+        self._groups: List[List[int]] = list(groups.values())
+        self._seed = seed
+        self._epoch = 0
+
+    def set_epoch(self, epoch: int) -> None:
+        self._epoch = epoch
+
+    def __len__(self) -> int:
+        return sum(len(g) for g in self._groups)
+
+    def __iter__(self) -> Iterator[int]:
+        rng = np.random.default_rng(self._seed + self._epoch)
+        # Shuffle cache order so every epoch sees a different trajectory sequence.
+        order = rng.permutation(len(self._groups)).tolist()
+        for gi in order:
+            group = self._groups[gi]
+            # Shuffle windows within this cache.
+            perm = rng.permutation(len(group)).tolist()
+            for wi in perm:
+                yield group[wi]
