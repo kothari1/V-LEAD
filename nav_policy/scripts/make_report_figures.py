@@ -23,7 +23,7 @@ plt.rcParams.update({
 # ---------------------------------------------------------------------------
 # Figure 1: training/validation curves (15-epoch BC run)
 # ---------------------------------------------------------------------------
-log_path = ROOT / 'nav_policy' / 'data' / 'checkpoints' / 'log.csv'
+log_path = ROOT / 'nav_policy' / 'data' / 'checkpoints_bc' / 'log.csv'
 rows = []
 with open(log_path) as f:
     r = csv.DictReader(f)
@@ -69,7 +69,7 @@ print('wrote training_curves.{pdf,png}')
 # Figure 2: per-horizon-step RMSE
 # ---------------------------------------------------------------------------
 ph_bc = list(csv.DictReader(open(ROOT / 'nav_policy/data/eval/bc_full/per_horizon.csv')))
-ph_da = list(csv.DictReader(open(ROOT / 'nav_policy/data/eval/dagger_r2/per_horizon.csv')))
+ph_da = list(csv.DictReader(open(ROOT / 'nav_policy/data/eval/dagger_r2_mpc_offline/per_horizon.csv')))
 hs = np.array([int(r['horizon_step']) for r in ph_bc])
 
 fig, axes = plt.subplots(1, 4, figsize=(8.5, 2.1), sharex=True)

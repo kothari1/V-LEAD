@@ -187,7 +187,8 @@ class _NullCtx:
 
 def train(config_path: Path,
           checkpoint_dir_override: Optional[Path] = None,
-          run_tag_override: Optional[str] = None) -> None:
+          run_tag_override: Optional[str] = None,
+          resume_from: Optional[Path] = None) -> None:
     with open(config_path, "r") as f:
         cfg = yaml.safe_load(f)
     base = config_path.resolve().parent.parent
@@ -219,6 +220,11 @@ def train(config_path: Path,
     print(f"[stats] mean={stats.mean.tolist()}  std={stats.std.tolist()}")
 
     model = _build_model(cfg).to(device)
+    if resume_from is not None:
+        resume_path = (base / resume_from).resolve()
+        blob = torch.load(resume_path, weights_only=False, map_location=device)
+        model.load_state_dict(blob["model"])
+        print(f"[resume] warm-started from {resume_path}")
     print(f"[model] trainable_params={count_parameters(model):,}")
 
     optimizer = torch.optim.AdamW(
@@ -307,10 +313,18 @@ def main() -> None:
              "checkpoint config and propagated by downstream eval scripts to "
              "summary.json so the ablation collector can identify the run.",
     )
+    p.add_argument(
+        "--resume-from", type=Path, default=None,
+        help="Path to a checkpoint (.pt) whose model weights are loaded before "
+             "training starts.  Use this for DAgger fine-tuning so the model "
+             "warm-starts from the previous round rather than training from "
+             "scratch on the aggregated dataset.",
+    )
     args = p.parse_args()
     train(args.config,
           checkpoint_dir_override=args.checkpoint_dir,
-          run_tag_override=args.run_tag)
+          run_tag_override=args.run_tag,
+          resume_from=args.resume_from)
 
 
 if __name__ == "__main__":
