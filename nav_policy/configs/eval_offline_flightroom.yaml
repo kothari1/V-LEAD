@@ -1,0 +1,6 @@
+# Offline evaluation on the flightroom validation set.
+
+checkpoint: data/checkpoints_flightroom/bc_best.pt
+output_dir: data/eval/flightroom_bc_offline
+processed_root: data/processed_flightroom
+split: val
