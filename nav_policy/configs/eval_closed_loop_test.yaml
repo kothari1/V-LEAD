@@ -7,7 +7,7 @@
 #
 # Update `checkpoint` to point to whichever checkpoint you want to evaluate.
 
-checkpoint: data/checkpoints_flightroom/bc_best.pt
+checkpoint: data/checkpoints_modal/bc_best.pt
 output_dir: data/eval/flightroom_bc_test
 
 frame: carl
