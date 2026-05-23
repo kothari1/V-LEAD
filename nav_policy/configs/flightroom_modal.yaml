@@ -48,7 +48,7 @@ model:
 train:
   batch_size: 128
   num_workers: 4              # safe on Modal; 4 parallel prefetch workers
-  epochs: 10
+  epochs: 6
   color_jitter: true
   lr: 6.0e-4
   weight_decay: 1.0e-4
