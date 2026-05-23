@@ -1,0 +1,10 @@
+# vlead package build/run artifacts
+vlead_runs/
+vlead/**/*.egg-info/
+vlead/**/__pycache__/
+
+# stray rollout videos
+*.mp4
+
+# editor
+.vscode/
