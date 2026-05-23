@@ -95,11 +95,15 @@ def evaluate(config_path: Path, checkpoint_path: Path, output_dir: Path) -> Dict
     zero_goal_eval = bool(ckpt_train_cfg.get("zero_goal_heading", False))
     goal_input_dim = int(ckpt_model_cfg.get("goal_input_dim", 2))
     goal_distance_scale = float(ckpt_model_cfg.get("goal_distance_scale", 5.0))
-    ds = RGBHorizonDataset(processed_root, split="val",
-                           cache_blobs_in_memory=True,
-                           zero_goal_heading=zero_goal_eval,
-                           goal_input_dim=goal_input_dim,
-                           goal_distance_scale=goal_distance_scale)
+    data_cfg = cfg.get("data", {})
+    ds = RGBHorizonDataset(
+        processed_root, split="val",
+        cache_blobs_in_memory=bool(data_cfg.get("cache_blobs_in_memory", False)),
+        cache_lru_size=int(data_cfg.get("cache_lru_size", 64)),
+        zero_goal_heading=zero_goal_eval,
+        goal_input_dim=goal_input_dim,
+        goal_distance_scale=goal_distance_scale,
+    )
     if ds.T != model.T or ds.H != model.H:
         raise ValueError(
             f"manifest T,H ({ds.T},{ds.H}) != model T,H ({model.T},{model.H})"
