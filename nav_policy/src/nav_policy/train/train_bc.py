@@ -85,16 +85,25 @@ def _make_loaders(cfg: dict, processed_root: Path):
     pin = torch.cuda.is_available()
     nw_train = int(cfg["train"].get("num_workers", 0))
     nw_val   = min(2, nw_train)
-    # Use CacheBucketSampler so each cache file is loaded once per epoch
-    # instead of once per sample.  This reduces disk reads by ~46x for the
-    # flightroom dataset (2640 cache files, 121k windows).
-    train_sampler = CacheBucketSampler(
-        train_ds, seed=int(cfg["train"].get("seed", 0))
-    )
+    # bucket_sampling groups windows by cache file so each file is loaded
+    # once per epoch instead of once per sample (~46x fewer disk reads).
+    # Disable on fast-SSD cloud instances (e.g. Modal) where true random
+    # shuffle is both fast and gives unbiased gradients.
+    use_bucket = bool(data_cfg.get("bucket_sampling", True))
+    if use_bucket:
+        train_sampler = CacheBucketSampler(
+            train_ds, seed=int(cfg["train"].get("seed", 0))
+        )
+        shuffle_arg = None
+    else:
+        train_sampler = None
+        shuffle_arg = True
+
     train_dl = DataLoader(
         train_ds,
         batch_size=cfg["train"]["batch_size"],
-        sampler=train_sampler,          # replaces shuffle=True
+        sampler=train_sampler,      # None → DataLoader uses shuffle_arg
+        shuffle=shuffle_arg,
         num_workers=nw_train,
         pin_memory=pin and nw_train > 0,
         drop_last=True,
@@ -110,6 +119,7 @@ def _make_loaders(cfg: dict, processed_root: Path):
         drop_last=False,
         collate_fn=_collate,
     )
+    # train_sampler is None when bucket_sampling=false (random shuffle used instead)
     return train_ds, val_ds, train_dl, val_dl, train_sampler
 
 
@@ -264,7 +274,8 @@ def train(config_path: Path,
 
     best_val = math.inf
     for epoch in range(int(cfg["train"]["epochs"])):
-        train_sampler.set_epoch(epoch)   # reshuffle cache order each epoch
+        if train_sampler is not None:
+            train_sampler.set_epoch(epoch)   # reshuffle cache order each epoch
         header = f"[epoch {epoch + 1:>3d}]"
         tr = _run_epoch(
             model, train_dl, stats, device,
