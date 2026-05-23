@@ -91,7 +91,11 @@ data_volume = modal.Volume.from_name(DATA_VOLUME_NAME, create_if_missing=True)
     volumes={VOLUME_MOUNT_PATH: data_volume},
     timeout=60 * 60 * 4,     # 4-hour hard limit (10 epochs finishes in ~30 min)
 )
-def train_bc(run_tag: str = "flightroom_bc_v1") -> str:
+def train_bc(
+    run_tag: str = "flightroom_bc_v1",
+    resume_from: str = "",
+    checkpoint_dir: str = "",
+) -> str:
     """
     Run one complete BC training job in the cloud.
 
@@ -125,6 +129,10 @@ def train_bc(run_tag: str = "flightroom_bc_v1") -> str:
         "--config", "configs/flightroom_modal.yaml",
         "--run-tag", run_tag,
     ]
+    if resume_from:
+        cmd += ["--resume-from", resume_from]
+    if checkpoint_dir:
+        cmd += ["--checkpoint-dir", checkpoint_dir]
     print(f"[modal] Running: {' '.join(cmd)}", flush=True)
     proc = subprocess.run(cmd, cwd="/workspace/nav_policy", env=env)
 
@@ -135,7 +143,8 @@ def train_bc(run_tag: str = "flightroom_bc_v1") -> str:
     if proc.returncode != 0:
         raise RuntimeError(f"Training exited with code {proc.returncode}")
 
-    ckpt_path = f"{VOLUME_MOUNT_PATH}/checkpoints_flightroom/bc_best.pt"
+    out_dir = checkpoint_dir if checkpoint_dir else f"{VOLUME_MOUNT_PATH}/checkpoints_flightroom"
+    ckpt_path = f"{out_dir}/bc_best.pt"
     print(f"[modal] Done. Checkpoint at {ckpt_path}", flush=True)
     return ckpt_path
 
@@ -144,7 +153,11 @@ def train_bc(run_tag: str = "flightroom_bc_v1") -> str:
 # Runs on YOUR machine when you type `modal run modal_train.py`.
 # It calls train_bc.remote() which submits the job to the cloud.
 @app.local_entrypoint()
-def main(run_tag: str = "flightroom_bc_v1"):
+def main(
+    run_tag: str = "flightroom_bc_v1",
+    resume_from: str = "",
+    checkpoint_dir: str = "",
+):
     """
     Trigger remote training and print the checkpoint location.
 
@@ -153,7 +166,7 @@ def main(run_tag: str = "flightroom_bc_v1"):
         modal run nav_policy/modal_train.py --run-tag my_run_v2
     """
     print(f"[local] Submitting training job  run_tag='{run_tag}' ...")
-    ckpt = train_bc.remote(run_tag=run_tag)
+    ckpt = train_bc.remote(run_tag=run_tag, resume_from=resume_from, checkpoint_dir=checkpoint_dir)
     print(f"[local] Training complete.  Checkpoint: {ckpt}")
     print()
     print("Download with:")

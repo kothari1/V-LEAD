@@ -1,39 +1,41 @@
 # configs/dagger_round2_mpc.yaml -- DAgger round 2 with proper MPC re-solve.
 #
-# Same flow as dagger_round1_mpc.yaml but rolls out the ROUND-1 MPC-DAgger
-# checkpoint and appends a new tagged batch of windows to the manifest.
+# Identical rollout list to dagger_round1_mpc.yaml.  The only changes are:
+#   - checkpoint points to the round-1 fine-tuned weights
+#   - round and output_run are incremented
 #
-# Assumed workflow (each step keeps its own checkpoint folder so the ablation
-# table can later cite all three):
-#   1. python scripts/train_bc.py    --config configs/default.yaml \
-#        --checkpoint-dir data/checkpoints_bc --run-tag bc_round0
-#   2. python scripts/run_dagger.py  --config configs/dagger_round1_mpc.yaml
-#   3. python scripts/train_bc.py    --config configs/default.yaml \
-#        --checkpoint-dir data/checkpoints_dagger_r1 --run-tag dagger_r1_mpc
-#   4. python scripts/run_dagger.py  --config configs/dagger_round2_mpc.yaml
-#   5. python scripts/train_bc.py    --config configs/default.yaml \
-#        --checkpoint-dir data/checkpoints_dagger_r2 --run-tag dagger_r2_mpc
+# Fine-tune command after this round:
+#   python scripts/train_bc.py --config configs/default.yaml \
+#     --resume-from data/checkpoints_dagger_r1/bc_best.pt \
+#     --checkpoint-dir data/checkpoints_dagger_r2 \
+#     --run-tag dagger_r2_mpc
 
-base_config: configs/default.yaml
-checkpoint: data/checkpoints_dagger_r1/bc_best.pt   # produced by step 3 above
+base_config: configs/flightroom.yaml
+checkpoint: data/checkpoints_modal/dagger_r1_best.pt
 round: 2
 output_run: dagger_r2_mpc
 run_tag: dagger_r2_mpc
 
-oracle: mpc            # 'reference' (legacy) | 'mpc' (proper DAgger)
-mpc_policy: vrmpc_rrt  # FiGS configs/policy/{}.json -- match the original expert
-
+oracle: mpc
+mpc_policy: vrmpc_rrt
 frame: carl
 Kv: 2.0
 Ka: 5.0
 split_assignment: train
 
 rollouts:
+  # ---- backroom scene: stack 0, all 4 sub-trajectories ----
   - name: backroom_00_sub0
     scene: backroom
     rollout: baseline
     setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00000.pt
     sub_idx: 0
+
+  - name: backroom_00_sub1
+    scene: backroom
+    rollout: baseline
+    setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00000.pt
+    sub_idx: 1
 
   - name: backroom_00_sub2
     scene: backroom
@@ -41,8 +43,58 @@ rollouts:
     setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00000.pt
     sub_idx: 2
 
+  - name: backroom_00_sub3
+    scene: backroom
+    rollout: baseline
+    setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00000.pt
+    sub_idx: 3
+
+  # ---- backroom scene: stack 1, all 4 sub-trajectories ----
+  - name: backroom_01_sub0
+    scene: backroom
+    rollout: baseline
+    setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00001.pt
+    sub_idx: 0
+
+  - name: backroom_01_sub1
+    scene: backroom
+    rollout: baseline
+    setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00001.pt
+    sub_idx: 1
+
+  - name: backroom_01_sub2
+    scene: backroom
+    rollout: baseline
+    setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00001.pt
+    sub_idx: 2
+
+  - name: backroom_01_sub3
+    scene: backroom
+    rollout: baseline
+    setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00001.pt
+    sub_idx: 3
+
+  # ---- packardpark scene: stack 0, all 4 sub-trajectories ----
   - name: packardpark_00_sub0
     scene: packardpark
     rollout: baseline
     setup_from: data/raw/packardpark_exp_04-29-26/trajectories_val00000.pt
     sub_idx: 0
+
+  - name: packardpark_00_sub1
+    scene: packardpark
+    rollout: baseline
+    setup_from: data/raw/packardpark_exp_04-29-26/trajectories_val00000.pt
+    sub_idx: 1
+
+  - name: packardpark_00_sub2
+    scene: packardpark
+    rollout: baseline
+    setup_from: data/raw/packardpark_exp_04-29-26/trajectories_val00000.pt
+    sub_idx: 2
+
+  - name: packardpark_00_sub3
+    scene: packardpark
+    rollout: baseline
+    setup_from: data/raw/packardpark_exp_04-29-26/trajectories_val00000.pt
+    sub_idx: 3
