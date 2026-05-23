@@ -7,8 +7,12 @@ data:
   raw_root: "data/raw"
   processed_root: "data/processed"
   runs:
-    - "backroom_exp_04-29-26"
-    - "packardpark_exp_04-29-26"
+    - "flightroom_ssv_exp_2026-05-22_071733_trajs-110"
+    - "flightroom_ssv_exp_2026-05-22_071718"
+    - "flightroom_ssv_exp_2026-05-22_071353"
+    - "flightroom_ssv_exp_2026-05-22_064652_training_mode_shuffled_trajs"
+    # - "backroom_exp_04-29-26"
+    # - "packardpark_exp_04-29-26"
   # Sub-trajectory IDs (within a stack) that should be skipped if missing the rgb video.
   # The builder also auto-skips any stack without a matching rgb mp4.
   drop_missing_rgb: true
