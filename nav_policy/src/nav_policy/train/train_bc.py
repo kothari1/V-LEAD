@@ -273,6 +273,9 @@ def train(config_path: Path,
         csv.writer(f).writerow(log_fields)
 
     best_val = math.inf
+    early_stop_patience = int(cfg["train"].get("early_stopping_patience", 0))
+    epochs_no_improve = 0
+
     for epoch in range(int(cfg["train"]["epochs"])):
         if train_sampler is not None:
             train_sampler.set_epoch(epoch)   # reshuffle cache order each epoch
@@ -322,8 +325,23 @@ def train(config_path: Path,
         torch.save(state, ckpt_dir / "bc_latest.pt")
         if va["mse_overall"] < best_val:
             best_val = va["mse_overall"]
+            epochs_no_improve = 0
             torch.save(state, ckpt_dir / "bc_best.pt")
             print(f"  -> saved bc_best.pt (val_mse_overall={best_val:.4f})", flush=True)
+        else:
+            epochs_no_improve += 1
+            print(
+                f"  -> no improvement ({epochs_no_improve}/{early_stop_patience or '∞'})",
+                flush=True,
+            )
+
+        if early_stop_patience > 0 and epochs_no_improve >= early_stop_patience:
+            print(
+                f"[early stop] val_mse_overall has not improved for "
+                f"{early_stop_patience} epochs. Stopping.",
+                flush=True,
+            )
+            break
 
 
 def main() -> None:
