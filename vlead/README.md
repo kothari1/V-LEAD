@@ -1,8 +1,10 @@
-# vlead
+# vlead_flight
 
 V-LEAD goal-conditioned visuomotor navigation deployment for quadrotors (CS231N project).
 
 Wraps a trained PyTorch network as a duck-typed FiGS controller so the FiGS Simulator can fly a drone in a Gaussian-Splat scene using the network's velocity-command outputs — with no changes to FiGS itself.
+
+> **Naming**: outer repo dir is `V-LEAD/vlead/` (project root for this package). Importable Python module is `vlead_flight` (mirrors SINGER's `sousvide.flight` convention). All imports: `from vlead_flight import ...`. CLI: `python -m vlead_flight.deploy ...`.
 
 ---
 
@@ -59,17 +61,17 @@ To override the mount path: `VLEAD_PATH=/some/other/path docker compose run --rm
 
 ---
 
-## CLI — `python -m vlead.deploy`
+## CLI — `python -m vlead_flight.deploy`
 
 ### `smoke` — wiring sanity check, no checkpoint needed
 ```bash
-python -m vlead.deploy smoke
+python -m vlead_flight.deploy smoke
 ```
 Loads `DummyVLeadNet` (always outputs zero velocities). Drone should hover. Exit 0 means wiring works end-to-end.
 
 ### `rollout` — eval a trained checkpoint
 ```bash
-python -m vlead.deploy rollout \
+python -m vlead_flight.deploy rollout \
     --checkpoint /path/to/model.pth \
     --scene "flightroom_ssv_exp/gemsplat/2026-02-28_205058" \
     --target "5.0,0.0,-1.5" \
@@ -95,9 +97,9 @@ python -m vlead.deploy rollout \
 import numpy as np
 import torch
 from figs.simulator import Simulator
-from vlead.pilot import VLeadPilot
-from vlead.recorder import RolloutRecorder
-from vlead.eval import summarize, print_summary
+from vlead_flight.pilot import VLeadPilot
+from vlead_flight.recorder import RolloutRecorder
+from vlead_flight.eval import summarize, print_summary
 
 # 1. Build sim
 sim = Simulator(
@@ -183,7 +185,7 @@ def forward(
 
 Output is `[B, H, 4]` where `H` is the receding horizon length (default 10, read from output shape at runtime). Each row is `[vx, vy, vz, ψ̇]` in the world frame.
 
-See `vlead/network_protocol.py` for the runtime-checkable `Protocol` and `DummyVLeadNet` reference.
+See `vlead_flight/network_protocol.py` for the runtime-checkable `Protocol` and `DummyVLeadNet` reference.
 
 ### Checkpoint format
 
@@ -239,7 +241,7 @@ World frame is **NED-like**: z points DOWN, gravity = `[0, 0, +9.81]`. So `targe
 
 Load back:
 ```python
-from vlead.recorder import RolloutRecorder
+from vlead_flight.recorder import RolloutRecorder
 rec = RolloutRecorder.load("rollout.pt")
 print(len(rec), "steps")
 print(rec.steps[0]["vel_pred"].shape)   # (10, 4)
@@ -247,7 +249,7 @@ print(rec.steps[0]["vel_pred"].shape)   # (10, 4)
 
 ---
 
-## Eval metrics (`vlead/eval.py`)
+## Eval metrics (`vlead_flight/eval.py`)
 
 `summarize(Tro, Xro, Uro, target_xyz, radius=0.5)` returns:
 
@@ -277,7 +279,7 @@ The `dagger` CLI is a documented stub. v1 path:
 
 ```bash
 # 1. Capture student trajectory with full state log
-python -m vlead.deploy rollout --checkpoint student.pth --record \
+python -m vlead_flight.deploy rollout --checkpoint student.pth --record \
     --output-dir runs/dagger_iter_3
 
 # 2. Offline: re-run expert MPC at each recorded state, append (state, expert_action) to training set
@@ -346,11 +348,11 @@ python /workspace/vlead/tests/test_pilot_smoke.py
 
 | File | Role |
 |------|------|
-| `vlead/pilot.py` | `VLeadPilot` — duck-typed FiGS controller |
-| `vlead/network_protocol.py` | Forward signature + `DummyVLeadNet` reference |
-| `vlead/recorder.py` | `RolloutRecorder` for offline / DAgger / RL data |
-| `vlead/eval.py` | Post-rollout metrics |
-| `vlead/deploy.py` | Typer CLI (`smoke`, `rollout`, `dagger` stub) |
+| `vlead_flight/pilot.py` | `VLeadPilot` — duck-typed FiGS controller |
+| `vlead_flight/network_protocol.py` | Forward signature + `DummyVLeadNet` reference |
+| `vlead_flight/recorder.py` | `RolloutRecorder` for offline / DAgger / RL data |
+| `vlead_flight/eval.py` | Post-rollout metrics |
+| `vlead_flight/deploy.py` | Typer CLI (`smoke`, `rollout`, `dagger` stub) |
 | `tests/test_pilot_smoke.py` | Wiring sanity checks (4 tests, no trained net needed) |
 | `pyproject.toml` | Editable install |
 

@@ -3,14 +3,14 @@
 Run inside the SINGER (or FiGS) Docker container:
 
     # Smoke test (no checkpoint, uses DummyVLeadNet → hover)
-    python -m vlead.deploy smoke
+    python -m vlead_flight.deploy smoke
 
     # Full rollout with a trained checkpoint
-    python -m vlead.deploy rollout --checkpoint /path/to/model.pth \\
+    python -m vlead_flight.deploy rollout --checkpoint /path/to/model.pth \\
         --target 5.0 0.0 -1.5 --duration 15.0 --record
 
     # With depth observations
-    python -m vlead.deploy rollout --checkpoint ... --use-depth
+    python -m vlead_flight.deploy rollout --checkpoint ... --use-depth
 """
 import os
 from pathlib import Path
@@ -20,10 +20,10 @@ import numpy as np
 import torch
 import typer
 
-from vlead.pilot import VLeadPilot
-from vlead.recorder import RolloutRecorder
-from vlead.network_protocol import DummyVLeadNet
-from vlead.eval import summarize, print_summary
+from vlead_flight.pilot import VLeadPilot
+from vlead_flight.recorder import RolloutRecorder
+from vlead_flight.network_protocol import DummyVLeadNet
+from vlead_flight.eval import summarize, print_summary
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -162,7 +162,7 @@ def dagger(
     at arbitrary (state, time) — typically VehicleRateMPC with the student's
     visited state injected. For now use:
 
-        python -m vlead.deploy rollout --checkpoint ... --record
+        python -m vlead_flight.deploy rollout --checkpoint ... --record
 
     and post-process the recorded states against expert MPC offline.
     """

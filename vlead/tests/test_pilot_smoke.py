@@ -26,8 +26,8 @@ def _build_sim_once(_cache={}):
 
 def test_dummy_pilot_hovers():
     """DummyVLeadNet → zero velocities → drone holds its initial position."""
-    from vlead.pilot import VLeadPilot
-    from vlead.network_protocol import DummyVLeadNet
+    from vlead_flight.pilot import VLeadPilot
+    from vlead_flight.network_protocol import DummyVLeadNet
 
     sim = _build_sim_once()
     pilot = VLeadPilot(
@@ -49,9 +49,9 @@ def test_dummy_pilot_hovers():
 
 def test_recorder_collects_steps():
     """RolloutRecorder should hold one entry per control step."""
-    from vlead.pilot import VLeadPilot
-    from vlead.recorder import RolloutRecorder
-    from vlead.network_protocol import DummyVLeadNet
+    from vlead_flight.pilot import VLeadPilot
+    from vlead_flight.recorder import RolloutRecorder
+    from vlead_flight.network_protocol import DummyVLeadNet
 
     sim = _build_sim_once()
     rec = RolloutRecorder()
@@ -74,9 +74,9 @@ def test_recorder_collects_steps():
 
 def test_depth_flag_renders_depth():
     """use_depth=True should populate depth in recorder."""
-    from vlead.pilot import VLeadPilot
-    from vlead.recorder import RolloutRecorder
-    from vlead.network_protocol import DummyVLeadNet
+    from vlead_flight.pilot import VLeadPilot
+    from vlead_flight.recorder import RolloutRecorder
+    from vlead_flight.network_protocol import DummyVLeadNet
 
     sim = _build_sim_once()
     rec = RolloutRecorder()
@@ -98,8 +98,8 @@ def test_depth_flag_renders_depth():
 
 
 def test_set_target_updates_goal():
-    from vlead.pilot import VLeadPilot
-    from vlead.network_protocol import DummyVLeadNet
+    from vlead_flight.pilot import VLeadPilot
+    from vlead_flight.network_protocol import DummyVLeadNet
 
     pilot = VLeadPilot(
         network=DummyVLeadNet(),
