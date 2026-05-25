@@ -48,7 +48,7 @@ services:
         python -c 'import figs' 2>/dev/null || python -m pip install -e /workspace/FiGS-Standalone --no-deps
         python -c 'import gemsplat' 2>/dev/null || python -m pip install -e /workspace/FiGS-Standalone/gemsplat --no-deps
         python -c 'import sousvide' 2>/dev/null || python -m pip install -e /workspace/SINGER --no-deps
-        python -c 'import vlead_flight' 2>/dev/null || python -m pip install -e /workspace/vlead --no-deps
+        (cd /tmp && python -c 'import vlead_flight') 2>/dev/null || python -m pip install -e /workspace/vlead --no-deps
         exec runuser -u $$USERNAME -- bash -l
       "
 
