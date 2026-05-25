@@ -1,0 +1,36 @@
+# eval_closed_loop_test.yaml
+#
+# Closed-loop test-set evaluation.
+# These rollouts use the ORIGINAL backroom and packardpark environments which
+# are NEVER part of the flightroom training or validation data.  Run this after
+# training is complete to obtain held-out test metrics.
+#
+# Update `checkpoint` to point to whichever checkpoint you want to evaluate.
+
+checkpoint: data/checkpoints_modal/bc_best.pt
+output_dir: data/eval/flightroom_bc_test
+
+frame: carl
+Kv: 2.0
+Ka: 5.0
+
+rollouts:
+  # ── backroom (2 sub-trajectories) ─────────────────────────────────────────
+  - name: backroom_00_sub0
+    scene: backroom
+    rollout: baseline
+    setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00000.pt
+    sub_idx: 0
+
+  - name: backroom_00_sub2
+    scene: backroom
+    rollout: baseline
+    setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00000.pt
+    sub_idx: 2
+
+  # ── packardpark (1 sub-trajectory) ────────────────────────────────────────
+  - name: packardpark_00_sub0
+    scene: packardpark
+    rollout: baseline
+    setup_from: data/raw/packardpark_exp_04-29-26/trajectories_val00000.pt
+    sub_idx: 0

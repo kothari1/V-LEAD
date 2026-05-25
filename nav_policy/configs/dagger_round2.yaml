@@ -1,0 +1,44 @@
+# configs/dagger_round2.yaml -- second round of DAgger.
+#
+# Same flow as dagger_round1.yaml but rolls out the ROUND-1 retrained
+# checkpoint and appends a new tagged batch of windows to the manifest.
+#
+# Assumed workflow (each step keeps its own checkpoint folder so the
+# ablation table can later cite all three):
+#   1. python scripts/train_bc.py --config configs/default.yaml \
+#        --checkpoint-dir data/checkpoints_bc --run-tag bc_round0
+#   2. python scripts/run_dagger.py  --config configs/dagger_round1.yaml
+#   3. python scripts/train_bc.py    --config configs/default.yaml \
+#        --checkpoint-dir data/checkpoints_dagger_r1 --run-tag dagger_r1
+#   4. python scripts/run_dagger.py  --config configs/dagger_round2.yaml
+#   5. python scripts/train_bc.py    --config configs/default.yaml \
+#        --checkpoint-dir data/checkpoints_dagger_r2 --run-tag dagger_r2
+
+base_config: configs/default.yaml
+checkpoint: data/checkpoints_dagger_r1/bc_best.pt   # produced by step 3 above
+round: 2
+output_run: dagger_r2
+
+frame: carl
+Kv: 2.0
+Ka: 5.0
+split_assignment: train
+
+rollouts:
+  - name: backroom_00_sub0
+    scene: backroom
+    rollout: baseline
+    setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00000.pt
+    sub_idx: 0
+
+  - name: backroom_00_sub2
+    scene: backroom
+    rollout: baseline
+    setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00000.pt
+    sub_idx: 2
+
+  - name: packardpark_00_sub0
+    scene: packardpark
+    rollout: baseline
+    setup_from: data/raw/packardpark_exp_04-29-26/trajectories_val00000.pt
+    sub_idx: 0
