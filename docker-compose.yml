@@ -1,0 +1,56 @@
+# V-LEAD master container — mounts all 4 packages (FiGS, SINGER, Semantic_HSM, vlead_flight)
+# and editable-installs them. Use this when doing V-LEAD-centric work
+# (online RL, vlead policy deployment, end-to-end CS231N pipeline).
+#
+# For SINGER-only work, use SINGER/docker-compose.yml instead.
+#
+# Usage:
+#   cd /home/kothari1/autonomy_projects/V-LEAD
+#   docker compose run --rm vlead
+
+services:
+  vlead:
+    image: figs:latest
+    volumes:
+      - ${SINGER_PATH:-./SINGER}:/workspace/SINGER
+      - ${FIGS_PATH:-./FiGS-Standalone}:/workspace/FiGS-Standalone
+      - ${SEMANTIC_HSM_PATH:-./Semantic_HSM}:/workspace/Semantic_HSM
+      - ${VLEAD_PATH:-./vlead}:/workspace/vlead
+      - ${DATA_PATH:-/media/admin/data/StanfordMSL/nerf_data}:${DATA_PATH:-/media/admin/data/StanfordMSL/nerf_data}
+      - /project/kothari1:/project/kothari1
+      - vlead-site-packages:/usr/local/lib/python3.10/dist-packages
+      - vlead-model-cache:/root/.cache
+    working_dir: /workspace/vlead
+    environment:
+      - DISPLAY=${DISPLAY:-}
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    network_mode: host
+    shm_size: '12gb'
+    stdin_open: true
+    tty: true
+    command: >
+      bash -c "
+        HOST_UID=$$(stat -c '%u' /workspace/vlead)
+        HOST_GID=$$(stat -c '%g' /workspace/vlead)
+        if ! getent passwd $$HOST_UID >/dev/null 2>&1; then
+          groupadd -g $$HOST_GID vlead 2>/dev/null || true
+          useradd -u $$HOST_UID -g $$HOST_GID -m -s /bin/bash vlead 2>/dev/null || true
+        fi
+        USERNAME=$$(getent passwd $$HOST_UID | cut -d: -f1)
+        python -c 'import figs' 2>/dev/null || python -m pip install -e /workspace/FiGS-Standalone --no-deps
+        python -c 'import gemsplat' 2>/dev/null || python -m pip install -e /workspace/FiGS-Standalone/gemsplat --no-deps
+        python -c 'import sousvide' 2>/dev/null || python -m pip install -e /workspace/SINGER --no-deps
+        python -c 'import vlead_flight' 2>/dev/null || python -m pip install -e /workspace/vlead --no-deps
+        exec runuser -u $$USERNAME -- bash -l
+      "
+
+volumes:
+  vlead-site-packages:
+  vlead-model-cache:

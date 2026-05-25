@@ -48,16 +48,22 @@ Tested scene: `flightroom_ssv_exp/gemsplat/2026-02-28_205058`. Tested frame: `ca
 
 ---
 
-## Install (inside SINGER Docker container)
+## Install (inside Docker container)
 
-The SINGER `docker-compose.yml` mounts `../vlead` at `/workspace/vlead` and runs `pip install -e` automatically on container start. To enter:
+Two equivalent entry points — both land in the same `figs:latest` container with all 4 packages (figs, gemsplat, sousvide, vlead_flight) editable-installed and GPU access enabled.
 
+| Use case | Command | Working dir inside container |
+|----------|---------|------------------------------|
+| **V-LEAD work** (online RL, vlead deployment, end-to-end CS231N) | `cd V-LEAD && docker compose run --rm vlead` | `/workspace/vlead` |
+| SINGER-only work | `cd V-LEAD/SINGER && docker compose run --rm singer` | `/workspace/SINGER` |
+
+First entry into each service runs a one-time `pip install -e` for all packages (~5 min, CLIP + AlexNet downloads). Subsequent entries are instant. The two services use separate named volumes, so each installs once independently.
+
+To override default mount paths:
 ```bash
-cd /home/kothari1/autonomy_projects/V-LEAD/SINGER
-docker compose run --rm singer
+VLEAD_PATH=/some/other/vlead docker compose run --rm vlead
+FIGS_PATH=/some/other/FiGS-Standalone docker compose run --rm vlead
 ```
-
-To override the mount path: `VLEAD_PATH=/some/other/path docker compose run --rm singer`.
 
 ---
 
