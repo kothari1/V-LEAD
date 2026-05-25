@@ -44,6 +44,7 @@ services:
           useradd -u $$HOST_UID -g $$HOST_GID -m -s /bin/bash vlead 2>/dev/null || true
         fi
         USERNAME=$$(getent passwd $$HOST_UID | cut -d: -f1)
+        python -c 'import typer' 2>/dev/null || python -m pip install --quiet typer 'transformers==4.40.0' 'huggingface_hub==0.23.0' shapely scikit-image imageio
         python -c 'import figs' 2>/dev/null || python -m pip install -e /workspace/FiGS-Standalone --no-deps
         python -c 'import gemsplat' 2>/dev/null || python -m pip install -e /workspace/FiGS-Standalone/gemsplat --no-deps
         python -c 'import sousvide' 2>/dev/null || python -m pip install -e /workspace/SINGER --no-deps
