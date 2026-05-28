@@ -26,7 +26,10 @@ enable_legacy_torch_load()
 
 from nav_policy.rl.model.feature_extractor import BCEncoderFeatureExtractor
 from nav_policy.rl.train.callbacks import build_callbacks
-from nav_policy.rl.warm_start.bc_to_rl import load_bc_into_feature_extractor
+from nav_policy.rl.warm_start.bc_to_rl import (
+    load_bc_into_feature_extractor,
+    load_bc_into_sac_actor,
+)
 
 
 def _build_env(cfg: Dict[str, Any]):
@@ -108,20 +111,71 @@ def _build_sac(env, cfg: Dict[str, Any], device: str):
     return model
 
 
+def _find_bc_extractors(policy) -> list:
+    """Collect every BCEncoderFeatureExtractor instance under the SAC policy.
+
+    SB3 SAC quirk: policy.features_extractor can be None even with
+    share_features_extractor=True; the live extractor(s) sit on
+    policy.actor and policy.critic. When share=True, all three point to the
+    same Module; when share=False, each is independent and we must warm-start
+    every copy.
+    """
+    extractors: list = []
+    seen: set = set()
+    candidates = [
+        getattr(policy, "features_extractor", None),
+        getattr(getattr(policy, "actor", None), "features_extractor", None),
+        getattr(getattr(policy, "critic", None), "features_extractor", None),
+        getattr(getattr(policy, "critic_target", None), "features_extractor", None),
+    ]
+    for c in candidates:
+        if isinstance(c, BCEncoderFeatureExtractor) and id(c) not in seen:
+            extractors.append(c)
+            seen.add(id(c))
+    return extractors
+
+
 def _warm_start(model, cfg: Dict[str, Any]) -> None:
-    bc_ckpt = cfg.get("warm_start", {}).get("bc_checkpoint")
+    ws_cfg = cfg.get("warm_start", {}) or {}
+    bc_ckpt = ws_cfg.get("bc_checkpoint")
     if not bc_ckpt:
         print("[sac] no BC checkpoint provided; training feature extractor from scratch")
         return
-    extractor = model.policy.features_extractor
-    if not isinstance(extractor, BCEncoderFeatureExtractor):
+
+    # 1. Encoder warm-start (visual + goal embedding).
+    extractors = _find_bc_extractors(model.policy)
+    if not extractors:
         raise RuntimeError(
-            "warm-start requires a BCEncoderFeatureExtractor; "
-            f"got {type(extractor).__name__}"
+            "warm-start could not locate any BCEncoderFeatureExtractor on the SAC "
+            "policy (policy.features_extractor / policy.actor.features_extractor / "
+            "policy.critic.features_extractor were all unsuitable). Check "
+            "policy_kwargs.features_extractor_class is wired."
         )
-    info = load_bc_into_feature_extractor(extractor, bc_ckpt)
-    print(f"[sac] warm-started encoder from {bc_ckpt}")
-    print(f"      head keys dropped: {len(info.get('unexpected_keys', []))}")
+    for ext in extractors:
+        info = load_bc_into_feature_extractor(ext, bc_ckpt)
+        head_dropped = len([k for k in info.get('unexpected_keys', []) if k.startswith('head.')])
+        print(
+            f"[sac] warm-started encoder ({type(ext).__name__} id={id(ext)}) "
+            f"from {bc_ckpt}; head keys dropped: {head_dropped}"
+        )
+    print(f"[sac] warm-started {len(extractors)} extractor instance(s)")
+
+    # 2. Optional actor head warm-start (BC MLPHead -> SAC actor latent_pi + mu).
+    if ws_cfg.get("init_actor_from_bc_head", False):
+        action_dim = int(model.action_space.shape[0])
+        try:
+            stats = load_bc_into_sac_actor(
+                model.policy.actor, bc_ckpt, action_dim=action_dim,
+            )
+            print(
+                "[sac] warm-started actor latent_pi + mu from BC head: "
+                f"{stats['latent_pi_layers_copied']} hidden layers + "
+                f"{stats['mu_rows_copied']} mu rows (BC head output dim "
+                f"{stats['bc_head_output_dim']})"
+            )
+        except Exception as e:
+            print(f"[sac] WARNING actor warm-start failed: {e}")
+            print("[sac] continuing with random actor head; encoder warm-start retained")
 
 
 def main() -> None:

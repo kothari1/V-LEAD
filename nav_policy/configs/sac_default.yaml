@@ -15,8 +15,11 @@ env:
   img_resolution: [224, 224]
   goal_distance_scale: 5.0
   goal_input_dim: 4              # [hx, hy, hz, d/scale]; set 3 to drop hz
-  action_low: [-3.0, -3.0, -1.5, -1.5]
-  action_high: [3.0, 3.0, 1.5, 1.5]
+  # Tightened vz range (-0.5/+0.5 m/s) to dampen vertical exploration at init;
+  # ceiling at z=-1.95 m is only ~0.35 m above default start altitude, so wide
+  # vz exploration crashes through it in ~30 steps.
+  action_low: [-3.0, -3.0, -0.5, -1.5]
+  action_high: [3.0, 3.0, 0.5, 1.5]
 
 # Scene bbox from SINGER/configs/scenes/flightroom_ssv_exp.yml:
 #   minbound: [-3.7, -8, -2]
@@ -42,7 +45,7 @@ reward:
   w_crash: 50.0
   w_smooth: 0.05
   w_yaw: 0.05
-  w_altitude: 0.10
+  w_altitude: 0.50
   w_speedcap: 0.10
   alt_target: -1.2
   speed_cap: 3.0
@@ -87,6 +90,10 @@ sac:
 
 warm_start:
   bc_checkpoint: /project/kothari1/vlead_data/checkpoints/bc_best.pt
+  # If true, copies BC head's Linear layers into SAC actor.latent_pi + actor.mu
+  # so the actor's initial action mean matches BC's t=0 velocity command (not
+  # just the encoder). Requires model.actor_mlp == BC config's mlp_hidden.
+  init_actor_from_bc_head: true
 
 callbacks:
   eval:
