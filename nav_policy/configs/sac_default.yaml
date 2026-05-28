@@ -18,6 +18,10 @@ env:
   action_low: [-3.0, -3.0, -1.5, -1.5]
   action_high: [3.0, 3.0, 1.5, 1.5]
 
+# Scene bbox shared between sampler (reject out-of-scene goals) and termination
+# (crash if drone exits). Default values are flightroom-shaped; override per scene.
+# NED convention: z increases downward, so z_low is "high above ground", z_high
+# is ground level. Replace with measured scene bounds.
 sampler:
   start_xyz_low: [-0.5, -0.5, -1.5]
   start_xyz_high: [0.5, 0.5, -1.0]
@@ -27,8 +31,8 @@ sampler:
   goal_z_high: -0.9
   yaw_jitter: 0.0
   velocity_jitter: 0.0
-  # bbox_xyz_low: [-5, -5, -3]
-  # bbox_xyz_high: [5, 5, 0]
+  bbox_xyz_low: [-4.0, -4.0, -2.5]
+  bbox_xyz_high: [4.0, 4.0, 0.05]
 
 reward:
   w_progress: 1.0
@@ -46,8 +50,8 @@ reward:
 termination:
   success_radius: 0.5
   max_episode_steps: 300         # 15 s @ 20 Hz
-  # bbox_xyz_low: [-5, -5, -3]
-  # bbox_xyz_high: [5, 5, 0]
+  bbox_xyz_low: [-4.0, -4.0, -2.5]
+  bbox_xyz_high: [4.0, 4.0, 0.05]
   ground_z: 0.05                 # NED: positive pz = below ground
   ceiling_z: -3.0
   speed_kill: 5.0
@@ -80,4 +84,28 @@ sac:
   target_update_interval: 1
 
 warm_start:
-  bc_checkpoint: null            # e.g. "data/checkpoints/bc_best.pt"
+  bc_checkpoint: null            # e.g. "/project/kothari1/vlead_data/checkpoints/bc_best.pt"
+
+callbacks:
+  eval:
+    enabled: true
+    freq: 2500                   # eval every N env steps
+    n_episodes: 3
+    seed: 42
+  checkpoint:
+    enabled: true
+    freq: 5000
+  reward_components:
+    enabled: true
+    log_freq: 200
+  wandb:
+    enabled: false               # set true to mirror logs to W&B
+    project: vlead-sac
+    run_name: null               # defaults to timestamp if null
+    log_freq: 200
+
+# Optional eval-env sampler overrides (uses train sampler if absent).
+# eval:
+#   sampler:
+#     goal_radius_min: 2.0
+#     goal_radius_max: 2.5

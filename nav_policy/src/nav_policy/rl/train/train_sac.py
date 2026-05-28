@@ -25,6 +25,7 @@ from vlead_flight._torch_compat import enable_legacy_torch_load
 enable_legacy_torch_load()
 
 from nav_policy.rl.model.feature_extractor import BCEncoderFeatureExtractor
+from nav_policy.rl.train.callbacks import build_callbacks
 from nav_policy.rl.warm_start.bc_to_rl import load_bc_into_feature_extractor
 
 
@@ -159,14 +160,19 @@ def main() -> None:
 
     _warm_start(model, cfg)
 
+    out_dir = Path(cfg["output_dir"])
+    callbacks = build_callbacks(cfg, out_dir)
+    if callbacks is not None:
+        print(f"[sac] callbacks active: {[type(c).__name__ for c in callbacks.callbacks]}", flush=True)
+
     print(f"[sac] starting learn() for {cfg['total_timesteps']} timesteps", flush=True)
     model.learn(
         total_timesteps=int(cfg["total_timesteps"]),
         log_interval=cfg.get("log_interval", 1),
         progress_bar=True,
+        callback=callbacks,
     )
 
-    out_dir = Path(cfg["output_dir"])
     model.save(out_dir / "sac_final")
     print(f"[sac] saved final model to {out_dir/'sac_final'}.zip")
 
