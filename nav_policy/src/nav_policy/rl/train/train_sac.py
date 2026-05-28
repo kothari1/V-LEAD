@@ -185,6 +185,8 @@ def main() -> None:
                         help="Override cfg.output_dir.")
     parser.add_argument("--total-timesteps", type=int, default=None)
     parser.add_argument("--device", type=str, default=None)
+    parser.add_argument("--seed", type=int, default=None,
+                        help="Override cfg.seed for multi-seed runs.")
     args = parser.parse_args()
 
     with open(args.config, "r") as f:
@@ -198,6 +200,9 @@ def main() -> None:
     if args.total_timesteps is not None:
         cfg["total_timesteps"] = args.total_timesteps
     cfg.setdefault("total_timesteps", 50_000)
+
+    if args.seed is not None:
+        cfg["seed"] = args.seed
 
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     seed = int(cfg.get("seed", 0))
