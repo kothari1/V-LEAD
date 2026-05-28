@@ -16,9 +16,9 @@ services:
       - ${FIGS_PATH:-./FiGS-Standalone}:/workspace/FiGS-Standalone
       - ${SEMANTIC_HSM_PATH:-./Semantic_HSM}:/workspace/Semantic_HSM
       - ${VLEAD_PATH:-./vlead}:/workspace/vlead
+      - ${NAV_POLICY_PATH:-./nav_policy}:/workspace/nav_policy
       - ${DATA_PATH:-/media/admin/data/StanfordMSL/nerf_data}:${DATA_PATH:-/media/admin/data/StanfordMSL/nerf_data}
       - /project/kothari1:/project/kothari1
-      - vlead-site-packages:/usr/local/lib/python3.10/dist-packages
       - vlead-model-cache:/root/.cache
     working_dir: /workspace/vlead
     environment:
@@ -49,9 +49,12 @@ services:
         python -c 'import gemsplat' 2>/dev/null || python -m pip install -e /workspace/FiGS-Standalone/gemsplat --no-deps
         python -c 'import sousvide' 2>/dev/null || python -m pip install -e /workspace/SINGER --no-deps
         (cd /tmp && python -c 'import vlead_flight') 2>/dev/null || python -m pip install -e /workspace/vlead --no-deps
+        (cd /tmp && python -c 'import nav_policy') 2>/dev/null || python -m pip install -e /workspace/nav_policy --no-deps
+        python -c 'import gymnasium' 2>/dev/null || python -m pip install --quiet 'gymnasium~=0.29.0' 'stable-baselines3==2.2.1' tensorboard
+        # Pin sb3==2.2.1 because >=2.3 requires torch>=2.3 and silently upgrades
+        # torch from the image's 2.1.2+cu118 -> CUDA 13 wheel, which breaks gsplat.
         exec runuser -u $$USERNAME -- bash -l
       "
 
 volumes:
-  vlead-site-packages:
   vlead-model-cache:

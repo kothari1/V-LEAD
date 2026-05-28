@@ -20,6 +20,10 @@ import numpy as np
 import torch
 import typer
 
+from vlead_flight._torch_compat import enable_legacy_torch_load
+
+enable_legacy_torch_load()
+
 from vlead_flight.pilot import VLeadPilot
 from vlead_flight.recorder import RolloutRecorder
 from vlead_flight.network_protocol import DummyVLeadNet

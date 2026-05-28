@@ -1,0 +1,83 @@
+# SAC training scaffold for the V-LEAD pilot network.
+# Single FigsDroneEnv instance, SB3 SAC with BC-encoder feature extractor.
+
+seed: 0
+output_dir: data/rl_runs/sac_default
+total_timesteps: 100000
+log_interval: 4
+
+env:
+  scene_name: "flightroom_ssv_exp/gemsplat/2026-02-28_205058"
+  rollout_name: "baseline"
+  frame_name: "carl"
+  hz: 20
+  frame_window: 4
+  img_resolution: [224, 224]
+  goal_distance_scale: 5.0
+  goal_input_dim: 4              # [hx, hy, hz, d/scale]; set 3 to drop hz
+  action_low: [-3.0, -3.0, -1.5, -1.5]
+  action_high: [3.0, 3.0, 1.5, 1.5]
+
+sampler:
+  start_xyz_low: [-0.5, -0.5, -1.5]
+  start_xyz_high: [0.5, 0.5, -1.0]
+  goal_radius_min: 1.5
+  goal_radius_max: 3.0
+  goal_z_low: -1.5
+  goal_z_high: -0.9
+  yaw_jitter: 0.0
+  velocity_jitter: 0.0
+  # bbox_xyz_low: [-5, -5, -3]
+  # bbox_xyz_high: [5, 5, 0]
+
+reward:
+  w_progress: 1.0
+  w_success: 50.0
+  w_alive: 0.01
+  w_crash: 50.0
+  w_smooth: 0.05
+  w_yaw: 0.05
+  w_altitude: 0.10
+  w_speedcap: 0.10
+  alt_target: -1.2
+  speed_cap: 3.0
+  success_radius: 0.5
+
+termination:
+  success_radius: 0.5
+  max_episode_steps: 300         # 15 s @ 20 Hz
+  # bbox_xyz_low: [-5, -5, -3]
+  # bbox_xyz_high: [5, 5, 0]
+  ground_z: 0.05                 # NED: positive pz = below ground
+  ceiling_z: -3.0
+  speed_kill: 5.0
+
+model:
+  T: 4
+  H_pred: 10
+  cmd_dim: 4
+  gru_hidden: 256
+  gru_layers: 1
+  mlp_hidden: [256, 128]
+  goal_emb_dim: 32
+  freeze_visual: true
+  actor_mlp: [256, 128]
+  critic_mlp: [256, 128]
+
+sac:
+  learning_rate: 3.0e-4
+  # Replay buffer RAM = buffer_size * frame_window * 3 * H * W bytes (uint8).
+  # At T=4, 224x224: 5000 -> ~3 GB, 20000 -> ~12 GB, 50000 -> ~30 GB.
+  # Container shm_size is 12 GB. Keep buffer_size * obs_bytes < shm to avoid hangs.
+  buffer_size: 5000
+  learning_starts: 500
+  batch_size: 64
+  tau: 0.005
+  gamma: 0.99
+  train_freq: 1
+  gradient_steps: 1
+  ent_coef: "auto"
+  target_update_interval: 1
+
+warm_start:
+  bc_checkpoint: null            # e.g. "data/checkpoints/bc_best.pt"

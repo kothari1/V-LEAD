@@ -22,7 +22,14 @@ from typing import Optional, Tuple
 
 import numpy as np
 import torch
-import torch.nn.functional as F
+
+from vlead_flight.observation import (
+    FrameBuffer,
+    compute_goal,
+    imagenet_norm_buffers,
+    preprocess_depth,
+    preprocess_rgb,
+)
 
 
 class VLeadPilot:
@@ -116,27 +123,20 @@ class VLeadPilot:
         self.img_h, self.img_w = img_resolution
 
         # ImageNet normalization stats (consistent with SINGER preprocessing)
-        self._mean = torch.tensor(
-            [0.485, 0.456, 0.406], device=self.device, dtype=self.dtype
-        ).view(3, 1, 1)
-        self._std = torch.tensor(
-            [0.229, 0.224, 0.225], device=self.device, dtype=self.dtype
-        ).view(3, 1, 1)
+        self._mean, self._std = imagenet_norm_buffers(self.device, self.dtype)
 
         # ── Circular frame buffers ────────────────────────────────────────
-        self._rgb_buf = torch.zeros(
-            frame_window, 3, self.img_h, self.img_w,
+        self._rgb_fb = FrameBuffer(
+            frame_window, 3, (self.img_h, self.img_w),
             device=self.device, dtype=self.dtype,
         )
-        self._depth_buf = (
-            torch.zeros(
-                frame_window, 1, self.img_h, self.img_w,
+        self._depth_fb = (
+            FrameBuffer(
+                frame_window, 1, (self.img_h, self.img_w),
                 device=self.device, dtype=self.dtype,
             )
             if use_depth else None
         )
-        self._buf_idx = 0
-        self._buf_filled = False
 
         # ── Recorder hook ─────────────────────────────────────────────────
         self.recorder = recorder
@@ -150,11 +150,9 @@ class VLeadPilot:
 
     def reset_buffer(self) -> None:
         """Clear the temporal frame buffer. Call between independent rollouts."""
-        self._rgb_buf.zero_()
-        if self._depth_buf is not None:
-            self._depth_buf.zero_()
-        self._buf_idx = 0
-        self._buf_filled = False
+        self._rgb_fb.reset()
+        if self._depth_fb is not None:
+            self._depth_fb.reset()
 
     # ── FiGS controller interface ─────────────────────────────────────────
 
@@ -213,10 +211,7 @@ class VLeadPilot:
     # ── Internals ─────────────────────────────────────────────────────────
 
     def _compute_goal(self, xcr: np.ndarray):
-        delta = self.target_xyz - xcr[0:3]
-        dist = float(np.linalg.norm(delta))
-        heading = delta / (dist + 1e-8)
-        return heading, dist
+        return compute_goal(xcr, self.target_xyz)
 
     def _acquire_observation(self, xcr, icr):
         """Returns (rgb_proc, depth_proc, rgb_raw, depth_raw).
@@ -259,51 +254,24 @@ class VLeadPilot:
         return rgb_proc, depth_proc, rgb_raw, depth_raw
 
     def _preprocess_rgb(self, rgb_np: np.ndarray) -> torch.Tensor:
-        """[H, W, 3] uint8 → [3, H_out, W_out] normalized on device."""
-        x = torch.from_numpy(np.ascontiguousarray(rgb_np)).to(
-            self.device, non_blocking=True
+        return preprocess_rgb(
+            rgb_np,
+            device=self.device, dtype=self.dtype,
+            mean=self._mean, std=self._std,
+            target_hw=(self.img_h, self.img_w),
         )
-        x = x.permute(2, 0, 1).to(self.dtype) / 255.0  # [3, H, W]
-        if x.shape[-2:] != (self.img_h, self.img_w):
-            x = F.interpolate(
-                x.unsqueeze(0),
-                size=(self.img_h, self.img_w),
-                mode="bilinear",
-                align_corners=False,
-            ).squeeze(0)
-        x = (x - self._mean) / self._std
-        return x
 
     def _preprocess_depth(self, depth_np: np.ndarray) -> torch.Tensor:
-        """[H, W] float → [1, H_out, W_out] on device. No normalization."""
-        x = torch.from_numpy(np.ascontiguousarray(depth_np)).to(
-            self.device, non_blocking=True
-        ).to(self.dtype)
-        if x.ndim == 2:
-            x = x.unsqueeze(0)  # [1, H, W]
-        if x.shape[-2:] != (self.img_h, self.img_w):
-            x = F.interpolate(
-                x.unsqueeze(0),
-                size=(self.img_h, self.img_w),
-                mode="bilinear",
-                align_corners=False,
-            ).squeeze(0)
-        return x
+        return preprocess_depth(
+            depth_np,
+            device=self.device, dtype=self.dtype,
+            target_hw=(self.img_h, self.img_w),
+        )
 
     def _push_frame(self, rgb_tensor: torch.Tensor, depth_tensor):
-        """Push new frame to circular buffer. First call fills all slots."""
-        if not self._buf_filled:
-            for k in range(self.frame_window):
-                self._rgb_buf[k] = rgb_tensor
-                if self._depth_buf is not None and depth_tensor is not None:
-                    self._depth_buf[k] = depth_tensor
-            self._buf_idx = 1 % self.frame_window
-            self._buf_filled = True
-        else:
-            self._rgb_buf[self._buf_idx] = rgb_tensor
-            if self._depth_buf is not None and depth_tensor is not None:
-                self._depth_buf[self._buf_idx] = depth_tensor
-            self._buf_idx = (self._buf_idx + 1) % self.frame_window
+        self._rgb_fb.push(rgb_tensor)
+        if self._depth_fb is not None and depth_tensor is not None:
+            self._depth_fb.push(depth_tensor)
 
     def _get_temporal_input(self):
         """Return tensors in chronological order (oldest → newest).
@@ -311,14 +279,8 @@ class VLeadPilot:
         rgb:   [1, T, 3, H, W]
         depth: [1, T, 1, H, W] or None
         """
-        T = self.frame_window
-        # Oldest sample sits at self._buf_idx (next-write slot).
-        order = [(self._buf_idx + k) % T for k in range(T)]
-        rgb = self._rgb_buf[order].unsqueeze(0)
-        depth = (
-            self._depth_buf[order].unsqueeze(0)
-            if self._depth_buf is not None else None
-        )
+        rgb = self._rgb_fb.get_batched()
+        depth = self._depth_fb.get_batched() if self._depth_fb is not None else None
         return rgb, depth
 
 

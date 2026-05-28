@@ -13,7 +13,13 @@ dependencies = [
     "scipy",
     "typer",
     "matplotlib",
+    "gymnasium>=0.29",
 ]
+
+[project.optional-dependencies]
+# sb3 pinned to 2.2.1 (last version supporting torch 2.1) so the container's
+# bundled torch+gsplat (2.1.2+cu118 / 1.5.3+pt21cu118) stays intact.
+rl = ["stable-baselines3==2.2.1", "tensorboard"]
 
 [tool.setuptools.packages.find]
 include = ["vlead_flight*"]

@@ -144,16 +144,17 @@ class RGBVelocityPolicy(nn.Module):
             dropout=mlp_dropout,
         )
 
-    def forward(self,
-                rgb_seq: torch.Tensor,
-                goal: torch.Tensor) -> torch.Tensor:
-        """
-        Args:
-            rgb_seq: [B, T, 3, S, S] float32, ImageNet-normalized.
-            goal:    [B, goal_input_dim] float32 -- [hx, hy] or [hx, hy, d/scale].
+    @property
+    def feature_dim(self) -> int:
+        return self.gru_hidden + self.goal_emb_dim
 
-        Returns:
-            commands: [B, H, cmd_dim] float32, z-scored.
+    def encode(self,
+               rgb_seq: torch.Tensor,
+               goal: torch.Tensor) -> torch.Tensor:
+        """Shared visual+goal encoder. Returns fused feature [B, feature_dim].
+
+        Exposed for reuse by RL actor-critic heads — BC warm-start copies these
+        weights 1:1 from a BC checkpoint into the actor's encoder.
         """
         if rgb_seq.ndim != 5:
             raise ValueError(f"expected rgb_seq [B,T,3,S,S], got {tuple(rgb_seq.shape)}")
@@ -165,17 +166,30 @@ class RGBVelocityPolicy(nn.Module):
                 f"goal must be [B,{self.goal_input_dim}], got {tuple(goal.shape)}"
             )
 
-        flat = rgb_seq.reshape(B * T, C, S1, S2)             # [B*T, 3, S, S]
-        feats = self.visual(flat)                            # [B*T, 512]
-        seq = feats.view(B, T, self.visual.out_dim)          # [B, T, 512]
+        flat = rgb_seq.reshape(B * T, C, S1, S2)
+        feats = self.visual(flat)
+        seq = feats.view(B, T, self.visual.out_dim)
 
-        _, h_n = self.gru(seq)                                # [num_layers, B, gru_hidden]
-        h = self.gru_norm(h_n[-1])                           # [B, gru_hidden], unit-scale
+        _, h_n = self.gru(seq)
+        h = self.gru_norm(h_n[-1])
 
-        g = self.goal_embed(goal)                            # [B, goal_emb_dim]
-        h_aug = torch.cat([h, g], dim=-1)                    # [B, gru_hidden + goal_emb_dim]
+        g = self.goal_embed(goal)
+        return torch.cat([h, g], dim=-1)
 
-        out = self.head(h_aug)                               # [B, H * cmd_dim]
+    def forward(self,
+                rgb_seq: torch.Tensor,
+                goal: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            rgb_seq: [B, T, 3, S, S] float32, ImageNet-normalized.
+            goal:    [B, goal_input_dim] float32 -- [hx, hy] or [hx, hy, d/scale].
+
+        Returns:
+            commands: [B, H, cmd_dim] float32, z-scored.
+        """
+        B = rgb_seq.shape[0]
+        h_aug = self.encode(rgb_seq, goal)
+        out = self.head(h_aug)
         return out.view(B, self.H, self.cmd_dim)
 
 

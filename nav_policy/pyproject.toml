@@ -21,6 +21,7 @@ dependencies = [
 
 [project.optional-dependencies]
 wandb = ["wandb"]
+rl = ["gymnasium~=0.29.0", "stable-baselines3==2.2.1", "tensorboard"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
