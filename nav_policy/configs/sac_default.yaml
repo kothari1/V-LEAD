@@ -18,21 +18,22 @@ env:
   action_low: [-3.0, -3.0, -1.5, -1.5]
   action_high: [3.0, 3.0, 1.5, 1.5]
 
-# Scene bbox shared between sampler (reject out-of-scene goals) and termination
-# (crash if drone exits). Default values are flightroom-shaped; override per scene.
-# NED convention: z increases downward, so z_low is "high above ground", z_high
-# is ground level. Replace with measured scene bounds.
+# Scene bbox from SINGER/configs/scenes/flightroom_ssv_exp.yml:
+#   minbound: [-3.7, -8, -2]
+#   maxbound: [ 3.7,  8,  0]
+# NED convention: z increases downward. z=0 is floor, z=-2 is ceiling.
+# Sampler gets a slightly shrunk bbox so spawned goals stay safely inside.
 sampler:
-  start_xyz_low: [-0.5, -0.5, -1.5]
-  start_xyz_high: [0.5, 0.5, -1.0]
+  start_xyz_low: [-1.0, -1.0, -1.6]
+  start_xyz_high: [1.0, 1.0, -1.0]
   goal_radius_min: 1.5
-  goal_radius_max: 3.0
-  goal_z_low: -1.5
-  goal_z_high: -0.9
+  goal_radius_max: 5.0
+  goal_z_low: -1.7
+  goal_z_high: -0.5
   yaw_jitter: 0.0
   velocity_jitter: 0.0
-  bbox_xyz_low: [-4.0, -4.0, -2.5]
-  bbox_xyz_high: [4.0, 4.0, 0.05]
+  bbox_xyz_low: [-3.4, -7.7, -1.9]
+  bbox_xyz_high: [3.4, 7.7, -0.15]
 
 reward:
   w_progress: 1.0
@@ -50,10 +51,11 @@ reward:
 termination:
   success_radius: 0.5
   max_episode_steps: 300         # 15 s @ 20 Hz
-  bbox_xyz_low: [-4.0, -4.0, -2.5]
-  bbox_xyz_high: [4.0, 4.0, 0.05]
-  ground_z: 0.05                 # NED: positive pz = below ground
-  ceiling_z: -3.0
+  # Hard scene bbox (matches flightroom maxbound/minbound exactly).
+  bbox_xyz_low: [-3.7, -8.0, -2.0]
+  bbox_xyz_high: [3.7, 8.0, 0.0]
+  ground_z: -0.05                # NED: crash if pz > -0.05 m (within 5 cm of floor)
+  ceiling_z: -1.95               # crash if pz < -1.95 m (within 5 cm of ceiling)
   speed_kill: 5.0
 
 model:
@@ -84,7 +86,7 @@ sac:
   target_update_interval: 1
 
 warm_start:
-  bc_checkpoint: null            # e.g. "/project/kothari1/vlead_data/checkpoints/bc_best.pt"
+  bc_checkpoint: /project/kothari1/vlead_data/checkpoints/bc_best.pt
 
 callbacks:
   eval:
