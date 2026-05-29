@@ -56,7 +56,8 @@ class RGBHorizonDataset(Dataset):
                  use_color_jitter: bool = False,
                  zero_goal_heading: bool = False,
                  goal_input_dim: int = 2,
-                 goal_distance_scale: float = 5.0) -> None:
+                 goal_distance_scale: float = 5.0,
+                 run_filter: Optional[List[str]] = None) -> None:
         self.processed_root = Path(processed_root)
         manifest_path = self.processed_root / "manifest.json"
         stats_path = self.processed_root / "stats.json"
@@ -76,8 +77,17 @@ class RGBHorizonDataset(Dataset):
         self.imagenet_mean = tuple(manifest.get("imagenet_mean", IMAGENET_MEAN))
         self.imagenet_std = tuple(manifest.get("imagenet_std", IMAGENET_STD))
         self.stats = CommandStats.from_dict(stats_dict)
-        self.samples: List[Dict] = [e for e in manifest["samples"] if e["split"] == split]
-        if not self.samples:
+
+        # Filter by split tag first, then optionally by run name.
+        # run_filter=None means "all runs for this split".
+        # run_filter=[]   means "no runs" (intentionally empty, e.g. no-val ablation).
+        allowed_runs = set(run_filter) if run_filter is not None else None
+        self.samples: List[Dict] = [
+            e for e in manifest["samples"]
+            if e["split"] == split
+            and (allowed_runs is None or Path(e["cache"]).parts[0] in allowed_runs)
+        ]
+        if not self.samples and run_filter is None:
             raise RuntimeError(f"no samples with split='{split}' in manifest")
 
         # Per-frame color jitter (training only).  Each frame in a window gets an

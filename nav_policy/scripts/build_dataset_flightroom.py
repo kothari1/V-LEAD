@@ -301,6 +301,9 @@ def _build_one_file(paths: RunFilePaths,
         }
 
         cache_path = cache_dir / f"file{paths.raw_index}_sub{sub_idx}.pt"
+        if cache_path.exists():
+            written.append(cache_path)
+            continue
         write_cache(
             cache_path,
             rgb_uint8=rgb,

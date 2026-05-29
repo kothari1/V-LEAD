@@ -94,10 +94,14 @@ def _make_loaders(cfg: dict, processed_root: Path):
         goal_distance_scale=goal_distance_scale,
     )
 
+    train_runs = data_cfg.get("train_runs") or None   # None = all tagged-train runs
+    val_runs   = data_cfg.get("val_runs")             # None = all; [] = intentionally empty
     train_ds = RGBHorizonDataset(processed_root, split="train",
-                                 use_color_jitter=use_jitter, **ds_kw)
+                                 use_color_jitter=use_jitter,
+                                 run_filter=train_runs, **ds_kw)
     val_ds   = RGBHorizonDataset(processed_root, split="val",
-                                 use_color_jitter=False, **ds_kw)
+                                 use_color_jitter=False,
+                                 run_filter=val_runs, **ds_kw)
 
     pin = torch.cuda.is_available()
     nw_train = int(cfg["train"].get("num_workers", 0))
@@ -233,7 +237,11 @@ def _run_val_epoch(policy: FlowMatchingPolicy,
 
             n_batches += 1
 
-    return {k: v / max(n_batches, 1) for k, v in totals.items()}
+    if n_batches == 0:
+        nan = float("nan")
+        return {"fm_loss": nan, "mse_overall": nan, "mse_vx": nan,
+                "mse_vy": nan, "mse_vz": nan, "mse_psi_dot": nan, "mse_lin_vel": nan}
+    return {k: v / n_batches for k, v in totals.items()}
 
 
 # ── W&B helpers ───────────────────────────────────────────────────────────────
@@ -287,6 +295,7 @@ def train(config_path: Path,
 
     train_ds, val_ds, train_dl, val_dl, train_sampler = _make_loaders(cfg, processed_root)
     stats = train_ds.stats
+    has_val = len(val_ds) > 0
     print(f"[data] train={len(train_ds)}  val={len(val_ds)}  "
           f"T={train_ds.T}  H={train_ds.H}  S={train_ds.image_size}")
     print(f"[stats] mean={stats.mean.tolist()}  std={stats.std.tolist()}")
@@ -346,35 +355,48 @@ def train(config_path: Path,
         )
         va = _run_val_epoch(policy, val_dl, stats, device, n_val_steps=n_val_steps)
 
-        print(
-            f"{header}  train_fm={tr['fm_loss']:.4f}  "
-            f"val_fm={va['fm_loss']:.4f}  val_mse_lin={va['mse_lin_vel']:.4f}  "
-            f"val_mse_psi={va['mse_psi_dot']:.4f}  sec={tr['sec_per_epoch']:.1f}",
-            flush=True,
-        )
+        if has_val:
+            print(
+                f"{header}  train_fm={tr['fm_loss']:.4f}  "
+                f"val_fm={va['fm_loss']:.4f}  val_mse_lin={va['mse_lin_vel']:.4f}  "
+                f"val_mse_psi={va['mse_psi_dot']:.4f}  sec={tr['sec_per_epoch']:.1f}",
+                flush=True,
+            )
+        else:
+            print(
+                f"{header}  train_fm={tr['fm_loss']:.4f}  [no val]  "
+                f"sec={tr['sec_per_epoch']:.1f}",
+                flush=True,
+            )
 
         # ── W&B logging ──────────────────────────────────────────────────────
         if wb_enabled:
-            _wb_log({
-                "train/fm_loss":        tr["fm_loss"],
-                "val/fm_loss":          va["fm_loss"],
-                "val/mse_vx":           va["mse_vx"],
-                "val/mse_vy":           va["mse_vy"],
-                "val/mse_vz":           va["mse_vz"],
-                "val/mse_psi_dot":      va["mse_psi_dot"],
-                "val/mse_lin_vel":      va["mse_lin_vel"],
-                "val/mse_overall":      va["mse_overall"],
-                "train/sec_per_epoch":  tr["sec_per_epoch"],
-            }, step=epoch + 1)
+            wb_dict = {
+                "train/fm_loss":       tr["fm_loss"],
+                "train/sec_per_epoch": tr["sec_per_epoch"],
+            }
+            if has_val:
+                wb_dict.update({
+                    "val/fm_loss":     va["fm_loss"],
+                    "val/mse_vx":      va["mse_vx"],
+                    "val/mse_vy":      va["mse_vy"],
+                    "val/mse_vz":      va["mse_vz"],
+                    "val/mse_psi_dot": va["mse_psi_dot"],
+                    "val/mse_lin_vel": va["mse_lin_vel"],
+                    "val/mse_overall": va["mse_overall"],
+                })
+            _wb_log(wb_dict, step=epoch + 1)
 
         # ── CSV log ──────────────────────────────────────────────────────────
+        nan = float("nan")
         with open(log_path, "a", newline="") as f:
             csv.writer(f).writerow([
                 epoch + 1,
                 tr["fm_loss"],
-                va["fm_loss"],
-                va["mse_vx"], va["mse_vy"], va["mse_vz"], va["mse_psi_dot"],
-                va["mse_lin_vel"], va["mse_overall"],
+                va.get("fm_loss", nan),
+                va.get("mse_vx", nan), va.get("mse_vy", nan),
+                va.get("mse_vz", nan), va.get("mse_psi_dot", nan),
+                va.get("mse_lin_vel", nan), va.get("mse_overall", nan),
                 tr["sec_per_epoch"],
             ])
 
@@ -383,17 +405,20 @@ def train(config_path: Path,
             "model":           policy.state_dict(),
             "config":          cfg,
             "epoch":           epoch + 1,
-            "val_loss":        va["fm_loss"],
-            "val_mse_overall": va["mse_overall"],
+            "val_loss":        va.get("fm_loss", nan),
+            "val_mse_overall": va.get("mse_overall", nan),
             "stats":           stats.to_dict(),
         }
         torch.save(state, ckpt_dir / "fm_latest.pt")
 
-        if va["mse_overall"] < best_val:
-            best_val   = va["mse_overall"]
+        # Track by val_mse_overall when val exists; fall back to train_fm_loss.
+        track = va["mse_overall"] if has_val else tr["fm_loss"]
+        if track < best_val:
+            best_val   = track
             no_improve = 0
             torch.save(state, ckpt_dir / "fm_best.pt")
-            print(f"  -> saved fm_best.pt (val_mse_overall={best_val:.4f})", flush=True)
+            label = f"val_mse_overall={best_val:.4f}" if has_val else f"train_fm_loss={best_val:.4f}"
+            print(f"  -> saved fm_best.pt ({label})", flush=True)
         else:
             no_improve += 1
             print(f"  -> no improvement ({no_improve}/{patience or '∞'})", flush=True)
@@ -404,7 +429,8 @@ def train(config_path: Path,
 
     if wb_enabled and _WANDB_AVAILABLE:
         _wandb.finish()
-    print(f"[done] best val_mse_overall={best_val:.4f}  ckpt={ckpt_dir/'fm_best.pt'}")
+    metric_label = "val_mse_overall" if has_val else "train_fm_loss"
+    print(f"[done] best {metric_label}={best_val:.4f}  ckpt={ckpt_dir/'fm_best.pt'}")
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────

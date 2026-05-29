@@ -113,7 +113,7 @@ raw_volume = modal.Volume.from_name(RAW_VOLUME_NAME, create_if_missing=True)
     image=image,
     gpu="A100",               # 40 GB VRAM, ~80 GB RAM, 40 vCPUs
     volumes={VOLUME_MOUNT_PATH: data_volume},
-    secrets=[modal.Secret.from_name("wandb", required=False)],
+    secrets=[modal.Secret.from_name("wandb")],
     timeout=60 * 60 * 4,     # 4-hour hard limit (10 epochs finishes in ~30 min)
 )
 def train_bc(
@@ -208,7 +208,7 @@ def main(
     volumes={
         VOLUME_MOUNT_PATH: data_volume,
     },
-    secrets=[modal.Secret.from_name("wandb", required=False)],
+    secrets=[modal.Secret.from_name("wandb")],
     timeout=60 * 60 * 6,    # 6-hour limit (FM trains ~2× slower than BC)
 )
 def train_fm(
@@ -278,10 +278,91 @@ def main_fm(
     )
 
 
-# ── 7. Dataset Build (CPU, raw → processed) ─────────────────────────────────────
+# ── 7. Ablation Training Functions ─────────────────────────────────────────────
+
+def _train_fm_with_config(config_name: str, run_tag: str, ckpt_subdir: str) -> str:
+    import os, subprocess
+    env = {**os.environ, "PYTHONPATH": "/workspace/nav_policy/src"}
+    result = subprocess.run(
+        ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"],
+        capture_output=True, text=True,
+    )
+    print(f"[modal] GPU: {result.stdout.strip()}", flush=True)
+    cmd = [
+        sys.executable, "scripts/train_fm.py",
+        "--config", f"configs/{config_name}",
+        "--run-tag", run_tag,
+    ]
+    print(f"[modal] Running: {' '.join(cmd)}", flush=True)
+    proc = subprocess.run(cmd, cwd="/workspace/nav_policy", env=env)
+    data_volume.commit()
+    if proc.returncode != 0:
+        raise RuntimeError(f"FM training exited with code {proc.returncode}")
+    ckpt_path = f"{VOLUME_MOUNT_PATH}/{ckpt_subdir}/fm_best.pt"
+    print(f"[modal] Done. Checkpoint at {ckpt_path}", flush=True)
+    return ckpt_path
+
+
+@app.function(
+    image=image, gpu="A100",
+    volumes={VOLUME_MOUNT_PATH: data_volume},
+    secrets=[modal.Secret.from_name("wandb")],
+    timeout=60 * 60 * 6,
+)
+def train_fm_fulltrajs(run_tag: str = "fulltrajs_v1") -> str:
+    """Ablation A: full spawn-to-goal trajectories only (no shuffled clips)."""
+    return _train_fm_with_config(
+        "flightroom_fm_modal_fulltrajs.yaml", run_tag,
+        "checkpoints_flightroom_fm_fulltrajs",
+    )
+
+
+@app.function(
+    image=image, gpu="A100",
+    volumes={VOLUME_MOUNT_PATH: data_volume},
+    secrets=[modal.Secret.from_name("wandb")],
+    timeout=60 * 60 * 6,
+)
+def train_fm_shuffled(run_tag: str = "shuffled_v1") -> str:
+    """Ablation B: shuffled 2-second domain-randomized clips only."""
+    return _train_fm_with_config(
+        "flightroom_fm_modal_shuffled.yaml", run_tag,
+        "checkpoints_flightroom_fm_shuffled",
+    )
+
+
+@app.local_entrypoint()
+def main_fm_fulltrajs(run_tag: str = "fulltrajs_v1"):
+    """Train ablation A (full trajectories).
+
+    Usage:
+        modal run modal_train.py::main_fm_fulltrajs
+        modal run modal_train.py::main_fm_fulltrajs --run-tag fulltrajs_v2
+    """
+    print(f"[local] Submitting fulltrajs FM job  run_tag='{run_tag}' ...")
+    ckpt = train_fm_fulltrajs.remote(run_tag=run_tag)
+    print(f"[local] Done.  Checkpoint: {ckpt}")
+    print(f"  modal volume get {DATA_VOLUME_NAME} checkpoints_flightroom_fm_fulltrajs/fm_best.pt data/checkpoints_modal/fm_fulltrajs_best.pt")
+
+
+@app.local_entrypoint()
+def main_fm_shuffled(run_tag: str = "shuffled_v1"):
+    """Train ablation B (shuffled clips).
+
+    Usage:
+        modal run modal_train.py::main_fm_shuffled
+        modal run modal_train.py::main_fm_shuffled --run-tag shuffled_v2
+    """
+    print(f"[local] Submitting shuffled FM job  run_tag='{run_tag}' ...")
+    ckpt = train_fm_shuffled.remote(run_tag=run_tag)
+    print(f"[local] Done.  Checkpoint: {ckpt}")
+    print(f"  modal volume get {DATA_VOLUME_NAME} checkpoints_flightroom_fm_shuffled/fm_best.pt data/checkpoints_modal/fm_shuffled_best.pt")
+
+
+# ── 9. Dataset Build (CPU, raw → processed) ─────────────────────────────────────
 # Runs build_dataset_flightroom.py inside Modal using raw data from vlead-raw-data
 # volume. Output lands in vlead-data at /processed_flightroom.
-# Run with: modal run nav_policy/modal_train.py::build_dataset_remote
+# Run with: modal run modal_train.py::build_dataset_remote_local
 
 @app.function(
     image=image,

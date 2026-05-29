@@ -23,9 +23,7 @@ data:
   val_runs:
     - "flightroom_ssv_exp_2026-05-22_071733_trajs-110"
 
-  test_runs:
-    - "backroom_exp_04-29-26"
-    - "packardpark_exp_04-29-26"
+  test_runs: []
 
 window:
   T: 4
