@@ -28,6 +28,7 @@ Color jitter (training only):
 from __future__ import annotations
 
 import json
+import random
 from collections import OrderedDict
 from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Tuple
@@ -37,6 +38,11 @@ import torch
 from torch.utils.data import Dataset, Sampler
 from torchvision.transforms import ColorJitter
 
+from nav_policy.data.augmentations import (
+    apply_depth_blur,
+    apply_rgb_augmentations,
+    window_with_latency,
+)
 from nav_policy.data.normalization import (
     IMAGENET_MEAN,
     IMAGENET_STD,
@@ -56,7 +62,10 @@ class RGBHorizonDataset(Dataset):
                  use_color_jitter: bool = False,
                  zero_goal_heading: bool = False,
                  goal_input_dim: int = 2,
-                 goal_distance_scale: float = 5.0) -> None:
+                 goal_distance_scale: float = 5.0,
+                 use_depth: bool = False,
+                 observation_latency: int = 0,
+                 photometric_aug: Optional[Dict] = None) -> None:
         self.processed_root = Path(processed_root)
         manifest_path = self.processed_root / "manifest.json"
         stats_path = self.processed_root / "stats.json"
@@ -108,6 +117,21 @@ class RGBHorizonDataset(Dataset):
         if goal_distance_scale <= 0.0:
             raise ValueError(f"goal_distance_scale must be > 0; got {goal_distance_scale}")
         self._goal_distance_scale: float = float(goal_distance_scale)
+
+        self._use_depth: bool = bool(use_depth)
+        self._obs_latency: int = max(0, int(observation_latency))
+        aug = photometric_aug or {}
+        self._blur_prob = float(aug.get("blur_prob", 0.3))
+        self._blur_sigma = tuple(aug.get("blur_sigma_range", (0.5, 1.5)))
+        self._gamma_prob = float(aug.get("gamma_prob", 0.3))
+        self._gamma_range = tuple(aug.get("gamma_range", (0.7, 1.4)))
+        self._brightness_prob = float(aug.get("brightness_prob", 0.3))
+        self._brightness_range = tuple(aug.get("brightness_range", (0.6, 1.4)))
+        self._apply_extra_aug = any(
+            v for v in (
+                self._blur_prob, self._gamma_prob, self._brightness_prob,
+            )
+        )
 
         # Preloading every cache (rgb + labels) works for small datasets but will
         # OOM on flightroom-scale data (~2500 caches, tens of GB of uint8 RGB).
@@ -162,7 +186,7 @@ class RGBHorizonDataset(Dataset):
         k = int(s["k"])
         T, H = self.T, self.H
 
-        rgb_window = blob["rgb"][k - T + 1 : k + 1]          # uint8 [T, 3, S, S]
+        rgb_window = window_with_latency(blob["rgb"], k, T, self._obs_latency)
         if rgb_window.shape[0] != T:
             raise RuntimeError(
                 f"window {idx} cache={s['cache']} k={k} produced {rgb_window.shape[0]} "
@@ -200,11 +224,36 @@ class RGBHorizonDataset(Dataset):
         if self._jitter is not None:
             rgb_window = torch.stack(
                 [self._jitter(rgb_window[t]) for t in range(T)], dim=0
-            )  # still [T, 3, S, S] uint8
+            )
+        if self._apply_extra_aug:
+            rgb_window = apply_rgb_augmentations(
+                rgb_window,
+                blur_prob=self._blur_prob,
+                blur_sigma_range=self._blur_sigma,
+                gamma_prob=self._gamma_prob,
+                gamma_range=self._gamma_range,
+                brightness_prob=self._brightness_prob,
+                brightness_range=self._brightness_range,
+            )
+
+        depth_window = None
+        if self._use_depth:
+            if "depth" not in blob:
+                raise RuntimeError(
+                    f"cache {s['cache']} missing 'depth'; run precompute_da2_depth.py"
+                )
+            depth_u8 = window_with_latency(blob["depth"], k, T, self._obs_latency)
+            depth_window = depth_u8.float() / 255.0
+            if self._apply_extra_aug and random.random() < self._blur_prob:
+                sigma = random.uniform(*self._blur_sigma)
+                depth_window = apply_depth_blur(depth_window, sigma)
 
         rgb = imagenet_normalize(rgb_window, mean=self.imagenet_mean, std=self.imagenet_std)
         u_star = self.stats.standardize(u_raw)
-        return rgb, goal, u_star, {"u_raw": u_raw, "k": k, "cache": s["cache"]}
+        meta: Dict = {"u_raw": u_raw, "k": k, "cache": s["cache"]}
+        if depth_window is not None:
+            meta["depth"] = depth_window
+        return rgb, goal, u_star, meta
 
 
 class CacheBucketSampler(Sampler):
@@ -263,3 +312,207 @@ class CacheBucketSampler(Sampler):
             perm = rng.permutation(len(group)).tolist()
             for wi in perm:
                 yield group[wi]
+
+
+def _partition_cache_groups(
+    dataset: "RGBHorizonDataset",
+    dagger_round_min: int = 1,
+) -> Tuple[List[List[int]], List[List[int]]]:
+    """Split cache groups into expert (round < min) vs DAgger (round >= min)."""
+    groups: Dict[str, List[int]] = {}
+    for idx, s in enumerate(dataset.samples):
+        groups.setdefault(s["cache"], []).append(idx)
+    expert_groups: List[List[int]] = []
+    dagger_groups: List[List[int]] = []
+    for indices in groups.values():
+        r = int(dataset.samples[indices[0]].get("round", 0))
+        if r >= dagger_round_min:
+            dagger_groups.append(indices)
+        else:
+            expert_groups.append(indices)
+    return expert_groups, dagger_groups
+
+
+def _partition_flat_indices(
+    dataset: "RGBHorizonDataset",
+    dagger_round_min: int = 1,
+) -> Tuple[List[int], List[int]]:
+    expert_idx: List[int] = []
+    dagger_idx: List[int] = []
+    for idx, s in enumerate(dataset.samples):
+        if int(s.get("round", 0)) >= dagger_round_min:
+            dagger_idx.append(idx)
+        else:
+            expert_idx.append(idx)
+    return expert_idx, dagger_idx
+
+
+class ExpertDaggerBalancedBucketSampler(Sampler):
+    """
+    50/50 expert vs DAgger windows while keeping cache-local ordering.
+
+    Each epoch yields 2 * n_expert indices: every expert window once, plus an
+    equal number of DAgger windows (DAgger caches repeated cyclically as needed).
+    Indices are interleaved so sequential batches are roughly half expert / half DAgger.
+    """
+
+    def __init__(
+        self,
+        dataset: "RGBHorizonDataset",
+        seed: int = 0,
+        dagger_round_min: int = 1,
+    ) -> None:
+        self._expert, self._dagger = _partition_cache_groups(dataset, dagger_round_min)
+        if not self._dagger:
+            raise ValueError("balanced dagger sampling requested but no DAgger windows found")
+        self._seed = seed
+        self._epoch = 0
+
+    def set_epoch(self, epoch: int) -> None:
+        self._epoch = epoch
+
+    def __len__(self) -> int:
+        return 2 * sum(len(g) for g in self._expert)
+
+    def __iter__(self) -> Iterator[int]:
+        rng = np.random.default_rng(self._seed + self._epoch)
+        expert_flat: List[int] = []
+        for gi in rng.permutation(len(self._expert)).tolist():
+            group = self._expert[gi]
+            for wi in rng.permutation(len(group)).tolist():
+                expert_flat.append(group[wi])
+
+        n_expert = len(expert_flat)
+        dagger_flat: List[int] = []
+        d_order = rng.permutation(len(self._dagger)).tolist()
+        while len(dagger_flat) < n_expert:
+            for gi in d_order:
+                group = self._dagger[gi]
+                for wi in rng.permutation(len(group)).tolist():
+                    dagger_flat.append(group[wi])
+                    if len(dagger_flat) >= n_expert:
+                        break
+        dagger_flat = dagger_flat[:n_expert]
+
+        for i in range(n_expert):
+            yield expert_flat[i]
+            yield dagger_flat[i]
+
+
+class ExpertDaggerBalancedSampler(Sampler):
+    """Flat 50/50 expert vs DAgger sampler (for random-shuffle / Modal training)."""
+
+    def __init__(
+        self,
+        dataset: "RGBHorizonDataset",
+        seed: int = 0,
+        dagger_round_min: int = 1,
+    ) -> None:
+        self._expert, self._dagger = _partition_flat_indices(dataset, dagger_round_min)
+        if not self._dagger:
+            raise ValueError("balanced dagger sampling requested but no DAgger windows found")
+        self._seed = seed
+        self._epoch = 0
+
+    def set_epoch(self, epoch: int) -> None:
+        self._epoch = epoch
+
+    def __len__(self) -> int:
+        return 2 * len(self._expert)
+
+    def __iter__(self) -> Iterator[int]:
+        rng = np.random.default_rng(self._seed + self._epoch)
+        expert_flat = rng.permutation(self._expert).tolist()
+        n_expert = len(expert_flat)
+        dagger_flat: List[int] = []
+        d_perm = rng.permutation(self._dagger).tolist()
+        while len(dagger_flat) < n_expert:
+            dagger_flat.extend(d_perm)
+        dagger_flat = dagger_flat[:n_expert]
+        for i in range(n_expert):
+            yield expert_flat[i]
+            yield dagger_flat[i]
+
+
+class DaggerOversampleBucketSampler(Sampler):
+    """
+    Cache-bucket sampler that repeats each DAgger window ``factor`` times per epoch.
+
+    Expert windows are yielded once (same as CacheBucketSampler).  With factor=15
+    on ~1% DAgger data, effective DAgger exposure is ~15% of epoch steps.
+    """
+
+    def __init__(
+        self,
+        dataset: "RGBHorizonDataset",
+        seed: int = 0,
+        dagger_round_min: int = 1,
+        factor: int = 15,
+    ) -> None:
+        if factor < 1:
+            raise ValueError(f"dagger_oversample_factor must be >= 1; got {factor}")
+        groups: Dict[str, List[int]] = {}
+        for idx, s in enumerate(dataset.samples):
+            groups.setdefault(s["cache"], []).append(idx)
+        self._groups: List[List[int]] = []
+        self._is_dagger: List[bool] = []
+        for indices in groups.values():
+            r = int(dataset.samples[indices[0]].get("round", 0))
+            self._groups.append(indices)
+            self._is_dagger.append(r >= dagger_round_min)
+        self._seed = seed
+        self._epoch = 0
+        self._factor = int(factor)
+
+    def set_epoch(self, epoch: int) -> None:
+        self._epoch = epoch
+
+    def __len__(self) -> int:
+        total = 0
+        for group, is_dag in zip(self._groups, self._is_dagger):
+            mult = self._factor if is_dag else 1
+            total += len(group) * mult
+        return total
+
+    def __iter__(self) -> Iterator[int]:
+        rng = np.random.default_rng(self._seed + self._epoch)
+        order = rng.permutation(len(self._groups)).tolist()
+        for gi in order:
+            group = self._groups[gi]
+            mult = self._factor if self._is_dagger[gi] else 1
+            for wi in rng.permutation(len(group)).tolist():
+                idx = group[wi]
+                for _ in range(mult):
+                    yield idx
+
+
+class DaggerOversampleSampler(Sampler):
+    """Flat oversample sampler (for random-shuffle / Modal training)."""
+
+    def __init__(
+        self,
+        dataset: "RGBHorizonDataset",
+        seed: int = 0,
+        dagger_round_min: int = 1,
+        factor: int = 15,
+    ) -> None:
+        if factor < 1:
+            raise ValueError(f"dagger_oversample_factor must be >= 1; got {factor}")
+        self._indices: List[int] = []
+        for idx, s in enumerate(dataset.samples):
+            mult = factor if int(s.get("round", 0)) >= dagger_round_min else 1
+            self._indices.extend([idx] * mult)
+        self._seed = seed
+        self._epoch = 0
+
+    def set_epoch(self, epoch: int) -> None:
+        self._epoch = epoch
+
+    def __len__(self) -> int:
+        return len(self._indices)
+
+    def __iter__(self) -> Iterator[int]:
+        rng = np.random.default_rng(self._seed + self._epoch)
+        perm = rng.permutation(len(self._indices)).tolist()
+        for i in perm:
+            yield self._indices[i]

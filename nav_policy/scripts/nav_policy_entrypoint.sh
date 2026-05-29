@@ -24,6 +24,14 @@ USERNAME="$(getent passwd "$HOST_UID" | cut -d: -f1)"
 find /workspace -maxdepth 3 -name '*.egg-info' -not -user "$HOST_UID" \
     -exec chown -R "$HOST_UID:$HOST_GID" {} + 2>/dev/null || true
 
+# Repair root-owned data artifacts (checkpoints, rl videos, eval outputs).
+find /workspace/nav_policy/data -maxdepth 3 ! -user "$HOST_UID" \
+    -exec chown -R "$HOST_UID:$HOST_GID" {} + 2>/dev/null || true
+
+# Windows bind mounts inject desktop.ini into scene/checkpoint dirs; nerfstudio's
+# eval_setup parses every filename in nerfstudio_models/ as step-XXXXX.ckpt.
+find /workspace/FiGS-Standalone/3dgs/workspace -name 'desktop.ini' -delete 2>/dev/null || true
+
 # Patch nerfstudio pil_to_numpy for Pillow >= 10.0.0 compatibility.
 # Pillow 10 changed ImagingCore.setimage() to require explicit extents.
 # The fix is to pass (0, 0, width, height) as the second argument.
@@ -58,7 +66,6 @@ if ! python -c 'import nav_policy' >/dev/null 2>&1; then
             exit 1
         }
 fi
-
 # When no command was supplied, drop into an interactive login shell.
 if [ "$#" -eq 0 ]; then
     set -- bash -l

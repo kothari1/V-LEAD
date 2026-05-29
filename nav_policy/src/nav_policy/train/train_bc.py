@@ -33,9 +33,18 @@ import yaml
 from torch.utils.data import DataLoader
 
 from nav_policy.data.normalization import CommandStats
-from nav_policy.data.rgb_horizon_dataset import CacheBucketSampler, RGBHorizonDataset
+from nav_policy.data.rgb_horizon_dataset import (
+    CacheBucketSampler,
+    DaggerOversampleBucketSampler,
+    DaggerOversampleSampler,
+    ExpertDaggerBalancedBucketSampler,
+    ExpertDaggerBalancedSampler,
+    RGBHorizonDataset,
+    _partition_cache_groups,
+)
+from nav_policy.model.factory import build_model, model_uses_depth
 from nav_policy.model.losses import bc_loss, per_component_mse
-from nav_policy.model.rgb_velocity_policy import RGBVelocityPolicy, count_parameters
+from nav_policy.model.rgb_velocity_policy import count_parameters
 
 
 def _set_seed(seed: int) -> None:
@@ -54,7 +63,67 @@ def _collate(batch):
     goal = torch.stack(goals, dim=0)
     u_star = torch.stack(u_stars, dim=0)
     u_raw = torch.stack([m["u_raw"] for m in metas], dim=0)
-    return rgb, goal, u_star, u_raw
+    depth = None
+    if metas[0].get("depth") is not None:
+        depth = torch.stack([m["depth"] for m in metas], dim=0)
+    return rgb, goal, u_star, u_raw, depth
+
+
+def _make_train_sampler(train_ds: RGBHorizonDataset, cfg: dict, use_bucket: bool):
+    """Build train sampler; supports balanced 50/50 or DAgger oversampling."""
+    train_cfg = cfg.get("train", {})
+    mode = str(train_cfg.get("dagger_sampling", "none")).lower()
+    seed = int(train_cfg.get("seed", 0))
+    if mode == "none":
+        if use_bucket:
+            return CacheBucketSampler(train_ds, seed=seed)
+        return None
+
+    dagger_round_min = int(train_cfg.get("dagger_round_min", 1))
+    oversample_factor = int(train_cfg.get("dagger_oversample_factor", 15))
+    _expert_groups, dagger_groups = _partition_cache_groups(train_ds, dagger_round_min)
+    if not dagger_groups:
+        print(
+            f"[sampler] dagger_sampling={mode!r} but no round>={dagger_round_min} windows; "
+            "using default sampler",
+            flush=True,
+        )
+        if use_bucket:
+            return CacheBucketSampler(train_ds, seed=seed)
+        return None
+
+    n_dagger = sum(len(g) for g in dagger_groups)
+    n_expert = len(train_ds) - n_dagger
+    print(
+        f"[sampler] dagger_sampling={mode!r}  expert={n_expert}  dagger={n_dagger}  "
+        f"round_min={dagger_round_min}  oversample_factor={oversample_factor}",
+        flush=True,
+    )
+    if mode == "balanced":
+        if use_bucket:
+            return ExpertDaggerBalancedBucketSampler(
+                train_ds, seed=seed, dagger_round_min=dagger_round_min,
+            )
+        return ExpertDaggerBalancedSampler(
+            train_ds, seed=seed, dagger_round_min=dagger_round_min,
+        )
+    if mode == "oversample":
+        if use_bucket:
+            return DaggerOversampleBucketSampler(
+                train_ds,
+                seed=seed,
+                dagger_round_min=dagger_round_min,
+                factor=oversample_factor,
+            )
+        return DaggerOversampleSampler(
+            train_ds,
+            seed=seed,
+            dagger_round_min=dagger_round_min,
+            factor=oversample_factor,
+        )
+    raise ValueError(
+        f"train.dagger_sampling must be none|balanced|oversample; got {mode!r}"
+    )
 
 
 def _make_loaders(cfg: dict, processed_root: Path):
@@ -62,6 +131,9 @@ def _make_loaders(cfg: dict, processed_root: Path):
     zero_goal = bool(cfg["train"].get("zero_goal_heading", False))
     goal_input_dim = int(cfg["model"].get("goal_input_dim", 2))
     goal_distance_scale = float(cfg["model"].get("goal_distance_scale", 5.0))
+    use_depth = model_uses_depth(cfg)
+    obs_latency = int(cfg["train"].get("observation_latency", 0))
+    photometric_aug = cfg["train"].get("photometric_aug", {})
     data_cfg = cfg.get("data", {})
     cache_in_mem = bool(data_cfg.get("cache_blobs_in_memory", False))
     cache_lru = int(data_cfg.get("cache_lru_size", 64))
@@ -71,6 +143,9 @@ def _make_loaders(cfg: dict, processed_root: Path):
         zero_goal_heading=zero_goal,
         goal_input_dim=goal_input_dim,
         goal_distance_scale=goal_distance_scale,
+        use_depth=use_depth,
+        observation_latency=obs_latency,
+        photometric_aug=photometric_aug,
     )
     train_ds = RGBHorizonDataset(
         processed_root, split="train",
@@ -90,14 +165,8 @@ def _make_loaders(cfg: dict, processed_root: Path):
     # Disable on fast-SSD cloud instances (e.g. Modal) where true random
     # shuffle is both fast and gives unbiased gradients.
     use_bucket = bool(data_cfg.get("bucket_sampling", True))
-    if use_bucket:
-        train_sampler = CacheBucketSampler(
-            train_ds, seed=int(cfg["train"].get("seed", 0))
-        )
-        shuffle_arg = None
-    else:
-        train_sampler = None
-        shuffle_arg = True
+    train_sampler = _make_train_sampler(train_ds, cfg, use_bucket)
+    shuffle_arg = None if train_sampler is not None else True
 
     train_dl = DataLoader(
         train_ds,
@@ -123,23 +192,15 @@ def _make_loaders(cfg: dict, processed_root: Path):
     return train_ds, val_ds, train_dl, val_dl, train_sampler
 
 
-def _build_model(cfg: dict) -> RGBVelocityPolicy:
-    m = RGBVelocityPolicy(
-        T=int(cfg["window"]["T"]),
-        H=int(cfg["window"]["H"]),
-        cmd_dim=int(cfg["model"]["cmd_dim"]),
-        gru_hidden=int(cfg["model"]["gru_hidden"]),
-        gru_layers=int(cfg["model"]["gru_layers"]),
-        mlp_hidden=tuple(cfg["model"]["mlp_hidden"]),
-        mlp_dropout=float(cfg["model"].get("mlp_dropout", 0.1)),
-        goal_emb_dim=int(cfg["model"].get("goal_emb_dim", 32)),
-        goal_input_dim=int(cfg["model"].get("goal_input_dim", 2)),
-        freeze_stem_and_layer1=bool(cfg["model"].get("freeze_stem_and_layer1", True)),
-    )
-    return m
+def _forward(model, rgb, goal, depth):
+    if getattr(model, "use_depth", False):
+        if depth is None:
+            raise RuntimeError("depth batch required for DA2 policy")
+        return model(rgb, goal, depth)
+    return model(rgb, goal)
 
 
-def _run_epoch(model: RGBVelocityPolicy,
+def _run_epoch(model,
                loader: DataLoader,
                stats: CommandStats,
                device: torch.device,
@@ -154,15 +215,18 @@ def _run_epoch(model: RGBVelocityPolicy,
     totals: Dict[str, float] = defaultdict(float)
     n_batches = 0
     t0 = time.time()
-    for it, (rgb, goal, u_star, u_raw) in enumerate(loader):
+    for it, batch in enumerate(loader):
+        rgb, goal, u_star, u_raw, depth = batch
         rgb = rgb.to(device, non_blocking=True)
         goal = goal.to(device, non_blocking=True)
         u_star = u_star.to(device, non_blocking=True)
         u_raw = u_raw.to(device, non_blocking=True)
+        if depth is not None:
+            depth = depth.to(device, non_blocking=True)
 
         autocast_ctx = torch.cuda.amp.autocast if scaler is not None else _NullCtx
         with autocast_ctx():
-            u_hat = model(rgb, goal)
+            u_hat = _forward(model, rgb, goal, depth)
             losses = bc_loss(u_hat, u_star, lambda_smooth=lambda_smooth)
 
         if train_mode:
@@ -245,7 +309,7 @@ def train(config_path: Path,
           f"T={train_ds.T}  H={train_ds.H}  S={train_ds.image_size}")
     print(f"[stats] mean={stats.mean.tolist()}  std={stats.std.tolist()}")
 
-    model = _build_model(cfg).to(device)
+    model = build_model(cfg).to(device)
     if resume_from is not None:
         resume_path = (base / resume_from).resolve()
         blob = torch.load(resume_path, weights_only=False, map_location=device)

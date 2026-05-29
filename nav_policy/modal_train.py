@@ -12,14 +12,14 @@ SETUP (one-time, on your local Windows machine, NOT inside Docker):
   modal volume create vlead-data
 
 DATA UPLOAD (one-time):
-  modal volume put vlead-data "C:\\path\\to\\nav_policy\\data\\processed_flightroom" /processed_flightroom
+  modal volume put vlead-data "C:\\path\\to\\nav_policy\\data\\processed_flightroom" /processed_flightroom_da2
 
 RUNNING TRAINING:
   modal run nav_policy/modal_train.py
-  modal run nav_policy/modal_train.py --run-tag my_experiment_v2
+  modal run nav_policy/modal_train.py --run-tag a2_da2_crossattn
 
 DOWNLOADING THE CHECKPOINT:
-  modal volume get vlead-data checkpoints_flightroom/bc_best.pt nav_policy/data/checkpoints_modal/bc_best.pt
+  modal volume get vlead-data checkpoints_a2_da2_crossattn/bc_best.pt nav_policy/data/checkpoints_a2_da2_crossattn/bc_best.pt
 
 MONITORING:
   modal.com/apps  ->  live logs, GPU utilization, cost per second
@@ -89,10 +89,10 @@ data_volume = modal.Volume.from_name(DATA_VOLUME_NAME, create_if_missing=True)
     image=image,
     gpu="A100",               # 40 GB VRAM, ~80 GB RAM, 40 vCPUs
     volumes={VOLUME_MOUNT_PATH: data_volume},
-    timeout=60 * 60 * 4,     # 4-hour hard limit (10 epochs finishes in ~30 min)
+    timeout=60 * 60 * 8,     # 8-hour limit (~30 min/epoch on A100 with DA2 data → 10 epochs)
 )
 def train_bc(
-    run_tag: str = "flightroom_bc_v1",
+    run_tag: str = "a2_da2_crossattn",
     resume_from: str = "",
     checkpoint_dir: str = "",
 ) -> str:
@@ -143,7 +143,7 @@ def train_bc(
     if proc.returncode != 0:
         raise RuntimeError(f"Training exited with code {proc.returncode}")
 
-    out_dir = checkpoint_dir if checkpoint_dir else f"{VOLUME_MOUNT_PATH}/checkpoints_flightroom"
+    out_dir = checkpoint_dir if checkpoint_dir else f"{VOLUME_MOUNT_PATH}/checkpoints_a2_da2_crossattn"
     ckpt_path = f"{out_dir}/bc_best.pt"
     print(f"[modal] Done. Checkpoint at {ckpt_path}", flush=True)
     return ckpt_path
@@ -154,7 +154,7 @@ def train_bc(
 # It calls train_bc.remote() which submits the job to the cloud.
 @app.local_entrypoint()
 def main(
-    run_tag: str = "flightroom_bc_v1",
+    run_tag: str = "a2_da2_crossattn",
     resume_from: str = "",
     checkpoint_dir: str = "",
 ):
@@ -172,6 +172,6 @@ def main(
     print("Download with:")
     print(
         f"  modal volume get {DATA_VOLUME_NAME} "
-        f"checkpoints_flightroom/bc_best.pt "
-        f"nav_policy/data/checkpoints_modal/bc_best.pt"
+        f"checkpoints_a2_da2_crossattn/bc_best.pt "
+        f"nav_policy/data/checkpoints_a2_da2_crossattn/bc_best.pt"
     )

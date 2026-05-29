@@ -118,6 +118,7 @@ class RGBVelocityPolicy(nn.Module):
         self.gru_hidden = gru_hidden
         self.goal_emb_dim = goal_emb_dim
         self.goal_input_dim = int(goal_input_dim)
+        self.use_depth = False
 
         self.visual = _PerFrameResNet18(freeze_stem_and_layer1=freeze_stem_and_layer1)
         self.gru = nn.GRU(
@@ -177,6 +178,35 @@ class RGBVelocityPolicy(nn.Module):
 
         out = self.head(h_aug)                               # [B, H * cmd_dim]
         return out.view(B, self.H, self.cmd_dim)
+
+    def forward_latent(self,
+                       rgb_seq: torch.Tensor,
+                       goal: torch.Tensor) -> torch.Tensor:
+        """Return fused GRU+goal features [B, gru_hidden + goal_emb_dim] before the MLP head."""
+        if rgb_seq.ndim != 5:
+            raise ValueError(f"expected rgb_seq [B,T,3,S,S], got {tuple(rgb_seq.shape)}")
+        B, T, C, S1, S2 = rgb_seq.shape
+        if T != self.T:
+            raise ValueError(f"T mismatch: config={self.T}, input={T}")
+        if goal.shape != (B, self.goal_input_dim):
+            raise ValueError(
+                f"goal must be [B,{self.goal_input_dim}], got {tuple(goal.shape)}"
+            )
+        flat = rgb_seq.reshape(B * T, C, S1, S2)
+        feats = self.visual(flat)
+        seq = feats.view(B, T, self.visual.out_dim)
+        _, h_n = self.gru(seq)
+        h = self.gru_norm(h_n[-1])
+        g = self.goal_embed(goal)
+        return torch.cat([h, g], dim=-1)
+
+    def predict_mean_first(self,
+                           rgb_seq: torch.Tensor,
+                           goal: torch.Tensor) -> torch.Tensor:
+        """Deterministic BC mean for the first horizon step [B, cmd_dim] in z-space."""
+        h_aug = self.forward_latent(rgb_seq, goal)
+        out = self.head(h_aug)
+        return out.view(-1, self.H, self.cmd_dim)[:, 0, :]
 
 
 def count_parameters(model: nn.Module, trainable_only: bool = True) -> int:
