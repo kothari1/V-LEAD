@@ -186,6 +186,78 @@ modal run modal_train.py::main_fm
 
 ---
 
+## Step 5 — Monitor training
+
+**Modal dashboard:** https://modal.com/apps — live logs, GPU utilisation, cost per run.
+
+**Weights & Biases:** https://wandb.ai — loss curves, val MSE per component. Project name is `vlead-fm`.
+
+Training prints a summary line each epoch:
+```
+[epoch   1]  train_fm=0.8420  val_fm=0.9103  val_mse_lin=0.0412  val_mse_psi=0.0089  sec=187.3
+  -> saved fm_best.pt (val_mse_overall=0.0326)
+```
+`val_mse_overall` is the headline metric (lower = better). A good FM seed for RL is typically below **0.03**.
+
+For the ablation configs (`main_fm_fulltrajs`, `main_fm_shuffled`) there is no val set — the line reads `[no val]` and best is tracked by train loss instead.
+
+---
+
+## Step 6 — Download checkpoints
+
+Run these from `V-LEAD/nav_policy/` after training completes:
+
+```bash
+mkdir -p data/checkpoints_modal
+
+# Combined FM (all 3 train folders):
+modal volume get vlead-data checkpoints_flightroom_fm/fm_best.pt \
+    data/checkpoints_modal/fm_best.pt
+
+# Ablation A — full trajectories:
+modal volume get vlead-data checkpoints_flightroom_fm_fulltrajs/fm_best.pt \
+    data/checkpoints_modal/fm_fulltrajs_best.pt
+
+# Ablation B — shuffled clips:
+modal volume get vlead-data checkpoints_flightroom_fm_shuffled/fm_best.pt \
+    data/checkpoints_modal/fm_shuffled_best.pt
+```
+
+To download the training log CSV (epoch-by-epoch loss history):
+```bash
+modal volume get vlead-data checkpoints_flightroom_fm/log.csv \
+    data/checkpoints_modal/fm_log.csv
+```
+
+---
+
+## Step 7 — What comes next
+
+### Inspect the checkpoint
+```python
+import torch
+ckpt = torch.load("data/checkpoints_modal/fm_best.pt", weights_only=False)
+print(ckpt["epoch"], ckpt["val_mse_overall"])   # epoch number + best val MSE
+```
+
+### SAC fine-tuning (RL)
+Use the FM checkpoint as a warm start for SAC inside FiGS:
+```bash
+# Edit configs/sac_fm.yaml to set warm_start.checkpoint_path to your downloaded .pt
+# Then (inside SINGER container with FiGS available):
+python scripts/train_sac.py --config configs/sac_fm.yaml
+```
+The FM visual encoder is frozen and loaded into `BCEncoderFeatureExtractor`; the SAC actor/critic train from scratch on top of it.
+
+### Closed-loop evaluation
+```bash
+# Inside SINGER container:
+python scripts/eval_closed_loop.py --config configs/eval_closed_loop_test.yaml \
+    --checkpoint data/checkpoints_modal/fm_best.pt
+```
+
+---
+
 ## Sherlock (Stanford HPC) alternative
 
 If you prefer Sherlock over Modal:
@@ -217,10 +289,13 @@ Logs appear in `logs/train_fm_<jobid>.out`. W&B logging is enabled by default (s
 
 | Step | Command |
 |---|---|
-| Download | Chrome → right-click folder → Download |
-| Unzip | Extract to `nav_policy/data/raw/<folder_name>/` |
-| Build dataset | `python scripts/build_dataset_flightroom.py --config configs/flightroom_fm.yaml` |
-| Verify | `python scripts/inspect_manifest.py data/processed_flightroom/manifest.json` |
-| Upload to Modal | `modal volume put vlead-data data/processed_flightroom /processed_flightroom` |
-| Train FM (Modal) | `modal run modal_train.py::main_fm` |
+| Download data | Chrome → right-click Drive folder → Download |
+| Unzip + flatten | Extract to `nav_policy/data/raw/<folder_name>/` |
+| Upload raw to Modal | `modal volume put vlead-raw-data data/raw /raw` |
+| Build dataset (cloud) | `modal run --detach modal_train.py::build_dataset_remote_local` |
+| Train FM — combined | `modal run --detach modal_train.py::main_fm` |
+| Train FM — full trajs | `modal run --detach modal_train.py::main_fm_fulltrajs` |
+| Train FM — shuffled | `modal run --detach modal_train.py::main_fm_shuffled` |
+| Monitor | https://modal.com/apps · https://wandb.ai |
 | Download checkpoint | `modal volume get vlead-data checkpoints_flightroom_fm/fm_best.pt data/checkpoints_modal/fm_best.pt` |
+| SAC fine-tuning | `python scripts/train_sac.py --config configs/sac_fm.yaml` |
