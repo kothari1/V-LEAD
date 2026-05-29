@@ -15,11 +15,12 @@ env:
   img_resolution: [224, 224]
   goal_distance_scale: 5.0
   goal_input_dim: 4              # [hx, hy, hz, d/scale]; set 3 to drop hz
-  # Tightened vz range (-0.5/+0.5 m/s) to dampen vertical exploration at init;
-  # ceiling at z=-1.95 m is only ~0.35 m above default start altitude, so wide
-  # vz exploration crashes through it in ~30 steps.
-  action_low: [-3.0, -3.0, -0.5, -1.5]
-  action_high: [3.0, 3.0, 0.5, 1.5]
+  # vz tightened to +/-0.3 m/s. seed=0 100k run still ended 52% of episodes in
+  # ceiling_crash at the previous +/-0.5 setting; cumulative count climbed
+  # linearly throughout training (no improvement). Tighter range + heavier
+  # w_altitude (1.0 below) should finally suppress vertical drift.
+  action_low: [-3.0, -3.0, -0.3, -1.5]
+  action_high: [3.0, 3.0, 0.3, 1.5]
 
 # Scene bbox from SINGER/configs/scenes/flightroom_ssv_exp.yml:
 #   minbound: [-3.7, -8, -2]
@@ -29,8 +30,11 @@ env:
 sampler:
   start_xyz_low: [-1.0, -1.0, -1.6]
   start_xyz_high: [1.0, 1.0, -1.0]
-  goal_radius_min: 1.5
-  goal_radius_max: 5.0
+  goal_radius_min: 1.0
+  # Curriculum: shrunk from 5.0 to 2.5 m so the task starts easier and the
+  # success signal arrives earlier in training. Widen later via callback if
+  # the policy plateaus.
+  goal_radius_max: 2.5
   goal_z_low: -1.7
   goal_z_high: -0.5
   yaw_jitter: 0.0
@@ -45,7 +49,7 @@ reward:
   w_crash: 50.0
   w_smooth: 0.05
   w_yaw: 0.05
-  w_altitude: 0.50
+  w_altitude: 1.00
   w_speedcap: 0.10
   alt_target: -1.2
   speed_cap: 3.0
@@ -99,7 +103,7 @@ callbacks:
   eval:
     enabled: true
     freq: 2500                   # eval every N env steps
-    n_episodes: 3
+    n_episodes: 10               # bumped 3 -> 10 to cut eval noise
     seed: 42
   checkpoint:
     enabled: true
