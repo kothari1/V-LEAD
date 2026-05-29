@@ -8,7 +8,7 @@
 #   - bucket_sampling: false  (fast NVMe SSD; use true random shuffle)
 
 data:
-  raw_root: "/data/raw"
+  raw_root: "data/raw"    # relative → resolves via workspace symlink to /raw_data/raw
   processed_root: "/data/processed_flightroom"
   bucket_sampling: false      # true random shuffle; no disk-read penalty on Modal NVMe
   cache_blobs_in_memory: false

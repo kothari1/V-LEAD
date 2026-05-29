@@ -11,7 +11,7 @@
 #   modal run nav_policy/modal_train.py::main_fm --run-tag my_fm_v2
 
 data:
-  raw_root: "/data/raw"
+  raw_root: "data/raw"    # relative → resolves via workspace symlink to /raw_data/raw
   processed_root: "/data/processed_flightroom"
   bucket_sampling: false
   cache_blobs_in_memory: false
