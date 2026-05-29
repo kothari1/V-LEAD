@@ -86,6 +86,7 @@ image = (
         "numpy",
         "opencv-python-headless",
         "Pillow",
+        "wandb",
     )
     # Inject the nav_policy source code into the container.
     # Excludes the data/ directory (that lives in the Volume).
@@ -112,6 +113,7 @@ raw_volume = modal.Volume.from_name(RAW_VOLUME_NAME, create_if_missing=True)
     image=image,
     gpu="A100",               # 40 GB VRAM, ~80 GB RAM, 40 vCPUs
     volumes={VOLUME_MOUNT_PATH: data_volume},
+    secrets=[modal.Secret.from_name("wandb", required=False)],
     timeout=60 * 60 * 4,     # 4-hour hard limit (10 epochs finishes in ~30 min)
 )
 def train_bc(
@@ -206,6 +208,7 @@ def main(
     volumes={
         VOLUME_MOUNT_PATH: data_volume,
     },
+    secrets=[modal.Secret.from_name("wandb", required=False)],
     timeout=60 * 60 * 6,    # 6-hour limit (FM trains ~2× slower than BC)
 )
 def train_fm(
