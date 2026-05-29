@@ -30,9 +30,11 @@ Usage (inside the nav_policy Docker container):
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import re
+import signal
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -62,6 +64,28 @@ from nav_policy.data.build_dataset import (
     _compute_stats_from_entries,
 )
 from nav_policy.data.normalization import CommandStats
+
+_FILE_TIMEOUT_SECS = 180   # skip any bundle that takes longer than this
+
+
+@contextlib.contextmanager
+def _file_timeout(label: str):
+    """Raise TimeoutError if the block takes longer than _FILE_TIMEOUT_SECS.
+    Uses SIGALRM — Linux only (fine for Modal containers)."""
+    if not hasattr(signal, "SIGALRM"):
+        yield   # Windows dev environment: no timeout
+        return
+
+    def _handler(signum, frame):
+        raise TimeoutError(f"[timeout] {label} took >{_FILE_TIMEOUT_SECS}s — skipping")
+
+    old = signal.signal(signal.SIGALRM, _handler)
+    signal.alarm(_FILE_TIMEOUT_SECS)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, old)
 
 
 # ── filename patterns ──────────────────────────────────────────────────────────
@@ -237,21 +261,41 @@ def _build_one_file(paths: RunFilePaths,
                     out_run_dir: Path,
                     image_size: int) -> List[Path]:
     """
-    Process one trajectory file and its paired video into per-trajectory caches.
+    Process one trajectory bundle + video into per-trajectory cache files.
 
-    Returns the list of cache paths actually written (may be empty).
+    Skip strategy: a <file>.done marker is written when a bundle is fully
+    processed.  On restart the entire bundle (including disk I/O and video
+    decode) is skipped instantly.  A per-bundle timeout prevents a single
+    corrupted file from hanging the whole job.
+
+    Returns the list of cache paths for this bundle (written or skipped).
     """
     cache_dir = out_run_dir / "cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
 
-    trajs = _load_trajs(paths.traj_pt)
-    if not trajs:
+    # ── bundle-level skip: if previously completed, return existing caches ──
+    done_marker = cache_dir / f"file{paths.raw_index}.done"
+    if done_marker.exists():
+        return sorted(cache_dir.glob(f"file{paths.raw_index}_sub*.pt"))
+
+    # ── load trajectory + video with a hard timeout ──────────────────────
+    try:
+        with _file_timeout(str(paths.traj_pt.name)):
+            trajs = _load_trajs(paths.traj_pt)
+            if not trajs:
+                done_marker.touch()   # empty bundle — mark done so we don't retry
+                return []
+
+            frame_ranges = _load_frame_ranges(paths.imgdata_pt, len(trajs))
+            video_frames = _read_video(paths.rgb_video)   # (V, H, W, 3) uint8
+    except TimeoutError as exc:
+        print(f"\n{exc}", file=sys.stderr, flush=True)
+        return []
+    except Exception as exc:
+        print(f"\n[error] {paths.traj_pt.name}: {exc}", file=sys.stderr, flush=True)
         return []
 
-    frame_ranges = _load_frame_ranges(paths.imgdata_pt, len(trajs))
-    video_frames = _read_video(paths.rgb_video)   # (V, H, W, 3) uint8
-
-    # If no frame-range map available, assign blocks sequentially.
+    # ── fall back to sequential frame assignment when imgdata is absent ──
     if frame_ranges is None:
         cursor = 0
         frame_ranges = []
@@ -262,31 +306,24 @@ def _build_one_file(paths: RunFilePaths,
             cursor += nctl
 
     written: List[Path] = []
-    for sub_idx, (traj, (start, end)) in enumerate(
-        zip(trajs, frame_ranges)
-    ):
-        xro  = np.asarray(traj["Xro"])         # (10, N+1)
-        nctl = xro.shape[1] - 1                # Uro.shape[1]
+    for sub_idx, (traj, (start, end)) in enumerate(zip(trajs, frame_ranges)):
+        xro  = np.asarray(traj["Xro"])
+        nctl = xro.shape[1] - 1
 
         n_vid = end - start + 1
         n_use = min(nctl, n_vid)
         if n_use <= 0:
             continue
 
-        # ── visual frames ──
-        sub_frames = video_frames[start : start + n_use]    # (n, H, W, 3)
+        sub_frames = video_frames[start : start + n_use]
         resized = np.stack(
             [_resize_uint8(f, image_size) for f in sub_frames], axis=0
         )
         rgb = torch.from_numpy(resized).permute(0, 3, 1, 2).contiguous()
 
-        # ── command labels ──
         vel, psi_dot = _extract_labels(xro, n_use)
-
-        # ── goal heading + distance ──
         goal_heading, goal_dist = _extract_goal(traj, n_use)
 
-        # ── metadata ──
         frame_meta = traj.get("frame", {})
         meta = {
             "run":        out_run_dir.name,
@@ -301,9 +338,6 @@ def _build_one_file(paths: RunFilePaths,
         }
 
         cache_path = cache_dir / f"file{paths.raw_index}_sub{sub_idx}.pt"
-        if cache_path.exists():
-            written.append(cache_path)
-            continue
         write_cache(
             cache_path,
             rgb_uint8=rgb,
@@ -315,6 +349,7 @@ def _build_one_file(paths: RunFilePaths,
         )
         written.append(cache_path)
 
+    done_marker.touch()
     return written
 
 
