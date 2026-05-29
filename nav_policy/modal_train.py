@@ -87,6 +87,7 @@ image = (
         "opencv-python-headless",
         "Pillow",
         "wandb",
+        "matplotlib",
     )
     # Inject the nav_policy source code into the container.
     # Excludes the data/ directory (that lives in the Volume).
@@ -436,10 +437,9 @@ def build_dataset_remote_local():
 
 @app.function(
     image=image,
-    cpu=4,
-    memory=16384,
+    gpu="T4",                # cheapest Modal GPU; inference-only, no A100 needed
     volumes={VOLUME_MOUNT_PATH: data_volume},
-    timeout=60 * 60 * 1,    # offline eval typically takes < 10 minutes
+    timeout=60 * 60 * 1,    # offline eval typically takes < 10 minutes on GPU
 )
 def eval_fm_offline_remote(
     checkpoint_subdir: str = "checkpoints_flightroom_fm",
@@ -479,6 +479,15 @@ def eval_fm_offline_remote(
     if proc.returncode != 0:
         raise RuntimeError(f"eval_offline exited with code {proc.returncode}")
 
+    # Run plots immediately after eval (matplotlib Agg backend, no display needed)
+    plot_cmd = [
+        sys.executable, "scripts/plot_eval_offline.py",
+        "--eval-dir", out_dir,
+    ]
+    print(f"[modal] Running: {' '.join(plot_cmd)}", flush=True)
+    subprocess.run(plot_cmd, cwd="/workspace/nav_policy", env=env)
+    data_volume.commit()
+
     print(f"[modal] Eval output at {out_dir}", flush=True)
     return out_dir
 
@@ -500,6 +509,9 @@ def main_eval_fm_offline(
         output_subdir=output_subdir,
     )
     print(f"[local] Eval complete. Results at: {out}")
-    print("\nDownload summary:")
-    print(f"  modal volume get {DATA_VOLUME_NAME} {output_subdir}/summary.json data/eval/fm_offline_summary.json")
-    print(f"  modal volume get {DATA_VOLUME_NAME} {output_subdir}/per_horizon.csv data/eval/fm_per_horizon.csv")
+    print("\nDownload results:")
+    print(f"  modal volume get {DATA_VOLUME_NAME} {output_subdir}/summary.json       data/eval/summary.json")
+    print(f"  modal volume get {DATA_VOLUME_NAME} {output_subdir}/per_horizon.csv    data/eval/per_horizon.csv")
+    print(f"  modal volume get {DATA_VOLUME_NAME} {output_subdir}/scatter_h0.png     data/eval/scatter_h0.png")
+    print(f"  modal volume get {DATA_VOLUME_NAME} {output_subdir}/rmse_by_horizon.png data/eval/rmse_by_horizon.png")
+    print(f"  modal volume get {DATA_VOLUME_NAME} {output_subdir}/error_hist.png     data/eval/error_hist.png")

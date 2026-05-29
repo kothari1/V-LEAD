@@ -149,11 +149,17 @@ def evaluate(
         raise ValueError(
             f"manifest T,H ({ds.T},{ds.H}) != model T,H ({model.T},{model.H})"
         )
+    # num_workers=0 avoids multiprocessing hangs on CPU-only containers.
+    # On GPU containers, use 2 workers for prefetch overlap.
+    nw = 2 if device.type == "cuda" else 0
     loader = DataLoader(
-        ds, batch_size=int(cfg["train"].get("batch_size", 16)),
-        shuffle=False, num_workers=2, pin_memory=torch.cuda.is_available(),
+        ds, batch_size=int(cfg["train"].get("batch_size", 128)),
+        shuffle=False, num_workers=nw, pin_memory=(device.type == "cuda"),
         collate_fn=_collate, drop_last=False,
     )
+    n_batches_total = len(loader)
+    print(f"[eval] {len(ds.samples)} samples  batch_size={loader.batch_size}"
+          f"  n_batches={n_batches_total}  num_workers={nw}", flush=True)
 
     n = 0
     sum_sq_per_h: np.ndarray = np.zeros((H, cmd_dim), dtype=np.float64)
@@ -164,6 +170,7 @@ def evaluate(
     ks_all: List[np.ndarray] = []
     caches_all: List[List[str]] = []
 
+    batch_idx = 0
     with torch.inference_mode():
         for rgb, goal, _u_star, u_raw, ks, caches in loader:
             rgb = rgb.to(device, non_blocking=True)
@@ -177,6 +184,9 @@ def evaluate(
             else:
                 u_hat_z = model(rgb, goal)
             torch.cuda.synchronize() if device.type == "cuda" else None
+            batch_idx += 1
+            if batch_idx % 10 == 0 or batch_idx == n_batches_total:
+                print(f"  [batch {batch_idx}/{n_batches_total}]", flush=True)
             latencies.append((time.time() - t0) / rgb.shape[0])  # per-sample seconds
 
             u_hat = stats.destandardize(u_hat_z).float().cpu().numpy()  # [B, H, 4]
