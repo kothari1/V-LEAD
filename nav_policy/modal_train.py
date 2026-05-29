@@ -10,19 +10,39 @@ SETUP (one-time, on your local Windows machine, NOT inside Docker):
   pip install modal
   modal setup                    # opens browser to authenticate
   modal volume create vlead-data
+  modal volume create vlead-raw-data
 
-DATA UPLOAD (one-time):
+DATA UPLOAD — Option A: upload already-processed data (if you ran build_dataset locally):
   modal volume put vlead-data "C:\\path\\to\\nav_policy\\data\\processed_flightroom" /processed_flightroom
 
-RUNNING TRAINING:
-  modal run nav_policy/modal_train.py
-  modal run nav_policy/modal_train.py --run-tag my_experiment_v2
+DATA UPLOAD — Option B: upload raw SINGER data and process in the cloud:
+  # 1. Download raw folders from Google Drive (use gdown or browser):
+  #    pip install gdown
+  #    gdown --folder <FOLDER_ID> -O data/raw/<run_name>
+  # 2. Upload raw data to the raw volume:
+  #    modal volume put vlead-raw-data "C:\\path\\to\\nav_policy\\data\\raw" /raw
+  # 3. Process in cloud (CPU job, no GPU needed):
+  #    modal run nav_policy/modal_train.py::build_dataset_remote
+  # The processed output lands in vlead-data at /processed_flightroom.
 
-DOWNLOADING THE CHECKPOINT:
+RUNNING TRAINING:
+  # BC policy:
+  modal run nav_policy/modal_train.py
+  modal run nav_policy/modal_train.py --run-tag my_bc_v2
+
+  # Flow Matching policy:
+  modal run nav_policy/modal_train.py::main_fm
+  modal run nav_policy/modal_train.py::main_fm --run-tag my_fm_v2
+
+DOWNLOADING CHECKPOINTS:
+  # BC:
   modal volume get vlead-data checkpoints_flightroom/bc_best.pt nav_policy/data/checkpoints_modal/bc_best.pt
+  # FM:
+  modal volume get vlead-data checkpoints_flightroom_fm/fm_best.pt nav_policy/data/checkpoints_modal/fm_best.pt
 
 MONITORING:
   modal.com/apps  ->  live logs, GPU utilization, cost per second
+  Weights & Biases: https://wandb.ai  (W&B enabled by default in FM config)
 """
 
 from __future__ import annotations
@@ -83,6 +103,9 @@ DATA_VOLUME_NAME = "vlead-data"
 VOLUME_MOUNT_PATH = "/data"
 
 data_volume = modal.Volume.from_name(DATA_VOLUME_NAME, create_if_missing=True)
+
+RAW_VOLUME_NAME = "vlead-raw-data"
+raw_volume = modal.Volume.from_name(RAW_VOLUME_NAME, create_if_missing=True)
 
 # ── 4. Training Function ────────────────────────────────────────────────────────
 @app.function(
@@ -149,9 +172,7 @@ def train_bc(
     return ckpt_path
 
 
-# ── 5. Local Entrypoint ─────────────────────────────────────────────────────────
-# Runs on YOUR machine when you type `modal run modal_train.py`.
-# It calls train_bc.remote() which submits the job to the cloud.
+# ── 5. Local Entrypoint (BC) ────────────────────────────────────────────────────
 @app.local_entrypoint()
 def main(
     run_tag: str = "flightroom_bc_v1",
@@ -159,13 +180,13 @@ def main(
     checkpoint_dir: str = "",
 ):
     """
-    Trigger remote training and print the checkpoint location.
+    Trigger remote BC training and print the checkpoint location.
 
     Usage:
         modal run nav_policy/modal_train.py
         modal run nav_policy/modal_train.py --run-tag my_run_v2
     """
-    print(f"[local] Submitting training job  run_tag='{run_tag}' ...")
+    print(f"[local] Submitting BC training job  run_tag='{run_tag}' ...")
     ckpt = train_bc.remote(run_tag=run_tag, resume_from=resume_from, checkpoint_dir=checkpoint_dir)
     print(f"[local] Training complete.  Checkpoint: {ckpt}")
     print()
@@ -175,3 +196,150 @@ def main(
         f"checkpoints_flightroom/bc_best.pt "
         f"nav_policy/data/checkpoints_modal/bc_best.pt"
     )
+
+
+# ── 6. Flow Matching Training ───────────────────────────────────────────────────
+
+@app.function(
+    image=image,
+    gpu="A100",
+    volumes={
+        VOLUME_MOUNT_PATH: data_volume,
+    },
+    timeout=60 * 60 * 6,    # 6-hour limit (FM trains ~2× slower than BC)
+)
+def train_fm(
+    run_tag: str = "flightroom_fm_v1",
+    resume_from: str = "",
+    checkpoint_dir: str = "",
+) -> str:
+    """Run OT-CFM FlowMatchingPolicy training in the cloud.
+
+    Returns the Volume path to fm_best.pt.
+    """
+    import os
+    import subprocess
+
+    env = {**os.environ, "PYTHONPATH": "/workspace/nav_policy/src"}
+
+    result = subprocess.run(
+        ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"],
+        capture_output=True, text=True,
+    )
+    print(f"[modal] GPU: {result.stdout.strip()}", flush=True)
+
+    cmd = [
+        sys.executable, "scripts/train_fm.py",
+        "--config", "configs/flightroom_fm_modal.yaml",
+        "--run-tag", run_tag,
+    ]
+    if resume_from:
+        cmd += ["--resume-from", resume_from]
+    if checkpoint_dir:
+        cmd += ["--checkpoint-dir", checkpoint_dir]
+    print(f"[modal] Running: {' '.join(cmd)}", flush=True)
+    proc = subprocess.run(cmd, cwd="/workspace/nav_policy", env=env)
+
+    data_volume.commit()
+
+    if proc.returncode != 0:
+        raise RuntimeError(f"FM training exited with code {proc.returncode}")
+
+    out_dir = checkpoint_dir if checkpoint_dir else f"{VOLUME_MOUNT_PATH}/checkpoints_flightroom_fm"
+    ckpt_path = f"{out_dir}/fm_best.pt"
+    print(f"[modal] Done. Checkpoint at {ckpt_path}", flush=True)
+    return ckpt_path
+
+
+@app.local_entrypoint()
+def main_fm(
+    run_tag: str = "flightroom_fm_v1",
+    resume_from: str = "",
+    checkpoint_dir: str = "",
+):
+    """Trigger remote FM training.
+
+    Usage:
+        modal run nav_policy/modal_train.py::main_fm
+        modal run nav_policy/modal_train.py::main_fm --run-tag my_fm_v2
+    """
+    print(f"[local] Submitting FM training job  run_tag='{run_tag}' ...")
+    ckpt = train_fm.remote(run_tag=run_tag, resume_from=resume_from, checkpoint_dir=checkpoint_dir)
+    print(f"[local] FM training complete.  Checkpoint: {ckpt}")
+    print()
+    print("Download with:")
+    print(
+        f"  modal volume get {DATA_VOLUME_NAME} "
+        f"checkpoints_flightroom_fm/fm_best.pt "
+        f"nav_policy/data/checkpoints_modal/fm_best.pt"
+    )
+
+
+# ── 7. Dataset Build (CPU, raw → processed) ─────────────────────────────────────
+# Runs build_dataset_flightroom.py inside Modal using raw data from vlead-raw-data
+# volume. Output lands in vlead-data at /processed_flightroom.
+# Run with: modal run nav_policy/modal_train.py::build_dataset_remote
+
+@app.function(
+    image=image,
+    cpu=8,                   # CPU-only job; no GPU needed for dataset building
+    memory=32768,            # 32 GB RAM for video decoding
+    volumes={
+        VOLUME_MOUNT_PATH: data_volume,
+        "/raw_data": raw_volume,
+    },
+    timeout=60 * 60 * 4,    # 4-hour limit for large datasets
+)
+def build_dataset_remote() -> str:
+    """Convert raw SINGER data in vlead-raw-data volume → processed caches in vlead-data.
+
+    Raw data layout expected in vlead-raw-data:/raw/:
+        <run_name>/trajectories_val{NNNNN}.pt
+        <run_name>/video_val_rollout_images_rgb{NNNNN}.mp4
+        <run_name>/imgdata_val{NNNNN}.pt
+
+    Output written to vlead-data:/processed_flightroom/.
+    """
+    import os
+    import subprocess
+
+    env = {**os.environ, "PYTHONPATH": "/workspace/nav_policy/src"}
+
+    # Symlink raw data into expected location relative to nav_policy root.
+    raw_src = "/raw_data/raw"
+    raw_dst = "/workspace/nav_policy/data/raw"
+    os.makedirs("/workspace/nav_policy/data", exist_ok=True)
+    if not os.path.exists(raw_dst):
+        os.symlink(raw_src, raw_dst)
+
+    proc_dst = "/workspace/nav_policy/data/processed_flightroom"
+    if not os.path.exists(proc_dst):
+        os.symlink(f"{VOLUME_MOUNT_PATH}/processed_flightroom", proc_dst)
+
+    cmd = [
+        sys.executable, "scripts/build_dataset_flightroom.py",
+        "--config", "configs/flightroom_fm_modal.yaml",
+    ]
+    print(f"[modal] Running: {' '.join(cmd)}", flush=True)
+    proc = subprocess.run(cmd, cwd="/workspace/nav_policy", env=env)
+
+    data_volume.commit()
+
+    if proc.returncode != 0:
+        raise RuntimeError(f"build_dataset exited with code {proc.returncode}")
+
+    out = f"{VOLUME_MOUNT_PATH}/processed_flightroom"
+    print(f"[modal] Dataset built at {out}", flush=True)
+    return out
+
+
+@app.local_entrypoint()
+def build_dataset_remote_local():
+    """Trigger remote dataset build.
+
+    Usage:
+        modal run nav_policy/modal_train.py::build_dataset_remote_local
+    """
+    print("[local] Submitting dataset build job ...")
+    out = build_dataset_remote.remote()
+    print(f"[local] Dataset built at: {out}")

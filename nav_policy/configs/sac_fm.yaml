@@ -1,0 +1,112 @@
+# SAC training config using FlowMatchingPolicy checkpoint as warm-start.
+#
+# Identical to sac_default.yaml except:
+#   - warm_start.bc_checkpoint points to fm_best.pt
+#   - init_actor_from_bc_head: false  (FM head is a vector field, not a mean MLP;
+#     cannot be sliced into SAC actor.latent_pi + mu the same way as BC head)
+#   - output_dir changed to avoid overwriting SAC-from-BC runs
+#
+# The FM encoder (visual.* / gru.* / gru_norm.* / goal_embed.*) is identical
+# to BC and is loaded into BCEncoderFeatureExtractor via load_bc_into_feature_extractor.
+# Only vector_field.* keys in the FM checkpoint are unexpected and silently ignored.
+
+seed: 0
+output_dir: data/rl_runs/sac_fm
+total_timesteps: 100000
+log_interval: 4
+
+env:
+  scene_name: "flightroom_ssv_exp/gemsplat/2026-02-28_205058"
+  rollout_name: "baseline"
+  frame_name: "carl"
+  hz: 20
+  frame_window: 4
+  img_resolution: [224, 224]
+  goal_distance_scale: 5.0
+  goal_input_dim: 4
+  action_low: [-3.0, -3.0, -0.5, -1.5]
+  action_high: [3.0, 3.0, 0.5, 1.5]
+
+sampler:
+  start_xyz_low: [-1.0, -1.0, -1.6]
+  start_xyz_high: [1.0, 1.0, -1.0]
+  goal_radius_min: 1.5
+  goal_radius_max: 5.0
+  goal_z_low: -1.7
+  goal_z_high: -0.5
+  yaw_jitter: 0.0
+  velocity_jitter: 0.0
+  bbox_xyz_low: [-3.4, -7.7, -1.9]
+  bbox_xyz_high: [3.4, 7.7, -0.15]
+
+reward:
+  w_progress: 1.0
+  w_success: 50.0
+  w_alive: 0.01
+  w_crash: 50.0
+  w_smooth: 0.05
+  w_yaw: 0.05
+  w_altitude: 0.50
+  w_speedcap: 0.10
+  alt_target: -1.2
+  speed_cap: 3.0
+  success_radius: 0.5
+
+termination:
+  success_radius: 0.5
+  max_episode_steps: 300
+  bbox_xyz_low: [-3.7, -8.0, -2.0]
+  bbox_xyz_high: [3.7, 8.0, 0.0]
+  ground_z: -0.05
+  ceiling_z: -1.95
+  speed_kill: 5.0
+
+model:
+  T: 4
+  H_pred: 10
+  cmd_dim: 4
+  gru_hidden: 256
+  gru_layers: 1
+  mlp_hidden: [256, 128]
+  goal_emb_dim: 32
+  freeze_visual: true
+  actor_mlp: [256, 128]
+  critic_mlp: [256, 128]
+
+sac:
+  learning_rate: 3.0e-4
+  buffer_size: 5000
+  learning_starts: 500
+  batch_size: 64
+  tau: 0.005
+  gamma: 0.99
+  train_freq: 1
+  gradient_steps: 1
+  ent_coef: "auto"
+  target_update_interval: 1
+
+warm_start:
+  # Path to fm_best.pt produced by train_fm.py.
+  # Update this to the actual location after training.
+  bc_checkpoint: data/checkpoints_flightroom_fm/fm_best.pt
+  # FM head is a conditional vector field, not a mean MLP — cannot warm-start
+  # SAC actor.latent_pi + mu from it. Keep false.
+  init_actor_from_bc_head: false
+
+callbacks:
+  eval:
+    enabled: true
+    freq: 2500
+    n_episodes: 3
+    seed: 42
+  checkpoint:
+    enabled: true
+    freq: 5000
+  reward_components:
+    enabled: true
+    log_freq: 200
+  wandb:
+    enabled: true
+    project: vlead-sac-fm
+    run_name: null
+    log_freq: 200

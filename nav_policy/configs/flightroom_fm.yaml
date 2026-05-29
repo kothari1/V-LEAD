@@ -1,0 +1,75 @@
+# FlowMatchingPolicy training config — flightroom dataset, local.
+#
+# Key differences from flightroom.yaml (BC):
+#   - fm.*          : FM-specific hyperparameters (NFE, vector field)
+#   - wandb.*       : W&B logging enabled by default (set enabled: false to disable)
+#   - checkpoint_dir: separate directory to avoid overwriting BC checkpoints
+#
+# To run:
+#   python scripts/train_fm.py --config configs/flightroom_fm.yaml
+
+data:
+  raw_root: "data/raw"
+  processed_root: "data/processed_flightroom"
+  bucket_sampling: true       # ~46x I/O reduction on HDDs; set false on fast NVMe
+  cache_blobs_in_memory: false
+  cache_lru_size: 128
+
+  train_runs:
+    - "flightroom_ssv_exp_2026-05-22_064652_training_mode_shuffled_trajs"
+    - "flightroom_ssv_exp_2026-05-22_071718"
+    - "flightroom_ssv_exp_2026-05-22_071353"
+
+  val_runs:
+    - "flightroom_ssv_exp_2026-05-22_071733_trajs-110"
+
+  test_runs:
+    - "backroom_exp_04-29-26"
+    - "packardpark_exp_04-29-26"
+
+window:
+  T: 4
+  H: 10
+  image_size: 224
+  imagenet_mean: [0.485, 0.456, 0.406]
+  imagenet_std:  [0.229, 0.224, 0.225]
+
+model:
+  resnet_backbone: "resnet18"
+  freeze_stem_and_layer1: true
+  gru_hidden: 256
+  gru_layers: 1
+  cmd_dim: 4
+  goal_emb_dim: 32
+  goal_input_dim: 3          # [hx, hy, d_normalized]
+  goal_distance_scale: 5.0
+
+fm:
+  # ODE steps at validation (more steps = better MSE estimate, but slower).
+  # OT-CFM learns near-straight paths so n_val_steps=4 is typically sufficient.
+  n_val_steps: 4
+
+  # Vector field MLP — larger than BC head for better coverage of 40-dim space.
+  time_emb_dim: 64
+  vf_hidden: [512, 512, 512]
+  vf_use_skip: true          # residual from z_t → output; helps near t=1
+
+train:
+  batch_size: 128
+  num_workers: 4
+  epochs: 10
+  color_jitter: true
+  lr: 3.0e-4
+  weight_decay: 1.0e-4
+  amp: true
+  grad_clip: 1.0
+  log_every: 50
+  checkpoint_dir: "data/checkpoints_flightroom_fm"
+  run_tag: "flightroom_fm_v1"
+  early_stopping_patience: 3
+  seed: 0
+
+wandb:
+  enabled: true
+  project: vlead-fm
+  run_name: null             # defaults to run_tag if null

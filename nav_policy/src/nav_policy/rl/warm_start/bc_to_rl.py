@@ -1,16 +1,26 @@
-"""BC checkpoint -> RL warm-start helpers.
+"""BC (and FM) checkpoint -> RL warm-start helpers.
 
-The BC trainer saves checkpoints as:
+BC checkpoint format (produced by train_bc.py):
     {"model": <RGBVelocityPolicy state_dict>, "config": {...},
      "epoch": int, "val_loss": float, "val_mse_overall": float, "stats": {...}}
 
+FM checkpoint format (produced by train_fm.py — identical structure):
+    {"model": <FlowMatchingPolicy state_dict>, "config": {...},
+     "epoch": int, "val_loss": float, "val_mse_overall": float, "stats": {...}}
+
+Both share the same encoder keys (visual.*, gru.*, gru_norm.*, goal_embed.*),
+so load_bc_into_feature_extractor() works for EITHER checkpoint type.
+
+For FM checkpoints, the state dict contains extra vector_field.* keys that are
+not present in RGBVelocityPolicy (the inner_policy type used by BCEncoderFeatureExtractor).
+These appear as "unexpected_keys" and are silently ignored — they do not trigger
+an error because only head.* and vector_field.* keys are non-encoder.
+
 Two warm-start paths:
-- load_bc_into_feature_extractor: copy BC visual+goal encoder into the SB3
-  feature extractor (always safe).
-- load_bc_into_sac_actor: also copy BC's MLPHead Linear layers into SAC's
-  actor latent_pi + mu, so the SAC actor's initial mean prediction matches
-  BC's t=0 velocity command. Requires policy_kwargs.net_arch.pi to match
-  the BC config's mlp_hidden (default [256, 128]).
+- load_bc_into_feature_extractor: copy visual+goal encoder from BC or FM
+  checkpoint into the SB3 feature extractor (always safe for both types).
+- load_bc_into_sac_actor: copy BC's MLP head into SAC actor.latent_pi + mu
+  (BC checkpoints only — FM head is a conditional vector field, not a mean MLP).
 """
 from __future__ import annotations
 
@@ -59,11 +69,12 @@ def load_bc_into_feature_extractor(
     if strict:
         return {"missing_keys": list(missing), "unexpected_keys": list(unexpected)}
 
-    # Filter out the head: BC's head is wider (H * cmd_dim) and unused for RL,
-    # so non-matching head keys are expected and not errors.
-    head_prefix = "head."
-    real_missing = [k for k in missing if not k.startswith(head_prefix)]
-    real_unexpected = [k for k in unexpected if not k.startswith(head_prefix)]
+    # Filter out non-encoder keys that are expected to differ between BC and FM:
+    #   head.*          - BC MLP head (H*cmd_dim output); unused in RL feature extractor
+    #   vector_field.*  - FM conditional vector field; unused in RL feature extractor
+    non_encoder = ("head.", "vector_field.")
+    real_missing = [k for k in missing if not any(k.startswith(p) for p in non_encoder)]
+    real_unexpected = [k for k in unexpected if not any(k.startswith(p) for p in non_encoder)]
     if real_missing:
         raise RuntimeError(
             f"BC -> RL load missing required encoder keys: {real_missing}"
