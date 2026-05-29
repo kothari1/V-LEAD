@@ -8,16 +8,20 @@ How to get the V-LEAD flightroom dataset from Google Drive into training.
 
 **Drive root:** https://drive.google.com/drive/u/1/folders/12e3-0i52MUwcUrF2ewhs0jBQXhfxqltW
 
-| Folder name | Role | Description |
-|---|---|---|
-| `flightroom_ssv_exp_2026-05-22_064652_training_mode_shuffled_trajs` | **Train** | 2-second trajectory segments, domain-randomized (mass/force perturbations), pre-shuffled. **Most important training folder.** |
-| `flightroom_ssv_exp_2026-05-22_071718` | **Train** | Full spawn-to-goal trajectories used as additional training data |
-| `flightroom_ssv_exp_2026-05-22_071353` | **Train** | Same as above (second generation run) |
-| `flightroom_ssv_exp_2026-05-22_071733_trajs-110` | **Val** | 110 full trajectories (no domain randomization). Held out — used only for validation MSE. |
-| `backroom_exp_04-29-26` | **Test** | Different scene. **Not used for training or validation.** Reserved for closed-loop eval in FiGS. |
-| `packardpark_exp_04-29-26` | **Test** | Different scene. Same as above. |
+There are three training configs, each using the folders differently:
 
-You only need to download the 4 **train** and **val** folders for training. The 2 test folders are optional (closed-loop eval only).
+| Folder name | `main_fm` (combined) | `main_fm_shuffled` | `main_fm_fulltrajs` | Description |
+|---|:---:|:---:|:---:|---|
+| `flightroom_ssv_exp_2026-05-22_064652_training_mode_shuffled_trajs` | Train | **Train** | — | 2-sec domain-randomized clips (~550 bundles) |
+| `flightroom_ssv_exp_2026-05-22_071718` | Train | — | **Train** | Full spawn-to-goal trajectories (~220 bundles) |
+| `flightroom_ssv_exp_2026-05-22_071353` | Train | — | **Train** | Same as above, second generation run |
+| `flightroom_ssv_exp_2026-05-22_071733_trajs-110` | Val | Test | Test | 110 full trajectories, held out (no domain randomization) |
+
+**Download all 4 folders** — they are shared across all three configs.
+
+- **Combined (`main_fm`):** trains on all 3 folders, uses `071733` as val for early stopping.
+- **Shuffled ablation (`main_fm_shuffled`):** trains on the 2-sec clips only, 15 fixed epochs, no val.
+- **Full-trajs ablation (`main_fm_fulltrajs`):** trains on full trajectories only, 15 fixed epochs, no val.
 
 ---
 
@@ -25,7 +29,7 @@ You only need to download the 4 **train** and **val** folders for training. The 
 
 Google Drive lets you download an entire folder as a `.zip`.
 
-For each of the 4 folders (3 train + 1 val):
+For each of the 4 folders listed in the table above:
 1. Open Google Drive in Chrome and navigate into the folder
 2. Click the folder name in the breadcrumb to select it, or go up one level and right-click the folder
 3. Choose **Download** — Chrome will download a `.zip` file named after the folder
