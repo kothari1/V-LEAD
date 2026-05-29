@@ -1,8 +1,8 @@
 # V-LEAD: Drone Autonomy in 3D Gaussian Splats
 
-Welcome to **V-LEAD**, a specialized quadcopter autonomy and simulation framework compiled for the Stanford **cs231n** project. 
+V-LEAD is a quadcopter autonomy research framework integrating physics-accurate drone simulation with learned visuomotor policies trained inside photorealistic **3D Gaussian Splatting (3DGS)** environments.
 
-V-LEAD integrates physics-accurate drone simulation with visual-language navigation policy training inside photorealistic **3D Gaussian Splatting (3DGS)** environments.
+**CS224R work (current):** flow-matching BC policy → SAC fine-tuning in FiGS. See [`nav_policy/DATA_SETUP.md`](nav_policy/DATA_SETUP.md) for the end-to-end training guide.
 
 ---
 
@@ -22,8 +22,9 @@ graph TD
 ```
 
 ### Core Components:
-1. **[FiGS-Standalone](FiGS-Standalone)** (*Flight in Gaussian Splats*): A physics-accurate quadcopter simulator flying through 3D Gaussian Splat environments. It handles rigid-body dynamics (via ACADOS ODE solvers), MPC expert controllers, RRT* trajectory planning, and high-fidelity multi-channel rendering (RGB, depth, and CLIP-semantic maps).
-2. **[SINGER](SINGER)** (*Scene Understanding via Synthesized Visual Inertial Data from Experts*): The learned imitation policy layer. It trains neural pilots (HistoryEncoder + VisionMLP + CommanderSV) to navigate complex environments via DAgger-style imitation learning from expert demonstrations.
+1. **[FiGS-Standalone](FiGS-Standalone)** (*Flight in Gaussian Splats*): Physics-accurate quadcopter simulator in 3DGS environments. Handles rigid-body dynamics (ACADOS), MPC expert controllers, RRT* planning, and multi-channel rendering (RGB, depth, CLIP).
+2. **[SINGER](SINGER)** (*Scene Understanding via Synthesized Visual Inertial Data from Experts*): DAgger imitation learning pipeline producing trained neural pilots (HistoryEncoder + VisionMLP + CommanderSV).
+3. **[nav_policy](nav_policy/)** *(CS224R addition)*: RGB-only visuomotor policy (ResNet-18 + GRU) trained via flow matching (OT-CFM) as a BC seed for SAC RL fine-tuning. Trains on Modal cloud GPUs; no local GPU required.
 
 ---
 
@@ -33,9 +34,10 @@ To get started, reference these comprehensive guides included in this repository
 
 | Guide / Reference | Purpose | Target Audience |
 | :--- | :--- | :--- |
-| 📖 **[LEAD Instructions](LEAD_instructions.md)** | Step-by-step guide to run the full neural policy training pipeline, environment setup, and `Semantic_HSM` training. | Users & Policy Researchers |
-| 🎮 **[FiGS Guide](FiGS_instructions.md)** | Complete simulator operator guide covering 3DGS training, perception modes, ACADOS flight control parameters, and rendering. | Simulator Operators & Control Engineers |
-| 🧠 **[Agent Context](AGENT_CONTEXT.md)** | Architectural blueprints, codebase maps, directories, volume setups, and gotchas. | AI Agents & Developers |
+| 🚀 **[nav_policy/DATA_SETUP.md](nav_policy/DATA_SETUP.md)** | **Start here for CS224R.** Download data → build dataset → train FM policy on Modal. | Anyone running FM/RL training |
+| 📖 **[V-LEAD_instructions.md](V-LEAD_instructions.md)** | Full pipeline operator guide: containers, data generation, gotchas. | Users & Policy Researchers |
+| 🎮 **[FiGS_instructions.md](FiGS_instructions.md)** | Simulator operator guide: 3DGS training, perception modes, ACADOS control. | Simulator Operators |
+| 🧠 **[AGENT_CONTEXT.md](AGENT_CONTEXT.md)** | Architectural blueprints, codebase maps, directories, gotchas. | AI Agents & Developers |
 
 ---
 
@@ -45,11 +47,16 @@ To get started, reference these comprehensive guides included in this repository
 V-LEAD/
 ├── FiGS-Standalone/       # Submodule: Simulator, MPC Control, & 3DGS Rendering
 ├── SINGER/                # Submodule: DAgger training pipeline & Imitation Policies
-├── AGENT_CONTEXT.md       # AI Architect blueprints & developer map
-├── LEAD_instructions.md   # Setup & pipeline instructions for training pilots
-├── FiGS_instructions.md   # Reference guide for Splat training and simulation
-├── LICENSE                # Project licensing
-└── README.md              # This directory overview
+├── nav_policy/            # CS224R: FM + SAC policy (train on Modal, no local GPU)
+│   ├── DATA_SETUP.md      #   ← start here
+│   ├── configs/           #   training configs (BC, FM, ablations, SAC)
+│   ├── modal_train.py     #   Modal cloud training entrypoints
+│   └── src/nav_policy/    #   model, data, train, RL packages
+├── vlead/                 # Gymnasium env wrapper (FigsDroneEnv) + VLeadPilot
+├── AGENT_CONTEXT.md       # Architectural reference for developers
+├── CLAUDE.md              # Claude Code guidance
+├── V-LEAD_instructions.md # Operator guide
+└── FiGS_instructions.md   # Simulator reference
 ```
 
 ---
