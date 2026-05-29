@@ -54,20 +54,31 @@ class ExpertRef:
     rollout_id: str
     setup_from: Path
     sub_idx: int
+    goal_xy: Optional[np.ndarray] = None   # (2,) semantic target XY; None if unavailable
 
 
 def load_expert_setup(setup_from: Path, sub_idx: int) -> ExpertRef:
     blob = torch.load(setup_from, weights_only=False, map_location="cpu")
-    if "data" not in blob:
-        raise ValueError(f"{setup_from}: missing 'data' key")
-    if sub_idx >= len(blob["data"]):
-        raise IndexError(
-            f"{setup_from}: sub_idx={sub_idx} out of range ({len(blob['data'])} sub-trajs)"
+    # Handle flat-list (V-LEAD/flightroom format) and dict-with-'data' (SINGER format)
+    if isinstance(blob, list):
+        trajs = blob
+    elif isinstance(blob, dict) and "data" in blob:
+        trajs = blob["data"]
+    else:
+        raise ValueError(
+            f"{setup_from}: expected list or dict-with-'data', got {type(blob).__name__}"
         )
-    traj = blob["data"][sub_idx]
+    if sub_idx >= len(trajs):
+        raise IndexError(
+            f"{setup_from}: sub_idx={sub_idx} out of range ({len(trajs)} trajectories)"
+        )
+    traj = trajs[sub_idx]
     Tro = np.asarray(traj["Tro"], dtype=np.float64)
     Xro = np.asarray(traj["Xro"], dtype=np.float64)
     Uro = np.asarray(traj["Uro"], dtype=np.float64)
+    goal_xy = None
+    if "goal_xy" in traj:
+        goal_xy = np.asarray(traj["goal_xy"], dtype=np.float64).ravel()[:2]
     return ExpertRef(
         Tro=Tro, Xro=Xro, Uro=Uro,
         t0=float(Tro[0]),
@@ -77,6 +88,7 @@ def load_expert_setup(setup_from: Path, sub_idx: int) -> ExpertRef:
         rollout_id=str(traj.get("rollout_id", "")),
         setup_from=setup_from,
         sub_idx=sub_idx,
+        goal_xy=goal_xy,
     )
 
 
@@ -114,8 +126,18 @@ def compute_metrics(expert: ExpertRef,
                     Tsol: np.ndarray,
                     success_position_tol: float = 0.5,
                     success_tracking_tol: float = 1.0,
-                    bbox_margin: float = 2.0) -> Dict[str, float]:
-    """All quantities are in physical units (m, m/s, rad/s, seconds)."""
+                    bbox_margin: float = 2.0,
+                    success_goal_dist: float = 2.0) -> Dict[str, float]:
+    """All quantities are in physical units (m, m/s, rad/s, seconds).
+
+    Two success definitions are reported:
+      success          — tracking-based: final position within success_position_tol of
+                         the expert's end point AND tracking_rmse < success_tracking_tol
+                         AND no bbox violation.
+      goal_success     — task-based: drone ended within success_goal_dist of goal_xy
+                         (the semantic target centroid) AND no bbox violation.
+                         Falls back to `success` when goal_xy is unavailable.
+    """
     n_pol = min(int(Tpol.shape[0]) - 1, int(expert.Tro.shape[0]) - 1, int(Upol.shape[1]))
     if n_pol <= 1:
         raise RuntimeError("policy rollout produced too few control steps")
@@ -146,11 +168,28 @@ def compute_metrics(expert: ExpertRef,
 
     # Bounding-box safety proxy
     bbox_hit, bbox_step = _bbox_violation(p_pol, p_exp, margin=bbox_margin)
+
+    # Tracking-based success (original criterion)
     success = (
         (not bbox_hit)
         and final_pos_err < success_position_tol
         and tracking_rmse < success_tracking_tol
     )
+
+    # Goal-based success: reached within success_goal_dist of semantic target, no crash
+    if expert.goal_xy is not None:
+        goal_xy = expert.goal_xy                                 # (2,)
+        # XY distance only — altitude is handled by the VelocityController
+        dist_to_goal = np.linalg.norm(
+            p_pol[:2, :] - goal_xy[:, None], axis=0
+        )                                                        # (n+1,)
+        dist_to_goal_final = float(dist_to_goal[-1])
+        min_dist_to_goal = float(dist_to_goal.min())
+        goal_success = (not bbox_hit) and (dist_to_goal_final < success_goal_dist)
+    else:
+        dist_to_goal_final = float("nan")
+        min_dist_to_goal = float("nan")
+        goal_success = success  # fall back to tracking-based when goal_xy not available
 
     # Inference latency (model forward time recorded by RGBVelocityController.tsol[1])
     model_latencies_ms = Tsol[1, :n_pol] * 1000.0
@@ -160,8 +199,11 @@ def compute_metrics(expert: ExpertRef,
         "n_steps": int(n_pol),
         "duration_s": float(Tpol[n_pol] - Tpol[0]),
         "success": bool(success),
+        "goal_success": bool(goal_success),
         "bbox_violation": bool(bbox_hit),
         "bbox_violation_step": int(bbox_step),
+        "dist_to_goal_final_m": dist_to_goal_final,
+        "min_dist_to_goal_m": min_dist_to_goal,
         "tracking_rmse_m": tracking_rmse,
         "final_position_error_m": final_pos_err,
         "max_position_error_m": max_pos_err,
@@ -208,9 +250,13 @@ def run_one(rollout_cfg: dict,
 
     sim = Simulator(scene, rollout, frame)
 
-    # Supply the goal position (trajectory end) so the policy receives the
-    # correct goal-heading unit vector throughout the episode.
-    goal_pos_xy = expert.Xro[0:2, -1].astype(np.float64)
+    # Use goal_xy (semantic target centroid) when available; fall back to the
+    # expert's final position so the controller always has a valid goal vector.
+    goal_pos_xy = (
+        expert.goal_xy
+        if expert.goal_xy is not None
+        else expert.Xro[0:2, -1].astype(np.float64)
+    )
     controller.reset(goal_pos_xy=goal_pos_xy)
     t_start = time.time()
     try:
@@ -227,7 +273,7 @@ def run_one(rollout_cfg: dict,
             torch.cuda.empty_cache()
     wall_time = time.time() - t_start
 
-    metrics = compute_metrics(expert, Tpol, Xpol, Upol, Tsol)
+    metrics = compute_metrics(expert, Tpol, Xpol, Upol, Tsol, goal_xy=expert.goal_xy)
     metrics["wall_time_s"] = float(wall_time)
     metrics["scene"] = scene
     metrics["rollout"] = rollout
@@ -248,9 +294,10 @@ def run_one(rollout_cfg: dict,
     with open(rollout_dir / "metrics.json", "w") as f:
         json.dump(metrics, f, indent=2)
 
-    print(f"  [{name}] success={metrics['success']}  "
-          f"tracking_rmse={metrics['tracking_rmse_m']:.3f}m  "
-          f"vel_rmse_norm={metrics['vel_rmse_norm_mps']:.3f}m/s  "
+    dist_str = (f"  dist_to_goal={metrics['dist_to_goal_final_m']:.2f}m"
+                if not np.isnan(metrics.get("dist_to_goal_final_m", float("nan"))) else "")
+    print(f"  [{name}] goal_success={metrics['goal_success']}  "
+          f"tracking_rmse={metrics['tracking_rmse_m']:.3f}m{dist_str}  "
           f"latency={metrics['latency_model_ms_mean']:.1f}ms  "
           f"({metrics['n_steps']} steps in {wall_time:.1f}s)",
           flush=True)
@@ -262,6 +309,7 @@ def aggregate(per_rollout: List[Dict[str, float]]) -> Dict[str, float]:
         return {}
     keys_to_avg = [
         "tracking_rmse_m", "final_position_error_m", "max_position_error_m",
+        "dist_to_goal_final_m", "min_dist_to_goal_m",
         "vel_rmse_x_mps", "vel_rmse_y_mps", "vel_rmse_z_mps", "vel_rmse_norm_mps",
         "yaw_rmse_rad",
         "path_length_policy_m", "path_length_expert_m",
@@ -270,12 +318,15 @@ def aggregate(per_rollout: List[Dict[str, float]]) -> Dict[str, float]:
     ]
     agg: Dict[str, float] = {}
     for k in keys_to_avg:
-        vals = [r[k] for r in per_rollout if k in r]
+        vals = [r[k] for r in per_rollout if k in r and not np.isnan(r[k])]
         if vals:
             agg[f"mean_{k}"] = float(np.mean(vals))
             agg[f"std_{k}"] = float(np.std(vals))
     agg["n_rollouts"] = len(per_rollout)
     agg["success_rate"] = float(np.mean([1.0 if r["success"] else 0.0 for r in per_rollout]))
+    agg["goal_success_rate"] = float(
+        np.mean([1.0 if r.get("goal_success", r["success"]) else 0.0 for r in per_rollout])
+    )
     agg["bbox_violation_rate"] = float(
         np.mean([1.0 if r["bbox_violation"] else 0.0 for r in per_rollout])
     )

@@ -1,0 +1,83 @@
+# Closed-loop evaluation of the FM policy inside the FiGS flightroom scene.
+#
+# Uses trajectories from the held-out 071733 test set as initial conditions.
+# goal_xy (semantic object centroid) is loaded from each trajectory so the
+# controller targets the actual object, not just the expert's end position.
+# Success = reached within 2 m of goal_xy + no bounding-box violation.
+#
+# REQUIRES: flightroom_ssv_exp 3DGS scene checkpoint visible to FiGS.
+# Run inside the SINGER container (has FiGS + gemsplat installed):
+#   python scripts/eval_in_figs.py \
+#     --config configs/eval_closed_loop_flightroom_fm.yaml \
+#     --checkpoint data/checkpoints_modal/fm_best.pt \
+#     --output-dir data/eval/fm_closed_loop
+
+checkpoint: data/checkpoints_modal/fm_best.pt
+output_dir: data/eval/fm_closed_loop
+
+frame: carl
+Kv: 2.0
+Ka: 5.0
+
+# 10 rollouts across 5 bundle files × 2 sub-trajectories each.
+# Increase sub_idx range or add more files for a larger evaluation.
+rollouts:
+  - name: flightroom_file0_sub0
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00000.pt
+    sub_idx: 0
+
+  - name: flightroom_file0_sub1
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00000.pt
+    sub_idx: 1
+
+  - name: flightroom_file1_sub0
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00001.pt
+    sub_idx: 0
+
+  - name: flightroom_file1_sub1
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00001.pt
+    sub_idx: 1
+
+  - name: flightroom_file2_sub0
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00002.pt
+    sub_idx: 0
+
+  - name: flightroom_file2_sub1
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00002.pt
+    sub_idx: 1
+
+  - name: flightroom_file3_sub0
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00003.pt
+    sub_idx: 0
+
+  - name: flightroom_file3_sub1
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00003.pt
+    sub_idx: 1
+
+  - name: flightroom_file4_sub0
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00004.pt
+    sub_idx: 0
+
+  - name: flightroom_file4_sub1
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00004.pt
+    sub_idx: 1

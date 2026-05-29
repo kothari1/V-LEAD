@@ -427,3 +427,79 @@ def build_dataset_remote_local():
     print("[local] Submitting dataset build job ...")
     out = build_dataset_remote.remote()
     print(f"[local] Dataset built at: {out}")
+
+
+# ── 10. Offline Evaluation (CPU, no FiGS) ──────────────────────────────────────
+# Runs eval_offline.py on the Modal volume using the processed cache + a checkpoint.
+# Reports MSE metrics broken down by velocity component and horizon step.
+# The 071733 held-out test run is used by default (via eval_offline_flightroom_fm.yaml).
+
+@app.function(
+    image=image,
+    cpu=4,
+    memory=16384,
+    volumes={VOLUME_MOUNT_PATH: data_volume},
+    timeout=60 * 60 * 1,    # offline eval typically takes < 10 minutes
+)
+def eval_fm_offline_remote(
+    checkpoint_subdir: str = "checkpoints_flightroom_fm",
+    output_subdir: str = "eval_fm_offline",
+) -> str:
+    """Run offline (no-FiGS) evaluation of the FM checkpoint on the test split.
+
+    Evaluates on the 071733 held-out run (as configured in
+    eval_offline_flightroom_fm.yaml). Writes summary.json + per_horizon.csv
+    + predictions.npz to the vlead-data volume.
+    """
+    import os
+    import subprocess
+
+    env = {**os.environ, "PYTHONPATH": "/workspace/nav_policy/src"}
+
+    # Symlink processed data into the path the config expects.
+    proc_dst = "/workspace/nav_policy/data/processed_flightroom"
+    os.makedirs("/workspace/nav_policy/data", exist_ok=True)
+    if not os.path.exists(proc_dst):
+        os.symlink(f"{VOLUME_MOUNT_PATH}/processed_flightroom", proc_dst)
+
+    ckpt_path = f"{VOLUME_MOUNT_PATH}/{checkpoint_subdir}/fm_best.pt"
+    out_dir = f"{VOLUME_MOUNT_PATH}/{output_subdir}"
+
+    cmd = [
+        sys.executable, "scripts/eval_offline.py",
+        "--config", "configs/eval_offline_flightroom_fm.yaml",
+        "--checkpoint", ckpt_path,
+        "--output-dir", out_dir,
+    ]
+    print(f"[modal] Running: {' '.join(cmd)}", flush=True)
+    proc = subprocess.run(cmd, cwd="/workspace/nav_policy", env=env)
+
+    data_volume.commit()
+
+    if proc.returncode != 0:
+        raise RuntimeError(f"eval_offline exited with code {proc.returncode}")
+
+    print(f"[modal] Eval output at {out_dir}", flush=True)
+    return out_dir
+
+
+@app.local_entrypoint()
+def main_eval_fm_offline(
+    checkpoint_subdir: str = "checkpoints_flightroom_fm",
+    output_subdir: str = "eval_fm_offline",
+):
+    """Run offline FM evaluation on Modal.
+
+    Usage:
+        modal run modal_train.py::main_eval_fm_offline
+        modal run modal_train.py::main_eval_fm_offline --checkpoint-subdir checkpoints_flightroom_fm_fulltrajs --output-subdir eval_fulltrajs_offline
+    """
+    print(f"[local] Submitting offline eval  checkpoint={checkpoint_subdir} ...")
+    out = eval_fm_offline_remote.remote(
+        checkpoint_subdir=checkpoint_subdir,
+        output_subdir=output_subdir,
+    )
+    print(f"[local] Eval complete. Results at: {out}")
+    print("\nDownload summary:")
+    print(f"  modal volume get {DATA_VOLUME_NAME} {output_subdir}/summary.json data/eval/fm_offline_summary.json")
+    print(f"  modal volume get {DATA_VOLUME_NAME} {output_subdir}/per_horizon.csv data/eval/fm_per_horizon.csv")

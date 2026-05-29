@@ -1,0 +1,24 @@
+# Offline evaluation of the FM checkpoint on the held-out 071733 test data.
+#
+# The 071733 run is tagged split='val' in the processed cache (it was in val_runs
+# during combined training). We restrict to only this run via run_filter so the
+# numbers reflect the true held-out test performance.
+#
+# Run on Modal:
+#   modal run modal_train.py::main_eval_fm_offline
+#
+# Run locally (if processed data is available):
+#   python scripts/eval_offline.py \
+#     --config configs/eval_offline_flightroom_fm.yaml \
+#     --checkpoint data/checkpoints_modal/fm_best.pt \
+#     --output-dir data/eval/fm_offline
+
+data:
+  processed_root: "/data/processed_flightroom"
+  cache_blobs_in_memory: false
+  cache_lru_size: 128
+  run_filter:
+    - "flightroom_ssv_exp_2026-05-22_071733_trajs-110"
+
+train:
+  batch_size: 128

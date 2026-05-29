@@ -33,26 +33,49 @@ from torch.utils.data import DataLoader
 
 from nav_policy.data.normalization import CommandStats
 from nav_policy.data.rgb_horizon_dataset import RGBHorizonDataset
+from nav_policy.model.flow_matching_policy import FlowMatchingPolicy
 from nav_policy.model.rgb_velocity_policy import RGBVelocityPolicy
 
 
 CMD_NAMES = ("vx", "vy", "vz", "psi_dot")
 
 
-def _build_model_from_ckpt(ckpt: dict) -> RGBVelocityPolicy:
+def _is_fm_ckpt(ckpt: dict) -> bool:
+    """True when the checkpoint was produced by train_fm.py (has an 'fm' config section)."""
+    return bool(ckpt.get("config", {}).get("fm"))
+
+
+def _build_model_from_ckpt(ckpt: dict):
+    """Auto-detect checkpoint type and build the right policy class."""
     cfg = ckpt["config"]
-    m = RGBVelocityPolicy(
-        T=int(cfg["window"]["T"]),
-        H=int(cfg["window"]["H"]),
-        cmd_dim=int(cfg["model"]["cmd_dim"]),
-        gru_hidden=int(cfg["model"]["gru_hidden"]),
-        gru_layers=int(cfg["model"]["gru_layers"]),
-        mlp_hidden=tuple(cfg["model"]["mlp_hidden"]),
-        mlp_dropout=float(cfg["model"].get("mlp_dropout", 0.1)),
-        goal_emb_dim=int(cfg["model"].get("goal_emb_dim", 32)),
-        goal_input_dim=int(cfg["model"].get("goal_input_dim", 2)),
-        freeze_stem_and_layer1=bool(cfg["model"].get("freeze_stem_and_layer1", True)),
-    )
+    if _is_fm_ckpt(ckpt):
+        fm_cfg = cfg.get("fm", {})
+        m = FlowMatchingPolicy(
+            T=int(cfg["window"]["T"]),
+            H=int(cfg["window"]["H"]),
+            cmd_dim=int(cfg["model"]["cmd_dim"]),
+            gru_hidden=int(cfg["model"]["gru_hidden"]),
+            gru_layers=int(cfg["model"]["gru_layers"]),
+            goal_emb_dim=int(cfg["model"].get("goal_emb_dim", 32)),
+            goal_input_dim=int(cfg["model"].get("goal_input_dim", 3)),
+            freeze_stem_and_layer1=bool(cfg["model"].get("freeze_stem_and_layer1", True)),
+            time_emb_dim=int(fm_cfg.get("time_emb_dim", 64)),
+            vf_hidden=tuple(fm_cfg.get("vf_hidden", [512, 512, 512])),
+            vf_use_skip=bool(fm_cfg.get("vf_use_skip", True)),
+        )
+    else:
+        m = RGBVelocityPolicy(
+            T=int(cfg["window"]["T"]),
+            H=int(cfg["window"]["H"]),
+            cmd_dim=int(cfg["model"]["cmd_dim"]),
+            gru_hidden=int(cfg["model"]["gru_hidden"]),
+            gru_layers=int(cfg["model"]["gru_layers"]),
+            mlp_hidden=tuple(cfg["model"]["mlp_hidden"]),
+            mlp_dropout=float(cfg["model"].get("mlp_dropout", 0.1)),
+            goal_emb_dim=int(cfg["model"].get("goal_emb_dim", 32)),
+            goal_input_dim=int(cfg["model"].get("goal_input_dim", 2)),
+            freeze_stem_and_layer1=bool(cfg["model"].get("freeze_stem_and_layer1", True)),
+        )
     m.load_state_dict(ckpt["model"])
     return m
 
@@ -68,7 +91,13 @@ def _collate(batch):
     return rgb, goal, u_star, u_raw, ks, caches
 
 
-def evaluate(config_path: Path, checkpoint_path: Path, output_dir: Path) -> Dict[str, float]:
+def evaluate(
+    config_path: Path,
+    checkpoint_path: Path,
+    output_dir: Path,
+    run_filter: Optional[List[str]] = None,
+    split: str = "val",
+) -> Dict[str, float]:
     with open(config_path, "r") as f:
         cfg = yaml.safe_load(f)
     base = config_path.resolve().parent.parent
@@ -79,31 +108,43 @@ def evaluate(config_path: Path, checkpoint_path: Path, output_dir: Path) -> Dict
     ckpt = torch.load(checkpoint_path, weights_only=False, map_location="cpu")
     stats = CommandStats.from_dict(ckpt["stats"])
     model = _build_model_from_ckpt(ckpt).eval()
+    is_fm = _is_fm_ckpt(ckpt)
+    n_val_steps = int(ckpt["config"].get("fm", {}).get("n_val_steps", 4))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
+    print(f"[model] type={'FlowMatching' if is_fm else 'BC'}  device={device}", flush=True)
 
     H = model.H
     cmd_dim = model.cmd_dim
     assert cmd_dim == 4, f"expected cmd_dim=4, got {cmd_dim}"
 
     # Read the checkpoint's training-time goal-input configuration so we
-    # evaluate the policy in the same regime it was trained in (otherwise a
-    # 3-D goal-conditioned checkpoint evaluated with 2-D inputs, or with
-    # zeroed goals, would look broken).
+    # evaluate the policy in the same regime it was trained in.
     ckpt_train_cfg = ckpt["config"].get("train", {})
     ckpt_model_cfg = ckpt["config"].get("model", {})
     zero_goal_eval = bool(ckpt_train_cfg.get("zero_goal_heading", False))
     goal_input_dim = int(ckpt_model_cfg.get("goal_input_dim", 2))
     goal_distance_scale = float(ckpt_model_cfg.get("goal_distance_scale", 5.0))
     data_cfg = cfg.get("data", {})
+
+    # run_filter: CLI arg > config field > None (all runs)
+    effective_run_filter = run_filter
+    if effective_run_filter is None:
+        cfg_filter = data_cfg.get("run_filter")
+        if cfg_filter is not None:
+            effective_run_filter = list(cfg_filter)
+
     ds = RGBHorizonDataset(
-        processed_root, split="val",
+        processed_root, split=split,
         cache_blobs_in_memory=bool(data_cfg.get("cache_blobs_in_memory", False)),
         cache_lru_size=int(data_cfg.get("cache_lru_size", 64)),
         zero_goal_heading=zero_goal_eval,
         goal_input_dim=goal_input_dim,
         goal_distance_scale=goal_distance_scale,
+        run_filter=effective_run_filter,
     )
+    print(f"[data] split={split}  n_samples={len(ds.samples)}"
+          f"  run_filter={effective_run_filter}", flush=True)
     if ds.T != model.T or ds.H != model.H:
         raise ValueError(
             f"manifest T,H ({ds.T},{ds.H}) != model T,H ({model.T},{model.H})"
@@ -131,7 +172,10 @@ def evaluate(config_path: Path, checkpoint_path: Path, output_dir: Path) -> Dict
 
             torch.cuda.synchronize() if device.type == "cuda" else None
             t0 = time.time()
-            u_hat_z = model(rgb, goal)
+            if is_fm:
+                u_hat_z = model.sample(rgb, goal, n_steps=n_val_steps)
+            else:
+                u_hat_z = model(rgb, goal)
             torch.cuda.synchronize() if device.type == "cuda" else None
             latencies.append((time.time() - t0) / rgb.shape[0])  # per-sample seconds
 
@@ -187,6 +231,10 @@ def evaluate(config_path: Path, checkpoint_path: Path, output_dir: Path) -> Dict
         "goal_input_dim": int(goal_input_dim),
         "goal_distance_scale": float(goal_distance_scale),
         "train_epochs": int(ckpt_train_cfg.get("epochs", 0)),
+        "model_type": "flow_matching" if is_fm else "bc",
+        "n_val_steps": int(n_val_steps) if is_fm else None,
+        "split": split,
+        "run_filter": effective_run_filter,
     }
     print(json.dumps(summary, indent=2))
 
@@ -226,8 +274,18 @@ def main() -> None:
     p.add_argument("--config", type=Path, required=True)
     p.add_argument("--checkpoint", type=Path, required=True)
     p.add_argument("--output-dir", type=Path, required=True)
+    p.add_argument(
+        "--run-filter", nargs="+", default=None, metavar="RUN",
+        help="Restrict evaluation to these run names (partial names OK as exact match). "
+             "Overrides config data.run_filter.",
+    )
+    p.add_argument(
+        "--split", default="val", choices=["train", "val"],
+        help="Which manifest split to evaluate on (default: val).",
+    )
     args = p.parse_args()
-    evaluate(args.config, args.checkpoint, args.output_dir)
+    evaluate(args.config, args.checkpoint, args.output_dir,
+             run_filter=args.run_filter, split=args.split)
 
 
 if __name__ == "__main__":
