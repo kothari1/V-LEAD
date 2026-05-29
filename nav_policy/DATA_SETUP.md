@@ -42,29 +42,58 @@ flightroom_ssv_exp_2026-05-22_071733_trajs-110.zip
 
 ---
 
-## Step 2 — Unzip to the correct location
+## Step 2 — Unzip and flatten
 
-Unzip each archive so the folder lands directly under `nav_policy/data/raw/`:
+Google Drive zips an extra outer folder into the archive named after the download timestamp.  
+You need to extract and then promote the inner folder one level up.
 
+**Extract each zip** to any temp location (e.g. your Downloads folder).  
+You will see a structure like:
+```
+Downloads/
+└── 2026-05-22_064652_training_mode_shuffled_trajs/          ← outer wrapper (from zip)
+    └── flightroom_ssv_exp_2026-05-22_064652_training_mode_shuffled_trajs/   ← actual data
+        ├── trajectories00000.pt
+        ├── video_rgb00000.mp4
+        ├── video_depth00000.mp4
+        ├── video_semantic00000.mp4
+        ├── imgdata00000.pt
+        └── ...
+```
+
+**Move the inner folder** (the one starting with `flightroom_ssv_exp_`) directly into `nav_policy/data/raw/`.  
+Discard the outer wrapper folder.
+
+**PowerShell shortcut** (run from `nav_policy/data/raw/`, repeat for each zip):
+```powershell
+# After extracting a zip into raw/, run this to flatten it:
+# Replace <outer> with the wrapper folder name (e.g. 2026-05-22_064652_...)
+Move-Item "<outer>\flightroom_ssv_exp_*" .
+Remove-Item "<outer>"
+```
+
+**Target structure** (what `data/raw/` should look like when done):
 ```
 nav_policy/
 └── data/
     └── raw/
         ├── flightroom_ssv_exp_2026-05-22_064652_training_mode_shuffled_trajs/
-        │   ├── trajectories00000.pt
+        │   ├── trajectories00000.pt          (train-mode naming)
         │   ├── video_rgb00000.mp4
-        │   └── ...
+        │   └── ...  (~550 bundles × 5 file types = ~2750 files)
         ├── flightroom_ssv_exp_2026-05-22_071718/
-        │   ├── trajectories_val00000.pt
+        │   ├── trajectories_val00000.pt      (val-mode naming)
         │   ├── video_val_rollout_images_rgb00000.mp4
-        │   └── ...
+        │   └── ...  (~220 bundles × 5 file types = ~1100 files)
         ├── flightroom_ssv_exp_2026-05-22_071353/
-        │   └── ...
+        │   └── ...  (~1100 files)
         └── flightroom_ssv_exp_2026-05-22_071733_trajs-110/
-            └── ...
+            ├── trajectories_val00000.pt
+            ├── video_val_rollout_images_rgb00000.mp4
+            └── ...  (~110 bundles × 5 file types = ~550 files)
 ```
 
-> `build_dataset_flightroom.py` auto-detects the file naming (`trajectories_val*.pt` vs `trajectories*.pt`) so no renaming is needed.
+> `build_dataset_flightroom.py` auto-detects file naming (`trajectories_val*.pt` vs `trajectories*.pt`) — no renaming needed.
 
 ---
 
