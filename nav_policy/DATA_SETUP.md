@@ -101,92 +101,47 @@ nav_policy/
 
 ---
 
-## Step 3 — Build the processed dataset
+## Step 3 — Upload to Modal and build dataset
 
-The training scripts do not read raw `.pt` + `.mp4` files directly — they use pre-built per-trajectory cache files. This step runs once and takes ~20–40 minutes depending on CPU speed.
-
-**Run inside the nav_policy Docker container** (needed for ffmpeg + scipy on Windows):
+All processing runs in the cloud — no Docker or local GPU needed.
 
 ```bash
-cd nav_policy
-docker compose run --rm nav_policy
-# Inside the container:
-python scripts/build_dataset_flightroom.py --config configs/flightroom_fm.yaml
-```
-
-Output lands at `nav_policy/data/processed_flightroom/`:
-```
-processed_flightroom/
-├── manifest.json        ← window index (train/val split, T, H)
-├── stats.json           ← CommandStats (mean/std for z-scoring)
-├── flightroom_ssv_exp_2026-05-22_064652_training_mode_shuffled_trajs/cache/*.pt
-├── flightroom_ssv_exp_2026-05-22_071718/cache/*.pt
-├── flightroom_ssv_exp_2026-05-22_071353/cache/*.pt
-└── flightroom_ssv_exp_2026-05-22_071733_trajs-110/cache/*.pt
-```
-
-**Verify:**
-```bash
-python scripts/inspect_manifest.py data/processed_flightroom/manifest.json
-```
-Expected output shows `splits = {'train': ~N, 'val': ~M}` with non-zero counts for both.
-
----
-
-## Step 4 — Upload to Modal
-
-### Path A: upload processed data (recommended)
-
-The processed directory has no videos — it's much smaller than the raw data and uploads quickly.
-
-```bash
-# One-time setup (if not already done):
+# One-time setup:
 pip install modal
 modal setup
 modal volume create vlead-data
+modal volume create vlead-raw-data
+modal secret create wandb WANDB_API_KEY=<your_key_from_wandb.ai/settings>
 
-# Upload processed data (run from V-LEAD/nav_policy/ on your local machine):
-modal volume put vlead-data data/processed_flightroom /processed_flightroom
+# Upload raw data (run from V-LEAD/nav_policy/):
+modal volume put vlead-raw-data data/raw /raw
+
+# Build processed dataset in the cloud (CPU job, ~30–60 min):
+modal run --detach modal_train.py::build_dataset_remote_local
 ```
 
-The upload progress is shown in the terminal. For ~10k cache files this typically takes 5–15 minutes depending on your connection.
+Wait for the `✓ Initialized. View run at https://modal.com/apps/...` line before closing the terminal. Monitor progress at modal.com/apps.
 
-**Then train:**
-```bash
-# BC policy:
-modal run modal_train.py
-
-# Flow Matching policy (recommended — higher quality BC seed):
-modal run modal_train.py::main_fm
-
-# Override run name for W&B:
-modal run modal_train.py::main_fm --run-tag my_fm_v1
-```
-
-**Download checkpoint after training:**
-```bash
-modal volume get vlead-data checkpoints_flightroom_fm/fm_best.pt data/checkpoints_modal/fm_best.pt
-```
+The build writes per-trajectory cache files + `manifest.json` + `stats.json` to the `vlead-data` volume. **If the job is interrupted**, just rerun the same command — it skips already-processed bundles instantly.
 
 ---
 
-### Path B: upload raw data and build in the cloud (no local Docker needed)
+## Step 4 — Train
 
-Use this if you cannot run Docker locally. Builds take longer and require uploading videos.
+Once the dataset build completes, launch training. You can run all three in parallel:
 
 ```bash
-# Create the raw data volume (one-time):
-modal volume create vlead-raw-data
+# Combined (all 3 train folders + val, 10 epochs):
+modal run --detach modal_train.py::main_fm
 
-# Upload raw data:
-modal volume put vlead-raw-data data/raw /raw
+# Shuffled-clips ablation (2-sec clips only, 15 epochs, no val):
+modal run --detach modal_train.py::main_fm_shuffled
 
-# Process in cloud (CPU job, no GPU cost):
-modal run modal_train.py::build_dataset_remote_local
-
-# Then train:
-modal run modal_train.py::main_fm
+# Full-trajs ablation (spawn-to-goal only, 15 epochs, no val):
+modal run --detach modal_train.py::main_fm_fulltrajs
 ```
+
+Wait for the `✓ Initialized` URL line before closing each terminal.
 
 ---
 
@@ -295,11 +250,15 @@ Logs appear in `logs/train_fm_<jobid>.out`. W&B logging is enabled by default (s
 |---|---|
 | Download data | Chrome → right-click Drive folder → Download |
 | Unzip + flatten | Extract to `nav_policy/data/raw/<folder_name>/` |
-| Upload raw to Modal | `modal volume put vlead-raw-data data/raw /raw` |
+| One-time Modal setup | `modal setup && modal volume create vlead-data && modal volume create vlead-raw-data` |
+| Create W&B secret | `modal secret create wandb WANDB_API_KEY=<key>` |
+| Upload raw data | `modal volume put vlead-raw-data data/raw /raw` |
 | Build dataset (cloud) | `modal run --detach modal_train.py::build_dataset_remote_local` |
 | Train FM — combined | `modal run --detach modal_train.py::main_fm` |
-| Train FM — full trajs | `modal run --detach modal_train.py::main_fm_fulltrajs` |
 | Train FM — shuffled | `modal run --detach modal_train.py::main_fm_shuffled` |
+| Train FM — full trajs | `modal run --detach modal_train.py::main_fm_fulltrajs` |
 | Monitor | https://modal.com/apps · https://wandb.ai |
-| Download checkpoint | `modal volume get vlead-data checkpoints_flightroom_fm/fm_best.pt data/checkpoints_modal/fm_best.pt` |
+| Download checkpoint (combined) | `modal volume get vlead-data checkpoints_flightroom_fm/fm_best.pt data/checkpoints_modal/fm_best.pt` |
+| Download checkpoint (shuffled) | `modal volume get vlead-data checkpoints_flightroom_fm_shuffled/fm_best.pt data/checkpoints_modal/fm_shuffled_best.pt` |
+| Download checkpoint (fulltrajs) | `modal volume get vlead-data checkpoints_flightroom_fm_fulltrajs/fm_best.pt data/checkpoints_modal/fm_fulltrajs_best.pt` |
 | SAC fine-tuning | `python scripts/train_sac.py --config configs/sac_fm.yaml` |
