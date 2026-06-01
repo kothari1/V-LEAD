@@ -74,7 +74,8 @@ def write_cache(cache_path: Path,
                 psi_dot: torch.Tensor,
                 goal_heading: torch.Tensor,
                 meta: dict,
-                goal_dist: Optional[torch.Tensor] = None) -> None:
+                goal_dist: Optional[torch.Tensor] = None,
+                depth_uint8: Optional[torch.Tensor] = None) -> None:
     """
     Write a single sub-trajectory cache.
 
@@ -83,9 +84,7 @@ def write_cache(cache_path: Path,
     psi_dot:      [N]    float32 (world-frame yaw rate, rad/s)
     goal_heading: [N, 2] float32 (unit vector toward sub-traj goal in world XY)
     goal_dist:    [N]    float32 (raw meters from current XY to sub-traj goal XY)
-                  Optional only for backward compatibility with old callers;
-                  the dataset will fall back to zeros if missing, but new
-                  caches should always include it.
+    depth_uint8:  [N, 1, S, S] uint8 (DA2 depth, 0–255 maps to [0,1])
     meta:         arbitrary JSON-serializable dict
     """
     cache_path.parent.mkdir(parents=True, exist_ok=True)
@@ -106,6 +105,10 @@ def write_cache(cache_path: Path,
         if goal_dist.dtype != torch.float32 or goal_dist.ndim != 1:
             raise TypeError(f"goal_dist must be float32 [N], got {goal_dist.shape}")
         blob["goal_dist"] = goal_dist.contiguous()
+    if depth_uint8 is not None:
+        if depth_uint8.dtype != torch.uint8 or depth_uint8.ndim != 4:
+            raise TypeError(f"depth_uint8 must be uint8 [N,1,S,S], got {depth_uint8.shape}")
+        blob["depth"] = depth_uint8.contiguous()
     torch.save(blob, cache_path)
 
 

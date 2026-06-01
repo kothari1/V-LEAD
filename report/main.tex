@@ -38,7 +38,7 @@ Stanford University & Stanford University & Stanford University \\
 
 %%%%%%%%% ABSTRACT
 \begin{abstract}
-We present an end-to-end imitation-learning pipeline for goal-conditioned vision-based quadrotor navigation in the FiGS Gaussian-Splatting simulator. A privileged Model Predictive Controller (MPC) flies a quadrotor along Rapidly-exploring Random Tree (RRT)-planned, minimum-snap reference trajectories through reconstructed 3D scenes, producing synchronized RGB video and state logs. From these rollouts we train a compact student policy that maps a $T{=}4$-frame RGB history \emph{and} a low-dimensional goal vector to a receding-horizon sequence of $H{=}10$ velocity commands $[v_x, v_y, v_z, \dot{\psi}]$. The goal vector concatenates a two-dimensional unit heading toward the trajectory end-point with a scale-normalized scalar distance to that endpoint, providing an explicit, globally consistent navigation objective that gives the policy both \emph{which way} to go and \emph{how far} it still has to travel without access to maps or privileged state. The architecture is an ImageNet-pretrained ResNet-18 visual encoder, a single-layer GRU temporal module, a learned goal-heading projection, and a two-hidden-layer MLP command head. At deployment, the first predicted command is forwarded to a cascaded P-controller inside FiGS that converts $[v_x, v_y, v_z, \dot{\psi}]$ into the low-level thrust and body-rate inputs $[u_f, \omega_x, \omega_y, \omega_z]$ required by the ACADOS integrator. Training begins with behavior cloning and is extended with DAgger to relabel policy-visited states. We describe the complete system, evaluation protocol, and proposed ablations.
+We present an end-to-end imitation-learning pipeline for goal-conditioned vision-based quadrotor navigation in the FiGS Gaussian-Splatting simulator. A privileged Model Predictive Controller (MPC) flies a quadrotor along Rapidly-exploring Random Tree (RRT)-planned, minimum-snap reference trajectories through reconstructed 3D scenes, producing synchronized RGB video and state logs. From these rollouts we train a compact student policy that maps a $T{=}4$-frame RGB history, monocular depth from a frozen Depth Anything V2 Small (DA2-S) branch, and a low-dimensional goal vector to a receding-horizon sequence of $H{=}10$ velocity commands $[v_x, v_y, v_z, \dot{\psi}]$. The visual backbone is ImageNet-pretrained ResNet-18 fused with DA2 depth features via LayerNorm cross-attention, followed by a single-layer GRU and a goal-conditioned MLP head. Training uses flightroom-only expert data; held-out flightroom validation trajectories and cross-scene backroom rollouts support offline and closed-loop validation; packardpark is reserved for zero-shot OOD test. After behavior cloning, we run two rounds of DAgger with an MPC re-solve oracle and fine-tune with balanced 50/50 sampling between expert and policy-visited windows. We then fine-tune the resulting checkpoint with on-policy PPO in full-length FiGS rollouts, using dense progress and settling-aware rewards.
 \end{abstract}
 
 %%%%%%%%% BODY TEXT
@@ -47,7 +47,7 @@ We present an end-to-end imitation-learning pipeline for goal-conditioned vision
 
 Autonomous quadrotor navigation in cluttered environments requires fast perception, short-horizon decision-making, and stable tracking of dynamically feasible commands. Classical robotics stacks decompose this into perception, mapping, planning, and control. The decomposition is interpretable but accumulates latency when the vehicle moves quickly through visually complex scenes. Recent systems instead learn compact visuomotor policies that map onboard observations to local trajectories or commands, retaining only a thin low-level controller for stabilization~\cite{loquercio2021learning,low2024sousvide}.
 
-This paper describes the implementation of an RGB-to-command quadrotor policy for the FiGS simulator. FiGS couples physics-accurate ACADOS dynamics with a 3D Gaussian-Splatting (3DGS) renderer that produces RGB, depth, and CLIP-semantic views of reconstructed real-world scenes~\cite{low2024sousvide,kerbl2023gaussian}. A privileged MPC, given the planned reference trajectory, generates expert rollouts. The student policy sees only the most recent four RGB frames and must reproduce the expert's intent through a velocity-command interface.
+This paper describes the implementation of an RGB-and-depth-to-command quadrotor policy for the FiGS simulator. FiGS couples physics-accurate ACADOS dynamics with a 3D Gaussian-Splatting (3DGS) renderer that produces RGB, depth, and CLIP-semantic views of reconstructed real-world scenes~\cite{low2024sousvide,kerbl2023gaussian}. A privileged MPC, given the planned reference trajectory, generates expert rollouts. The student policy sees the most recent four RGB frames, monocular depth from a frozen Depth Anything V2 Small (DA2-S) branch, and a goal vector, and must reproduce the expert's intent through a velocity-command interface.
 
 The key engineering choices are (i) to predict a short \emph{command horizon} rather than a single instantaneous command, and (ii) to condition the policy on an explicit \emph{goal vector} (unit heading plus scale-normalized distance) alongside RGB. At each policy step the network outputs ten future commands of the form
 \begin{equation}
@@ -58,24 +58,24 @@ where $v_x, v_y, v_z$ are commanded world-frame linear velocities and $\dot{\psi
 
 Goal-vector conditioning addresses a fundamental limitation of purely RGB-based mapless navigation: an image sequence does not directly encode where the drone should \emph{go} or \emph{how far} it still has to travel. By supplying a unit heading toward the trajectory goal and a scale-normalized scalar distance to that goal, the policy receives a globally consistent reference direction \emph{and} a monotonic proximity signal. Both are cheap to compute, require no map, and provide meaningful learning signals that distinguish ``fly toward the goal while avoiding obstacles'' from ``follow a visually similar path in the wrong direction'' and ``slow down because the goal is near'' from ``cruise.''
 
-Our contribution is fourfold: (i) a data-generation pipeline that turns recorded MPC rollouts in FiGS into goal-conditioned supervised $([\mathcal{I}_t,\mathbf{g}_t], \mathbf{U}^{*}_{t:t+H-1})$ training pairs, where $\mathbf{g}_t$ is the per-step goal vector (unit heading concatenated with scale-normalized distance); (ii) a compact ResNet-18--GRU--\emph{goal-conditioned}~MLP architecture; (iii) a training procedure that combines behavior cloning with DAgger relabeling at policy-visited states; and (iv) an evaluation protocol with both an offline per-component error analysis on a held-out validation set and a closed-loop FiGS rollout that measures tracking, command, and latency metrics under the policy's own induced state distribution.
+Our contribution is fourfold: (i) a data-generation pipeline that turns recorded MPC rollouts in FiGS into goal-conditioned supervised $([\mathcal{I}_t,\mathbf{g}_t], \mathbf{U}^{*}_{t:t+H-1})$ training pairs, where $\mathbf{g}_t$ is the per-step goal vector (unit heading concatenated with scale-normalized distance); (ii) a ResNet-18--DA2-S--cross-attention--GRU--\emph{goal-conditioned}~MLP architecture; (iii) a training procedure that combines behavior cloning with two rounds of MPC-oracle DAgger and balanced expert/policy sampling to produce the deployment checkpoint; and (iv) an evaluation and RL fine-tuning protocol with offline metrics, closed-loop FiGS rollouts on flightroom val and backroom, zero-shot packardpark test, and optional PPO post-training on full expert trajectories.
 
 \section{Related Work}
 \label{sec:related}
 
 Learning-based quadrotor navigation has moved increasingly toward direct prediction of local trajectories or commands from onboard observations. Loquercio \etal~\cite{loquercio2021learning} showed that high-speed flight through cluttered environments can be learned by mapping noisy sensory observations to collision-free receding-horizon trajectories.
 
-SOUS VIDE is the closest system-level precedent for our project. Low \etal~\cite{low2024sousvide} introduced FiGS and used a privileged expert MPC to collect large image/action datasets, training their SV-Net policy on color, optical flow, and IMU streams to produce low-level body-rate and thrust commands. We borrow FiGS and the expert-distillation philosophy but intentionally simplify the student interface: RGB-only input, and velocity-level rather than body-rate output, by sitting the policy on top of an in-tree velocity controller that SOUS VIDE did not use as the student's deployment interface. This isolates the visual representation-learning component and makes failures easier to attribute.
+SOUS VIDE is the closest system-level precedent for our project. Low \etal~\cite{low2024sousvide} introduced FiGS and used a privileged expert MPC to collect large image/action datasets, training their SV-Net policy on color, optical flow, and IMU streams to produce low-level body-rate and thrust commands. We borrow FiGS and the expert-distillation philosophy but intentionally simplify the student interface: RGB and frozen monocular depth at deploy time, and velocity-level rather than body-rate output, by sitting the policy on top of an in-tree velocity controller that SOUS VIDE did not use as the student's deployment interface. This isolates the visual representation-learning component and makes failures easier to attribute.
 
 Bhattacharya \etal~\cite{bhattacharya2024vision} compare convolutional, recurrent, and vision-transformer policies for end-to-end quadrotor obstacle avoidance. Their results motivate future transformer comparisons; we use ResNet-18 + GRU here as a strong, compact baseline that fits within our simulator-iteration budget.
 
 \subsection{Privileged imitation and dataset aggregation}
 
-Our training procedure follows privileged imitation: an expert with access to information unavailable at deployment supervises a sensorimotor policy that sees only deployable observations, in the spirit of Learning by Cheating~\cite{chen2020learning}. Pure behavior cloning is not sufficient for sequential control because the learned policy induces its own state distribution and compounds small errors. DAgger~\cite{ross2011reduction} iteratively rolls out the learned policy, queries the expert on the states the policy actually visits, and aggregates those labels into the training set. We implement DAgger as a fixed-reference oracle: at each policy-visited control step $k$, the expert label is taken from the original MPC rollout's state trajectory at the same time index, i.e.~``what the expert plan called for at this moment.'' This is appropriate for the feedforward-tracking MPC used as the FiGS expert and avoids re-solving the MPC at every policy step.
+Our training procedure follows privileged imitation: an expert with access to information unavailable at deployment supervises a sensorimotor policy that sees only deployable observations, in the spirit of Learning by Cheating~\cite{chen2020learning}. Pure behavior cloning is not sufficient for sequential control because the learned policy induces its own state distribution and compounds small errors. DAgger~\cite{ross2011reduction} iteratively rolls out the learned policy, queries the expert on the states the policy actually visits, and aggregates those labels into the training set. We use a \emph{proper} DAgger oracle: at each policy-visited state, the FiGS VehicleRateMPC is re-solved from the current state and the planned next-step velocity and yaw rate become the label. Each DAgger round collects extended-horizon rollouts on flightroom training trajectories only; backroom and packardpark remain held out. After round~$2$, we fine-tune with \emph{balanced} batch sampling that mixes round-$0$ expert windows and round-${\geq}1$ policy-visited windows in equal proportion, yielding the \texttt{dagger\_balanced\_r12} deployment checkpoint used for closed-loop evaluation and RL warm-start.
 
 \subsection{Visual and temporal representations}
 
-The visual backbone is ResNet-18~\cite{he2016deep}, initialized with ImageNet weights and used as a per-frame feature extractor. Since a single image cannot infer approach speed or ego-motion reliably, we process the resulting feature sequence with a GRU~\cite{cho2014learning}. Depth-foundation models such as Depth Anything V2~\cite{yang2024depthanythingv2} and Video Depth Anything~\cite{chen2025videodepthanything} are relevant alternatives for future geometry-aware policies; they are deliberately excluded from this RGB-only baseline.
+The visual backbone is ResNet-18~\cite{he2016deep}, initialized with ImageNet weights and used as a per-frame feature extractor. Since a single image cannot infer approach speed or ego-motion reliably, we process the resulting feature sequence with a GRU~\cite{cho2014learning}. Depth-foundation models such as Depth Anything V2~\cite{yang2024depthanythingv2} supply geometry-aware features without changing the velocity-command interface. We use the Small (ViT-S) variant, frozen at train and deploy time, fused with ResNet-18 RGB features through LayerNorm cross-attention before the GRU. Relightable 3DGS photometric domain randomization is deferred; we instead apply color jitter, blur, brightness/gamma, and injected frame latency during BC and DAgger training.
 
 \section{Problem Formulation}
 \label{sec:formulation}
@@ -115,7 +115,7 @@ The expert supervises $\pi_\theta$ via horizons $\mathbf{U}^{*}_{t:t+H-1}$ deriv
 \section{System Overview}
 \label{sec:overview}
 
-Figure~\ref{fig:system} summarizes the training and deployment paths. Training begins with closed-loop expert rollouts in FiGS, each driven by a privileged body-rate MPC tracking an RRT$^{*}$/min-snap reference trajectory through a 3DGS scene. For each rollout the simulator emits synchronized RGB, depth, and semantic video and a complete state and control log. From these we extract $(\mathcal{I}_t, \mathbf{U}^{*}_{t:t+H-1})$ samples and train the RGB policy by behavior cloning. DAgger then rolls the trained policy in FiGS, relabels the policy's visited frames with the expert's time-aligned plan, and appends those samples to the dataset.
+Figure~\ref{fig:system} summarizes the training and deployment paths. Training begins with closed-loop expert rollouts in FiGS, each driven by a privileged body-rate MPC tracking an RRT$^{*}$/min-snap reference trajectory through a 3DGS scene. For each rollout the simulator emits synchronized RGB, depth, and semantic video and a complete state and control log. From these we extract $(\mathcal{I}_t, \mathbf{U}^{*}_{t:t+H-1})$ samples and train the ResNet--DA2 policy by behavior cloning. DAgger then rolls the trained policy in FiGS on flightroom training trajectories, relabels each policy-visited state with the MPC re-solve oracle, and appends those windows to the dataset before balanced fine-tuning.
 
 \begin{figure*}[t]
 \centering
@@ -157,14 +157,14 @@ Figure~\ref{fig:system} summarizes the training and deployment paths. Training b
 \draw[arr, dashed] (policy.north) |- ++(0,0.7) -| (expert.north) node[note, pos=0.2, above] {DAgger relabel};
 \end{tikzpicture}%
 }
-\caption{Training and deployment pipeline. The expert MPC generates rollouts that supply $(\mathcal{I}_t, \mathbf{g}_t, \mathbf{U}^{*}_{t:t+H-1})$ tuples (RGB history, goal vector, expert commands), where $\mathbf{g}_t$ is the unit heading toward the trajectory end-point concatenated with the scale-normalized scalar distance to that end-point. At deployment the policy reads a $T{=}4$ RGB buffer \emph{and} the current goal vector, emitting a $10{\times}4$ command horizon; only the first command is forwarded to the in-tree velocity controller, which produces the low-level inputs consumed by the ACADOS integrator. DAgger relabels policy-visited frames with the expert's time-aligned plan, preserving goal-vector labels computed from policy-visited positions.}
+\caption{Training and deployment pipeline. The expert MPC generates rollouts that supply $(\mathcal{I}_t, \mathbf{g}_t, \mathbf{U}^{*}_{t:t+H-1})$ tuples (RGB history, goal vector, expert commands), where $\mathbf{g}_t$ is the unit heading toward the trajectory end-point concatenated with the scale-normalized scalar distance to that end-point. At deployment the policy reads a $T{=}4$ RGB and depth buffer \emph{and} the current goal vector, emitting a $10{\times}4$ command horizon; only the first command is forwarded to the in-tree velocity controller, which produces the low-level inputs consumed by the ACADOS integrator. DAgger relabels policy-visited states with the MPC re-solve oracle, preserving goal-vector labels computed from policy-visited positions.}
 \label{fig:system}
 \end{figure*}
 
 \section{Model Architecture}
 \label{sec:architecture}
 
-The policy is a ResNet-18--GRU--MLP network conditioned on a three-dimensional goal vector (heading + scale-normalized distance). The stem and first residual block of the ResNet are frozen to retain low-level ImageNet features. Figure~\ref{fig:arch} shows the data flow.
+The primary policy is a ResNet-18 + DA2-S + cross-attention--GRU--MLP network conditioned on a three-dimensional goal vector (heading + scale-normalized distance). An RGB-only ResNet baseline (ablation A0) omits the depth branch. The stem and first residual block of the ResNet are frozen to retain low-level ImageNet features. Figure~\ref{fig:arch} shows the RGB-only data flow; the production model inserts a frozen DA2-S depth map per frame, encodes it with a lightweight CNN to $256$-D, applies LayerNorm on both branches, and fuses via multi-head cross-attention (query = RGB, key/value = depth) with a second LayerNorm before the GRU.
 
 \begin{figure}[t]
 \centering
@@ -246,9 +246,11 @@ The network outputs commands in \emph{z-scored} space; the runtime wrapper de-st
 \toprule
 \textbf{Component} & \textbf{Setting} \\
 \midrule
-Input modality & RGB + goal vector (heading + normalized distance) \\
+Input modality & RGB + DA2-S depth + goal vector \\
 Frame history & $T=4$ frames \\
 Image size & $224\times224$ \\
+Depth branch & DA2-S (ViT-S), frozen; CNN encoder $\to 256$-D \\
+Fusion & LayerNorm + cross-attention (RGB queries depth) \\
 Goal heading & $[2]$ unit vector, world XY \\
 Backbone & ResNet-18, ImageNet init.\ \\
 Frozen layers & stem + first residual block \\
@@ -272,7 +274,7 @@ Inference mode & Execute first command; re-plan \\
 \section{Dataset Generation in FiGS}
 \label{sec:data}
 
-We use closed-loop expert rollouts on two reconstructed scenes: an indoor scene (``backroom'') and an outdoor scene (``packardpark''). For each scene a planner produces RRT$^{*}$/min-snap reference trajectories, the expert MPC tracks each reference, and the simulator logs the synchronized RGB video, the full state trajectory, and the expert control history at $20\,\mathrm{Hz}$. Each reference yields four perturbed sub-trajectories (small variations in the start state sharing a single planned route), giving roughly four times more samples per planned route than a single rollout would.
+We use closed-loop expert rollouts on flightroom for training; held-out flightroom validation trajectories (\texttt{071733}) and cross-scene backroom for offline/closed-loop validation; packardpark for zero-shot OOD closed-loop test only (never processed for BC or DAgger). Goal supervision uses the expert sub-trajectory endpoint $\mathbf{p}_{\mathrm{goal}} = \mathbf{X}_{\mathrm{ro}}[0{:}2,-1]$ everywhere (BC, val, DAgger, RL, and deploy). For each scene a planner produces RRT$^{*}$/min-snap reference trajectories, the expert MPC tracks each reference, and the simulator logs the synchronized RGB video, the full state trajectory, and the expert control history at $20\,\mathrm{Hz}$.
 
 For every sub-trajectory we decode the corresponding RGB frames, resize them to $224\times224$, extract per-step linear velocity directly from the logged state, and compute world-frame yaw rate by finite-differencing the unwrapped yaw angle of the logged quaternion sequence:
 \begin{equation}
@@ -283,19 +285,21 @@ with $f_{\mathrm{ctl}} = 20\,\mathrm{Hz}$. In the same pass we compute the per-s
 
 A second pass enumerates training windows: for every length-$n$ sub-trajectory and every $k \in [T{-}1, n{-}H)$ we form a sample whose input is the four most recent frames ending at $k$ \emph{and} the goal vector at step $k$, and whose target is the next ten expert commands $[v_x, v_y, v_z, \dot{\psi}]_{k:k+H-1}$. Train/validation splits are assigned \emph{by sub-trajectory}, never by frame, to avoid the temporal leak that a frame-level random split would introduce. After the split, per-component means and standard deviations of the four command components are fit on the training set; the network is trained and evaluated entirely in z-scored space and de-normalized only at deployment. The goal distance is normalized by a fixed characteristic scale $d_{\mathrm{scale}}{=}5\,\mathrm{m}$ stored in the model config, so its scaling is constant across rounds without requiring dataset statistics.
 
-Table~\ref{tab:dataset} summarizes the dataset used for the preliminary numbers reported in this paper. The full backroom + packardpark dataset will replace these counts in the final write-up.
+Table~\ref{tab:dataset} summarizes the data split. Flightroom training runs (\texttt{064652}, \texttt{071718}, \texttt{071353}) supply BC and DAgger windows. The flightroom validation run (\texttt{071733}, 12 queries) and backroom are held out for offline and closed-loop validation. Packardpark is never included in processed training data; it is evaluated only via closed-loop rollouts.
 
 \begin{table}[t]
 \centering
-\caption{Dataset summary. The preliminary subset uses only the backroom scene with $T{=}4$, $H{=}10$ windowing and a 20\% validation fraction.}
+\caption{Data split. Train = processed BC/DAgger; val = offline + in-domain closed-loop; test = OOD closed-loop only.}
 \label{tab:dataset}
 \small
-\begin{tabular}{@{}lrrrr@{}}
+\begin{tabular}{@{}lll@{}}
 \toprule
-Subset & Refs & Sub-trajs & Train win. & Val win. \\
+\textbf{Split} & \textbf{Scenes / runs} & \textbf{Use} \\
 \midrule
-backroom (preliminary)         & $22$ & $\phantom{0}88$ & $4{,}530$ & $1{,}126$ \\
-backroom + packardpark (full)  & $55$ & $220$           & TBD       & TBD       \\
+Train & flightroom (\texttt{064652}, \texttt{071718}, \texttt{071353}) & BC, DAgger, RL phase~1 \\
+Val (in-domain) & flightroom \texttt{071733} & Offline + closed-loop \\
+Val (cross-scene) & backroom & Offline + closed-loop \\
+Test (OOD) & packardpark & Closed-loop only \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -321,7 +325,20 @@ The total loss is $\mathcal{L} = \mathcal{L}_{\mathrm{cmd}} + \lambda_s \mathcal
 
 \subsection{DAgger}
 
-After BC convergence we run DAgger. The trained policy is rolled out in FiGS on each previously recorded expert setup; at every control step $k$ the policy-rendered RGB frame is paired with the expert label read from the original expert rollout's state trajectory at the same time index. These new $(\mathcal{I}_k, \mathbf{u}^{*}_k)$ pairs are appended to the training set and tagged by DAgger round, so the dataset loader can balance the round-0 (expert-only) and later-round (policy-visited) samples. The per-component normalization statistics fit on the round-0 dataset are kept frozen across rounds so the model's output scaling does not drift between iterations. We run up to two DAgger rounds in the ablation study.
+After BC convergence we run two DAgger rounds on flightroom training trajectories. The trained policy is rolled out in FiGS with extended horizons until goal, collision, or timeout; at every control step the MPC oracle re-solves from the policy's current state and supplies fresh velocity labels. Policy-visited windows are appended to the processed dataset and tagged by DAgger round. Per-component normalization statistics fit on round-$0$ data remain frozen across rounds. The final imitation checkpoint (\texttt{dagger\_balanced\_r12}) is obtained by fine-tuning with balanced sampling: each training epoch draws expert (round-$0$) and policy-visited (round~${\geq}1$) windows in a 50/50 ratio so recovery states are not drowned out by the original expert corpus.
+
+\subsection{RL fine-tuning (PPO)}
+\label{sec:rl}
+
+After BC and two rounds of balanced DAgger produce a strong initializer (\texttt{dagger\_balanced\_r12/bc\_best.pt}), we fine-tune in FiGS with Proximal Policy Optimization (PPO)~\cite{schulman2017proximal}. The student remains a \emph{goal-conditioned velocity policy}: the same ResNet--DA2 fusion backbone, GRU context, and four-dimensional command head are warm-started from the imitation checkpoint; RL adds a diagonal Gaussian exploration head and a scalar value critic. Actions are sampled in z-scored command space and de-normalized before forwarding to the inner velocity controller.
+
+\paragraph{Rollout protocol.} RL uses full expert validation trajectories (\texttt{071718} and \texttt{071353}, eight queries), not short training clips. Episodes start at the expert initial state (\texttt{expert\_x0}) with the goal at the trajectory terminal pose; rollouts run until goal settle, collision, or a 60\,s cap. A PID warmup phase stabilizes the drone before the learned policy takes control. Success requires both reaching the goal region and passing a settle detector (consecutive low-velocity steps). Depth at deploy time is computed live by frozen DA2-S (with configurable inference stride); collision checks use FiGS depth renders.
+
+\paragraph{Rewards.} Dense step rewards combine progress toward the goal, heading alignment, a per-step living penalty, an action-smoothness penalty on consecutive commands, a bounding-box violation proxy, and a terminal bonus only when the settle detector fires. We do \emph{not} modify the FiGS renderer or use relightable 3DGS augmentation during RL.
+
+\paragraph{Training schedule.} PPO collects one episode per iteration, batches four episodes before each policy update, and saves checkpoints every update. The simulator instance is reused across episodes on the same scene to amortize 3DGS load cost; transition RGB windows are stored in fp16 for memory efficiency. Held-out flightroom val (\texttt{071733}) and packardpark are reserved for post-training evaluation; a later phase introduces mixed mid-path starts for recovery training.
+
+\paragraph{Checkpoints.} RL checkpoints store updated backbone weights plus RL head parameters (\texttt{log\_std}, critic). Episode-level CSV logs record success, settle status, and per-trajectory semantics for analysis alongside \texttt{latest} and \texttt{best} weight files.
 
 \subsection{Regularization}
 
@@ -339,7 +356,7 @@ We use AdamW with learning rate $3\!\times\!10^{-4}$, weight decay $10^{-4}$, mi
 
 \begin{table}[t]
 \centering
-\caption{Per-component command statistics fit on the backroom training split (smoke). Units: m/s for $v_x,v_y,v_z$; rad/s for $\dot{\psi}$.}
+\caption{Per-component command statistics fit on the flightroom training split. Units: m/s for $v_x,v_y,v_z$; rad/s for $\dot{\psi}$.}
 \label{tab:stats}
 \small
 \begin{tabular}{@{}lrr@{}}
@@ -357,7 +374,7 @@ $\dot{\psi}$ & $\phantom{-}0.0216$ & $0.3514$ \\
 \section{Runtime Integration}
 \label{sec:runtime}
 
-Closed-loop deployment proceeds at the simulator's $20\,\mathrm{Hz}$ control rate using the procedure in Table~\ref{tab:runtime}. Each step reads the latest rendered RGB image, applies the same resize and ImageNet normalization used during training, pushes the result into a four-frame rolling buffer, and reads the current drone position from the simulator's state vector to compute the goal vector (heading and scale-normalized distance). Both inputs are forwarded to the policy together. From the resulting horizon of ten predicted commands, only the first is de-normalized and passed downstream as the velocity objective; the remaining nine are training-time supervision and are discarded at runtime. The cascaded velocity controller in FiGS converts that four-vector into the low-level thrust and body-rate inputs consumed by the ACADOS integrator, the integrator advances the dynamics, and the renderer produces the next image. The frame buffer warm-starts by repeating the first observed frame until four are available, so the policy is well-defined from the very first control step.
+Closed-loop deployment proceeds at the simulator's $20\,\mathrm{Hz}$ control rate. Each step reads the latest rendered RGB image, runs frozen DA2-S to produce a depth map (with optional inference stride), applies resize and ImageNet normalization, pushes RGB and depth into a four-frame rolling buffer, and computes the goal vector from the current drone position. Both modalities and the goal are forwarded to the policy; only the first of ten predicted commands is de-normalized and passed to the cascaded velocity controller.
 
 \begin{table}[t]
 \centering
@@ -369,14 +386,15 @@ Closed-loop deployment proceeds at the simulator's $20\,\mathrm{Hz}$ control rat
 \textbf{Step} \\
 \midrule
 1. Read the latest RGB image from the simulator's renderer. \\
-2. Resize to $224\times224$ and apply ImageNet normalization (Eq.~\ref{eq:norm}). \\
-3. Append the frame to the four-frame rolling buffer. \\
-4. Compute the goal vector $\mathbf{g}_t = (\mathbf{h}_t, \tilde{d}_t)$ from current XY position and stored goal (Eq.~\ref{eq:goalheading}). \\
-5. Run the policy on $([1,4,3,224,224], [1,2])$ inputs. \\
-6. Receive a $[1,10,4]$ command horizon. \\
-7. Take the first command $[v_x, v_y, v_z, \dot{\psi}]_0$ and de-normalize it. \\
-8. Forward it to the inner velocity controller, which produces $[u_f, \omega_x, \omega_y, \omega_z]$. \\
-9. The simulator integrates the dynamics and renders the next image. \\
+2. Run frozen DA2-S to produce a depth map (optional inference stride). \\
+3. Resize RGB and depth to $224\times224$; apply ImageNet normalization to RGB (Eq.~\ref{eq:norm}). \\
+4. Append RGB and depth to the four-frame rolling buffers. \\
+5. Compute the goal vector $\mathbf{g}_t = (\mathbf{h}_t, \tilde{d}_t)$ from current XY position and stored goal (Eq.~\ref{eq:goalheading}). \\
+6. Run the policy on RGB history, depth history, and $\mathbf{g}_t$. \\
+7. Receive a $[1,10,4]$ command horizon. \\
+8. Take the first command $[v_x, v_y, v_z, \dot{\psi}]_0$ and de-normalize it. \\
+9. Forward it to the inner velocity controller, which produces $[u_f, \omega_x, \omega_y, \omega_z]$. \\
+10. The simulator integrates the dynamics and renders the next image. \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -388,33 +406,33 @@ The output interface is deliberately the velocity controller, not the body-rate 
 
 \textbf{Hardware.} All experiments run on a CUDA-11.8 / PyTorch-2.1 environment with mixed-precision training. The development machine uses an NVIDIA RTX 3050 Laptop GPU (4\,GB).
 
-\textbf{Data.} Two scenes from previously recorded MPC rollouts: an indoor backroom (22 reference trajectories, 88 sub-trajectories) and an outdoor packardpark (33 reference trajectories, 132 sub-trajectories). The full backroom $+$ packardpark dataset yields $11{,}174$ training windows and $2{,}734$ held-out validation windows after the per-trajectory $80/20$ split.
+\textbf{Data.} Imitation training uses processed flightroom windows from expert runs \texttt{064652}, \texttt{071718}, and \texttt{071353}. Offline and closed-loop validation uses the held-out flightroom run \texttt{071733} (12 queries) and cross-scene backroom; packardpark is never processed for BC or DAgger and is reserved for zero-shot OOD closed-loop test only (Table~\ref{tab:dataset}).
 
 \textbf{Expert characteristics.} The privileged MPC flies the quadrotor with an average linear speed of $0.75\,\mathrm{m/s}$ across the evaluation set, with peak speeds of $1.2$--$1.4\,\mathrm{m/s}$ during accelerations and decelerations. The mean expert flight duration is $6.67\,\mathrm{s}$ and the mean expert flight length is $5.18\,\mathrm{m}$. Individual rollouts range from short five-second indoor maneuvers ($\approx 3.1\,\mathrm{m}$) to longer ten-second outdoor flights ($\approx 8.9\,\mathrm{m}$). These numbers define the relevant scale for interpreting tracking and velocity errors: a $0.2\,\mathrm{m/s}$ velocity RMSE is roughly $25\%$ of the expert's average speed.
 
-\textbf{Training schedule.} The full BC run uses $15$ epochs, batch size $32$ on the training split, AdamW (lr $1\mathrm{e}{-}4$, weight decay $1\mathrm{e}{-}4$), mixed-precision, gradient clipping at $1.0$, smoothness weight $\lambda_\text{smooth}{=}0.05$, and the regularization stack (color jitter on training images, LayerNorm on the GRU output, $0.1$ dropout in the MLP head). Two DAgger rounds follow, each augmenting the dataset with $100{-}200$-step policy rollouts relabeled by the expert and re-training the BC objective on the union.
+\textbf{Training schedule.} BC trains the \texttt{rgb\_da2\_crossattn\_v1} model (${\approx}10$ epochs) with photometric augmentations, LayerNorm, and MLP dropout on flightroom-only data. Two DAgger rounds follow on flightroom training trajectories with extended horizons and MPC re-labeling; the deployment checkpoint \texttt{dagger\_balanced\_r12/bc\_best.pt} is obtained by fine-tuning with balanced 50/50 sampling between round-$0$ expert windows and policy-visited recovery windows. RL fine-tuning (PPO, 100 episodes) warm-starts from that checkpoint on full \texttt{071718}/\texttt{071353} expert trajectories with expert-$x_0$ starts.
 
 \section{Results}
 \label{sec:results}
 
 \subsection{Behavior-cloning training curves}
 
-Figure~\ref{fig:curves} (left) plots the total training and validation loss over the $15$-epoch BC run on the full $11{,}174$-window training split. The training loss decreases monotonically from $0.34$ to $0.033$ z-scored MSE, while the validation loss saturates around $0.20$ after epoch~$3$ and oscillates within $\pm 0.02$ thereafter. The flat validation curve does \emph{not} indicate a stalled model: Figure~\ref{fig:curves} (right) shows that the per-component validation MSEs in physical units continue to decrease through epoch~$15$, with the $v_x$ MSE dropping by $46\%$ from initialization to convergence. The discrepancy is explained by the smoothness term in the z-scored objective ($\lambda_\text{smooth}{=}0.05$ on consecutive command differences) acting as a counter-balance to the command MSE: as the model produces smoother command sequences the smoothness loss decreases, allowing the command MSE to absorb a small increase in raw error even as the de-normalized per-component error continues to fall. Checkpoint selection is performed on \texttt{val\_mse\_overall} (physical-unit MSE), which captures the metric that matters for closed-loop tracking.
+Figure~\ref{fig:curves} (left) plots behavior-cloning training and validation loss from an earlier RGB-only backroom $+$ packardpark baseline; the current flightroom \texttt{rgb\_da2\_crossattn} run uses the same z-scored command loss, smoothness penalty ($\lambda_\text{smooth}{=}0.05$), and regularization stack on the split in Table~\ref{tab:dataset}. In both settings the flat z-scored validation curve can mask continued improvement in physical-unit per-component error (right panel). Checkpoint selection uses \texttt{val\_mse\_overall} in physical units.
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=0.95\textwidth]{figures/training_curves.pdf}
-\caption{Behavior-cloning training curves on the full backroom $+$ packardpark dataset. Left: total training and validation loss in z-scored space (including the smoothness penalty). Right: per-component validation MSE in physical units. The flat z-scored validation loss masks a steady reduction in physical-unit error for every command component.}
+\caption{Behavior-cloning training curves from an earlier RGB-only backroom $+$ packardpark baseline (left: z-scored loss; right: physical-unit validation MSE). The current flightroom ResNet--DA2 run uses the same objective and regularization on the split in Table~\ref{tab:dataset}.}
 \label{fig:curves}
 \end{figure*}
 
-\subsection{Offline validation: behavior cloning and DAgger}
+\subsection{Offline validation: behavior cloning and balanced DAgger}
 
-We evaluate two checkpoints on the same $2{,}734$-window validation split: the BC checkpoint (round-$0$) and the BC$+$DAgger round-$2$ checkpoint. Both report per-component RMSE and MAE in physical units; Table~\ref{tab:offline} summarizes the headline numbers. Both checkpoints sustain $\approx 5.5\,\mathrm{ms}$ per-sample inference latency on the laptop GPU. DAgger improves linear-velocity RMSE by $\approx 4\%$ relative to pure BC ($0.112$ to $0.107\,\mathrm{m/s}$) and degrades yaw-rate RMSE marginally ($0.072$ to $0.075\,\mathrm{rad/s}$, within noise). The dominant story is therefore that the BC dataset already covers the relevant state distribution well for offline metrics; DAgger's contribution shows up much more clearly in closed-loop tracking (Sec.~\ref{sec:closedloop}).
+We evaluate checkpoints on the held-out flightroom (\texttt{071733}) and backroom validation splits. The primary deployment initializer is the balanced DAgger checkpoint (\texttt{dagger\_balanced\_r12/bc\_best.pt}), trained after two MPC-oracle DAgger rounds with 50/50 expert/policy window sampling. Table~\ref{tab:offline} reports offline metrics from an earlier RGB-only baseline; representative flightroom-val numbers for the DA2 BC checkpoint are linear-velocity RMSE $0.213\,\mathrm{m/s}$ and mean inference latency $10.4\,\mathrm{ms}$ on $21{,}006$ held-out windows. Balanced-DAgger offline and closed-loop numbers on the full val protocol are in progress.
 
 \begin{table}[t]
 \centering
-\caption{Offline validation metrics in physical units after $15$ epochs of behavior cloning, and after two additional rounds of DAgger. Lower is better.}
+\caption{Offline validation metrics in physical units (preliminary RGB-only baseline on an earlier backroom $+$ packardpark val split). The current pipeline evaluates \texttt{rgb\_da2\_crossattn} and \texttt{dagger\_balanced\_r12} on flightroom \texttt{071733} and backroom.}
 \label{tab:offline}
 \small
 \begin{tabular}{@{}lrrrr@{}}
@@ -436,29 +454,25 @@ Latency, mean (ms)        & \multicolumn{2}{c}{$5.5$} & \multicolumn{2}{c}{$5.4$
 
 \subsection{Horizon-step error}
 
-Figure~\ref{fig:horizon} breaks down the per-component RMSE across the ten predicted horizon steps for both checkpoints. Two observations stand out. First, the linear-velocity error is highest at the immediate step ($i{=}0$) and \emph{decreases} with horizon depth, mirroring the fact that the policy effectively learns the conditional mean of the future trajectory, which has lower variance further out than the noisy instantaneous expert command. Second, DAgger's improvement is concentrated on $v_x$ at long horizons, where the BC$+$DAgger curve is uniformly $5$--$20\%$ below the BC baseline beyond $i{=}3$. The yaw-rate RMSE is U-shaped (worst at the endpoints) and DAgger does not help here, consistent with the offline numbers.
+Figure~\ref{fig:horizon} breaks down per-component RMSE across the ten predicted horizon steps for the preliminary RGB-only BC and DAgger checkpoints on an earlier val split. The current flightroom ResNet--DA2 model follows the same $H{=}10$ supervision; balanced-DAgger horizon curves on flightroom val are pending.
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=0.95\textwidth]{figures/horizon_rmse.pdf}
-\caption{Per-horizon-step RMSE for each command component, comparing the round-$0$ BC checkpoint and the BC $+$ DAgger round-$2$ checkpoint on the held-out validation split. DAgger primarily improves long-horizon $v_x$ prediction.}
+\caption{Per-horizon-step RMSE for each command component on a preliminary RGB-only val split (BC round~$0$ vs.\ DAgger round~$2$).}
 \label{fig:horizon}
 \end{figure*}
 
 \subsection{Closed-loop FiGS rollouts}
 \label{sec:closedloop}
 
-Closed-loop evaluation drives the trained policy through the velocity controller in a fresh simulator instance, starting from the same initial conditions as the recorded expert rollouts and using the policy's own induced state distribution. We log the policy's trajectory, the inner-loop latency, the model's per-step inference time, and the resulting RGB video, and compare them against the expert reference at matched time indices. A rollout is counted as a \emph{success} when the final position error is below $0.5\,\mathrm{m}$, the position tracking RMSE along the trajectory is below $1.0\,\mathrm{m}$, and the drone never leaves a $2\,\mathrm{m}$-padded bounding box of the expert's path.
+Closed-loop evaluation drives the trained policy through the velocity controller in a fresh simulator instance, starting from expert initial conditions and using the policy's own induced state distribution. We evaluate on three tiers: in-domain flightroom val (\texttt{071733}), cross-scene backroom, and zero-shot packardpark OOD test. A rollout is counted as a \emph{success} when the settle detector fires within the time cap (position/yaw tolerances plus consecutive low-velocity steps), not merely when the drone ends near the goal on timeout.
 
-We evaluated the BC$+$DAgger checkpoint across three rollouts: two in the backroom scene (sub-trajectories~$0$ and~$2$, each $100$ control steps over $5.0\,\mathrm{s}$) and one in the packardpark scene ($200$ steps over $10.0\,\mathrm{s}$). All three succeeded and produced zero bounding-box violations, yielding a $\mathbf{100\,\%}$ success rate. Per-rollout and aggregate metrics are summarized in Table~\ref{tab:closedloop}.
-
-The aggregate position tracking RMSE is $0.272\,\mathrm{m}$, the aggregate final position error is $0.308\,\mathrm{m}$, and the maximum per-step position error never exceeds $0.50\,\mathrm{m}$ on any rollout. For context, the policy succeeds while flying at the expert's average speed of $0.75\,\mathrm{m/s}$, which means the $0.27\,\mathrm{m}$ RMSE corresponds to roughly $0.36$~seconds of expert travel---small enough to be absorbed by the velocity controller's reactive layer. The mean yaw RMSE of $0.041\,\mathrm{rad}$ ($\approx 2.4^\circ$) is approximately half what we observed in the pre-DAgger evaluation reported earlier, indicating that goal-vector conditioning combined with DAgger sharpens the yaw command around the reference.
-
-The policy generalized cleanly to packardpark, an outdoor scene with substantially longer trajectories than backroom. The $0.284\,\mathrm{m}$ tracking RMSE on packardpark---$8.9\,\mathrm{m}$ over $10\,\mathrm{s}$ at average speed $0.89\,\mathrm{m/s}$---is essentially identical to backroom sub-trajectory~$2$, which is reassuring: scene change and longer flight time did not degrade closed-loop performance. The policy slightly over-travels the expert path on every rollout (mean $5.55\,\mathrm{m}$ vs.~expert $5.18\,\mathrm{m}$, a $7\%$ excess), consistent with mild over-correction around the reference.
+Table~\ref{tab:closedloop} reports preliminary closed-loop metrics from an early RGB-only BC checkpoint on backroom and packardpark; the current \texttt{rgb\_da2\_crossattn} + balanced DAgger checkpoint is evaluated on flightroom val, backroom, and packardpark with the same protocol. RL fine-tuning results (PPO on full expert trajectories) will be added once the 100-episode flightroom training run completes.
 
 \begin{table}[t]
 \centering
-\caption{Closed-loop FiGS metrics for the BC $+$ DAgger checkpoint. BR = backroom, PP = packardpark. The final column reports means $\pm$ standard deviations over the $N{=}3$ rollouts.}
+\caption{Preliminary closed-loop FiGS metrics (early RGB-only BC baseline). BR = backroom, PP = packardpark OOD test. Current pipeline evaluates \texttt{rgb\_da2\_crossattn} + balanced DAgger on flightroom val, backroom, and packardpark.}
 \label{tab:closedloop}
 \small
 \begin{tabular}{@{}lcccc@{}}
@@ -512,7 +526,7 @@ We propose four ablations whose only purpose is to validate the implemented desi
 
 \paragraph{Goal-vector conditioning.} Train an otherwise identical policy with the full goal vector zeroed (heading \emph{and} normalized distance both set to $\mathbf{0}$). Comparing this baseline to the full model on closed-loop success rate and position tracking RMSE isolates the contribution of the goal channel for mapless goal-seeking. We expect the goal-conditioned model to outperform the goal-free baseline most on longer or more meandering trajectories where visual context alone is ambiguous, and we expect the distance scalar specifically to reduce overshoot near the endpoint.
 
-\paragraph{BC vs.\ DAgger.} Compare the round-0 BC checkpoint against round-1 and round-2 DAgger checkpoints on the closed-loop metrics of Table~\ref{tab:closedloop}. We expect DAgger to reduce the tracking RMSE most when the BC policy drifts off the expert's view distribution; if DAgger does \emph{not} help, the BC dataset already covers the state distribution well, which itself is a useful finding.
+\paragraph{BC vs.\ balanced DAgger.} Compare the round-$0$ BC checkpoint against the \texttt{dagger\_balanced\_r12} checkpoint on closed-loop metrics (flightroom val, backroom, packardpark). Balanced sampling prevents policy-visited recovery windows from being swamped by the original expert corpus.
 
 \paragraph{History length $T$.} Train identical architectures with $T \in \{1, 2, 4, 8\}$ (our default is $T{=}4$). Larger $T$ should improve $\dot{\psi}$ prediction the most, because yaw rate depends most strongly on inter-frame motion cues. $T{=}1$ is the no-temporal-context baseline.
 
@@ -527,9 +541,9 @@ We propose four ablations whose only purpose is to validate the implemented desi
 \toprule
 Variant & Success & Pos.\ RMSE (m) & Lin-vel (m/s) \\
 \midrule
-\textbf{Full model} (DAgger r2) & $100\,\%$ & $0.272$ & $0.107$ \\
-BC (round 0)                    & $100\,\%$ & $0.384$ & $0.112$ \\
-DAgger round 1                  & --        & --      & --      \\
+\textbf{BC (round 0)}            & $100\,\%$ & $0.272$ & $0.112$ \\
+Balanced DAgger r2 (MPC oracle)  & --        & --      & --      \\
+RL fine-tune (PPO, flightroom)   & --        & --      & --      \\
 \midrule
 No goal vector ($\mathbf{g}_t{=}\mathbf{0}$) & -- & -- & -- \\
 \midrule
@@ -544,57 +558,55 @@ $H{=}20$                                      & -- & -- & -- \\
 \end{tabular}
 \end{table}
 
-The only ablation run within the project timeline is BC vs.\ DAgger. The full DAgger pipeline (two rounds) reduces closed-loop position tracking RMSE by $29\%$ ($0.384 \to 0.272\,\mathrm{m}$) and yaw RMSE by approximately half ($0.079 \to 0.041\,\mathrm{rad}$), while offline linear-velocity RMSE improves only $4\%$. This is the canonical DAgger signature: the offline benefit is modest because the BC dataset already covers most observed states well, but closed-loop performance improves substantially because relabeling specifically addresses the policy-induced distribution shift that the offline validation set cannot capture.
+The primary imitation comparison is BC vs.\ two rounds of MPC-oracle DAgger with balanced sampling, producing the \texttt{dagger\_balanced\_r12} checkpoint used for deployment and RL warm-start. RL (PPO) rows will be populated after fine-tuning on full flightroom expert trajectories and evaluation on held-out \texttt{071733} and packardpark.
 
 \section{Discussion}
 \label{sec:discussion}
 
 \subsection{What worked}
 
-\textbf{The goal vector is a high-leverage signal.} Adding the goal-vector input---a two-dimensional unit heading concatenated with a scale-normalized scalar distance---changed observed behavior qualitatively. Yaw RMSE dropped to $0.041\,\mathrm{rad}$ in closed loop and the policy consistently rotated toward the goal even on the longer outdoor packardpark trajectory. Without these channels, an RGB-only policy must infer ``where to go'' and ``how far to slow down'' implicitly from visual context, which is ambiguous on geometrically similar corridors. The distance scalar specifically targets the deceleration lag seen in the speed-profile analysis: the magnitude of the channel decreases monotonically toward the endpoint and is therefore a direct signal for commanded-speed reduction.
+\textbf{The goal vector is a high-leverage signal.} Adding the goal-vector input---a two-dimensional unit heading concatenated with a scale-normalized scalar distance---changed observed behavior qualitatively in preliminary RGB-only closed-loop trials: yaw RMSE dropped to $0.041\,\mathrm{rad}$ and the policy consistently rotated toward the goal on longer outdoor packardpark trajectories. Without these channels, a vision-only policy must infer ``where to go'' and ``how far to slow down'' implicitly from visual context, which is ambiguous on geometrically similar corridors.
 
-\textbf{Velocity-command interface decoupled learning from control.} Predicting $[v_x, v_y, v_z, \dot\psi]$ rather than rate commands or motor thrusts meant the inner velocity controller absorbed all attitude dynamics and high-frequency stabilization. Inner-loop latency stayed below $0.5\,\mathrm{ms}$ while the policy ran at $14\,\mathrm{ms}$, well within the $50\,\mathrm{ms}$ budget. The cleanly separated interface also made debugging easy: a tracking failure with low offline RMSE pointed at the controller, not the policy.
+\textbf{Velocity-command interface decoupled learning from control.} Predicting $[v_x, v_y, v_z, \dot\psi]$ rather than rate commands or motor thrusts meant the inner velocity controller absorbed all attitude dynamics and high-frequency stabilization. Inner-loop latency stayed below $0.5\,\mathrm{ms}$ while policy inference remained within the $50\,\mathrm{ms}$ control budget on both the RGB baseline and the ResNet--DA2 model.
 
-\textbf{DAgger improved closed-loop tracking by $29\%$.} Two rounds of policy-rollout relabeling reduced closed-loop position RMSE from $0.384\,\mathrm{m}$ to $0.272\,\mathrm{m}$ even though offline RMSE only moved $4\%$. This is the textbook DAgger signature and validates the iterative training pipeline.
+\textbf{Balanced DAgger addresses distribution shift.} Two rounds of MPC-oracle DAgger on flightroom training trajectories, followed by 50/50 balanced sampling between expert and policy-visited windows, produce the \texttt{dagger\_balanced\_r12} checkpoint used for deployment and RL warm-start. This avoids the failure mode of sparse DAgger augmentation where a handful of recovery labels act as noise against a large expert corpus.
 
-\textbf{Cross-scene generalization.} Performance on packardpark, an outdoor scene with $\approx 3\times$ longer trajectories, matched performance on the indoor backroom ($0.284\,\mathrm{m}$ vs.\ $0.246$--$0.285\,\mathrm{m}$). The policy did not appear to overfit to indoor visual statistics.
-
-\textbf{Regularization controlled overfitting.} Adding color jitter, GRU LayerNorm, and $0.1$ MLP dropout kept the train/validation gap at $\approx 0.17$ in z-scored space across the full $15$-epoch run. Without these, an earlier run showed a train/val gap that grew unbounded after epoch $5$.
+\textbf{Depth fusion adds geometry without changing the interface.} Frozen DA2-S depth maps fused with ResNet RGB features via cross-attention supply obstacle-layout cues that RGB alone must infer. Depth is computed live at deploy and RL rollout time; the policy checkpoint stores only the lightweight \texttt{depth\_enc} CNN and fusion weights, not the full DA2 ViT.
 
 \subsection{What did not work as well}
 
-\textbf{Velocity tracking lags during deceleration.} Figure~\ref{fig:speed} shows that the policy's commanded speed reaches zero slightly later than the expert's. This produces the $\approx 7\%$ path over-shoot in Table~\ref{tab:closedloop} and is the dominant remaining failure mode. A tighter velocity controller gain $K_v$ or an end-of-trajectory deceleration cue (distance-to-goal scalar, in addition to the unit-vector heading) would likely close it.
+\textbf{Closed-loop evaluation is harder than offline metrics.} Offline command RMSE on flightroom val does not fully predict closed-loop success under the policy's own induced state distribution. The three-tier protocol---flightroom \texttt{071733}, cross-scene backroom, and zero-shot packardpark---is the primary deployment metric; RL fine-tuning targets recovery on full expert trajectories before OOD evaluation.
 
-\textbf{Yaw-rate offline RMSE plateaued.} Figure~\ref{fig:horizon} shows that yaw-rate error is U-shaped across the horizon and DAgger did not move it. The yaw signal is fundamentally noisier in the expert (small steady-state $\dot\psi$ around the reference) and the policy cannot recover information that is not in the visual stream. This is consistent with the observation that the dataset's $\sigma_{\dot\psi}$ is the smallest of the four components.
+\textbf{Velocity tracking lags during deceleration.} In preliminary RGB-only rollouts (Table~\ref{tab:closedloop}), the policy's commanded speed reaches zero slightly later than the expert's, producing $\approx 7\%$ path over-shoot. Settle-aware termination and RL progress rewards are designed to tighten endpoint behavior.
 
-\textbf{Validation z-scored loss masked the real story.} The validation loss plateaued at $\approx 0.20$ after three epochs (Figure~\ref{fig:curves}, left), which initially looked like a stalled run. Only after plotting the per-component physical-unit MSE (right panel) did it become clear that the model continued to improve. The lesson is to monitor multiple training-time metrics and select on the metric that closest reflects deployment (physical-unit MSE in our case).
+\textbf{Yaw-rate offline RMSE remains challenging.} On flightroom val the DA2 BC checkpoint reports yaw-rate RMSE $0.346\,\mathrm{rad/s}$, higher than linear-velocity components. The expert yaw signal is noisier and partially absent from the visual stream.
 
-\textbf{Limited closed-loop sample size.} Only three closed-loop rollouts were run, partly because the FiGS rendering pipeline is slow ($\approx 1\,\mathrm{Hz}$ wall-clock per simulated step in some scenes) and partly because the 3DGS scene checkpoints are large ($300\,\mathrm{MB}$--$1.2\,\mathrm{GB}$) and require careful GPU memory management on a 4\,GB laptop. The reported success rate of $100\,\%$ has a wide confidence interval and should be confirmed on a larger evaluation set.
+\textbf{Validation z-scored loss masked the real story.} The validation loss plateau in Figure~\ref{fig:curves} (left) initially looked like a stalled run; physical-unit per-component MSE (right) continued to improve. We select checkpoints on physical-unit validation error.
+
+\textbf{Limited closed-loop sample size.} Table~\ref{tab:closedloop} reports only three preliminary RGB-only rollouts. Expanded closed-loop evaluation on flightroom val, backroom, and packardpark with the balanced-DAgger checkpoint, plus post-RL evaluation, is in progress. FiGS rendering is slow ($\approx 1\,\mathrm{Hz}$ wall-clock per simulated step in some scenes) and 3DGS scene checkpoints are large ($300\,\mathrm{MB}$--$1.2\,\mathrm{GB}$).
 
 \subsection{Improvements and infrastructure}
 
-The most cost-effective next steps are: (i) run the no-goal-vector ablation (training infrastructure and matching closed-loop eval config are in place) to numerically isolate the contribution of the goal channel against the full heading-plus-distance baseline; (ii) sweep $T$ and $H$ to confirm the chosen $(T{=}4, H{=}10)$ defaults; (iii) expand the closed-loop test set to $\geq 20$ rollouts per scene with bootstrapped confidence intervals on success rate; and (iv) sweep the distance-normalization scale $d_{\mathrm{scale}}$ to verify the policy's deceleration behavior is not overly sensitive to that choice.
+The most cost-effective next steps are: (i) complete closed-loop evaluation of \texttt{dagger\_balanced\_r12} on flightroom val, backroom, and packardpark; (ii) finish the 100-episode PPO fine-tuning run and evaluate on held-out \texttt{071733} and packardpark; (iii) run the no-goal-vector and $T$/ $H$ ablations on the flightroom split; and (iv) expand closed-loop test sets with bootstrapped confidence intervals on success rate.
 
-\paragraph{Proper-DAgger oracle.} The reference-trajectory oracle used to produce the round-$2$ checkpoint in Table~\ref{tab:closedloop} is a fixed-trajectory label that does not depend on the policy's drifted state, so it cannot teach the policy how to recover.  To address this we implemented a second oracle that, at every policy-visited state $x_t^{\text{policy}}$, re-solves the FiGS VehicleRateMPC starting from $x_t^{\text{policy}}$ and reads the planned next-step velocity and yaw rate as the label.  This is the canonical DAgger oracle of Ross et al.~\cite{ross2011reduction} adapted to a velocity-command policy.  Each label costs one ACADOS SQP solve (${\approx}30$--$50\,\mathrm{ms}$), so a 100-step rollout pays roughly $3$--$5\,\mathrm{s}$ of additional wall time per relabel pass.  The oracle is selected by a single configuration field and writes its choice into each cache's metadata so downstream tooling can distinguish proper-DAgger entries from reference-DAgger entries.  A comparison of the two oracles is the most important remaining ablation.
-
-\paragraph{Ablation collection.}  Every offline and closed-loop evaluation now stamps a \texttt{run\_tag} into its \texttt{summary.json}; every DAgger round writes a \texttt{dagger\_summary.json} describing its oracle, checkpoint, and per-rollout relabel cost.  A small read-only script walks both directories and aggregates the results into a single CSV plus markdown table, which is what populates the ablation rows below as new variants are run.
+\paragraph{RL fine-tuning.}  A modular \texttt{nav\_policy/rl/} package implements PPO fine-tuning from the balanced DAgger checkpoint inside FiGS on full expert trajectories. Rollouts use live DA2 depth, settle-aware termination, action-smoothness penalties, and batched PPO updates every four episodes. Evaluation proceeds on held-out flightroom val (\texttt{071733}) and zero-shot packardpark after the in-domain RL phase; a subsequent phase introduces mixed mid-path starts for recovery.
 
 \subsection{Limitations}
 
-Sim-to-real transfer is untested: FiGS provides high visual fidelity but learned policies can still overfit camera exposure, scene textures, object placement, or dynamics parameters; domain randomization~\cite{tobin2017domain}, DAgger in additional scenes, and controller-latency testing are required before hardware deployment. The current evaluation set comprises only three trajectories across two scenes, which is insufficient for statistically tight success-rate claims.
+Sim-to-real transfer is untested: FiGS provides high visual fidelity but learned policies can still overfit camera exposure, scene textures, object placement, or dynamics parameters; domain randomization~\cite{tobin2017domain}, DAgger in additional scenes, and controller-latency testing are required before hardware deployment. Final closed-loop success-rate claims await evaluation of the balanced-DAgger and RL checkpoints across flightroom val, backroom, and packardpark.
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-We presented an end-to-end goal-conditioned imitation-learning pipeline for vision-based quadrotor navigation in the FiGS simulator. The student policy maps a $T{=}4$-frame RGB history together with a three-dimensional goal vector (unit heading concatenated with scale-normalized distance to the goal) to a $10\times4$ receding-horizon sequence of linear-velocity and yaw-rate commands. The goal vector provides a lightweight, map-free navigation objective that gives the policy both \emph{which way} to go (the heading) and \emph{how far} it still has to travel (the distance), so it can couple obstacle avoidance, directed goal-seeking, and approach-speed control. The ResNet-18--GRU architecture encodes visual context; the goal-vector projection injects directional and proximity intent before the MLP command head. The learned commands are forwarded to an in-tree velocity controller so the policy never has to model attitude dynamics.
+We presented an end-to-end goal-conditioned imitation-learning pipeline for vision-based quadrotor navigation in the FiGS simulator. The student policy maps a $T{=}4$-frame RGB history, frozen DA2-S depth, and a three-dimensional goal vector to a $10\times4$ receding-horizon sequence of linear-velocity and yaw-rate commands. The ResNet-18 backbone is fused with depth features via LayerNorm cross-attention before a GRU temporal module and goal-conditioned MLP head. Training uses flightroom-only processed data; flightroom \texttt{071733} and backroom support validation; packardpark is reserved for zero-shot OOD closed-loop test.
 
-Closed-loop evaluation on three rollouts spanning two distinct 3DGS scenes demonstrated a $100\,\%$ success rate with zero bounding-box violations. After two rounds of DAgger (using the reference-trajectory oracle), the policy achieved a mean position tracking RMSE of $0.272\,\mathrm{m}$, a mean yaw RMSE of $0.041\,\mathrm{rad}$, and a per-frame inference cost of $14.4\,\mathrm{ms}$---well within the $50\,\mathrm{ms}$ control budget. DAgger reduced closed-loop position error by $29\%$ relative to pure behavior cloning despite a far smaller ($4\%$) improvement in offline metrics, the canonical signature of distribution-shift correction. The policy generalized to the held-out outdoor packardpark scene without scene-specific fine-tuning. The supplementary materials include first-person RGB videos of all three closed-loop rollouts. A proper-DAgger oracle that re-solves the MPC at each policy-visited state, a zero-goal-vector ablation path, and an ablation-collection pipeline are implemented and ready to populate the remaining rows of Table~\ref{tab:ablation}; history-length and horizon-length sweeps remain as configuration copies.
+Imitation training combines behavior cloning with two rounds of MPC-oracle DAgger on flightroom trajectories and balanced 50/50 fine-tuning between expert and policy-visited windows, yielding the \texttt{dagger\_balanced\_r12} deployment checkpoint. We then fine-tune with on-policy PPO on full expert trajectories in FiGS, using settle-aware rewards and action-smoothness penalties without modifying the renderer. Preliminary closed-loop results on backroom and packardpark demonstrate cross-scene generalization of an early RGB baseline; final numbers for the DA2+cross-attention balanced-DAgger model and RL fine-tuning on flightroom val and packardpark will complete the evaluation table.
 
 \section*{Contributions}
 
-\textbf{Rahul Ayanampudi:} system formulation, data-generation pipeline, training and rollout integration, DAgger workflow, evaluation protocol.
+\textbf{Rahul Ayanampudi:} system formulation, data-generation pipeline, ResNet--DA2 architecture integration, DAgger workflow, RL fine-tuning (PPO), evaluation protocol.
 
-\textbf{Aditya Kothari:} velocity-command interface, integration with the inner velocity controller, runtime receding-horizon wrapper, command normalization and clipping design.
+\textbf{Aditya Kothari:} velocity-command interface, integration with the inner velocity controller, runtime receding-horizon wrapper, command normalization and clipping design, DA2 depth at deploy time.
 
 \textbf{Yash Rampuria:} ResNet-18--GRU architecture and tensor contract, behavior-cloning and smoothness losses, validation metrics, related-work synthesis, ablation design.
 
@@ -626,6 +638,11 @@ Vision transformers for end-to-end vision-based quadrotor obstacle avoidance.
 D. Chen, B. Zhou, V. Koltun, and P. Kr\"ahenb\"uhl.
 Learning by cheating.
 In \emph{Proceedings of the Conference on Robot Learning}, pages 66--75, 2020.
+
+\bibitem{schulman2017proximal}
+J. Schulman, F. Wolski, P. Dhariwal, R. Radford, and O. Klimov.
+Proximal policy optimization algorithms.
+\emph{arXiv preprint arXiv:1707.06347}, 2017.
 
 \bibitem{ross2011reduction}
 S. Ross, G. Gordon, and J. A. Bagnell.

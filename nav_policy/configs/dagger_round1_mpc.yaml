@@ -1,109 +1,112 @@
 # configs/dagger_round1_mpc.yaml -- DAgger round 1 with proper MPC re-solve.
 #
-# This is the canonical DAgger oracle (Ross et al. 2011): at each policy-
-# visited state we re-solve the FiGS VehicleRateMPC starting from the
-# policy's actual position and read the planned next-step velocity + yaw
-# rate as the label.  Unlike the 'reference' oracle (dagger_round1.yaml),
-# this provides drift correction so the policy can learn how to RECOVER,
-# not just track.
+# Rollouts are restricted to FLIGHTROOM training environments only.
+# backroom is in offline val (processed); packardpark is held out for OOD test.
 #
-# Cost: roughly one ACADOS SQP solve per policy step (~30-50 ms on the
-# laptop).  Expected wall-clock per rollout: a few extra seconds beyond
-# the 'reference' oracle baseline.
+# Training runs used (from configs/flightroom.yaml train_runs):
+#   - flightroom_ssv_exp_2026-05-22_064652_training_mode_shuffled_trajs
+#   - flightroom_ssv_exp_2026-05-22_071718
+#   - flightroom_ssv_exp_2026-05-22_071353
 #
-# Flow:
-#   1. Load the current BC checkpoint.
-#   2. Run the policy in FiGS on each rollout setup below.
-#   3. For each policy step, re-solve the MPC at (Tpol[k], Xpol[:, k]) and
-#      label the cache with the planned next-step velocity + yaw rate.
-#   4. Append new windows to data/processed/manifest.json with round=1 and
-#      meta["oracle"]="mpc" so the collector can distinguish them later.
+# The validation run (071733_trajs-110) is also excluded.
 
 base_config: configs/flightroom.yaml
-checkpoint: data/checkpoints_modal/bc_best.pt
+checkpoint: data/checkpoints_a2_da2_crossattn/bc_best.pt
 round: 1
 output_run: dagger_r1_mpc
 run_tag: dagger_r1_mpc
 
-oracle: mpc           # 'reference' (legacy) | 'mpc' (proper DAgger)
-mpc_policy: vrmpc_rrt # FiGS configs/policy/{}.json -- match the original expert
+oracle: mpc
+mpc_policy: vrmpc_rrt
 frame: carl
 Kv: 2.0
 Ka: 5.0
 split_assignment: train
 
+# Extended horizon: run until goal or collision (180s safety cap).
+extended_horizon: true
+collection:
+  run_until_terminal: true
+  max_rollout_s: 180.0
+  collision_depth_threshold_m: 0.25
+  goal_position_tol_m: 0.5
+  goal_yaw_tol_rad: 0.5
+  depth_inference_stride: 3
+  check_collision: true
+  check_goal: true
+
 rollouts:
-  # ---- backroom scene: stack 0, all 4 sub-trajectories ----
-  - name: backroom_00_sub0
-    scene: backroom
+  # ---- 064652 training run: queries 0-3 ----
+  - name: flightroom_064652_q00
+    scene: flightroom_ssv_exp
     rollout: baseline
-    setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00000.pt
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_064652_training_mode_shuffled_trajs/trajectories00000.pt
     sub_idx: 0
 
-  - name: backroom_00_sub1
-    scene: backroom
+  - name: flightroom_064652_q01
+    scene: flightroom_ssv_exp
     rollout: baseline
-    setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00000.pt
-    sub_idx: 1
-
-  - name: backroom_00_sub2
-    scene: backroom
-    rollout: baseline
-    setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00000.pt
-    sub_idx: 2
-
-  - name: backroom_00_sub3
-    scene: backroom
-    rollout: baseline
-    setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00000.pt
-    sub_idx: 3
-
-  # ---- backroom scene: stack 1, all 4 sub-trajectories ----
-  - name: backroom_01_sub0
-    scene: backroom
-    rollout: baseline
-    setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00001.pt
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_064652_training_mode_shuffled_trajs/trajectories00001.pt
     sub_idx: 0
 
-  - name: backroom_01_sub1
-    scene: backroom
+  - name: flightroom_064652_q02
+    scene: flightroom_ssv_exp
     rollout: baseline
-    setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00001.pt
-    sub_idx: 1
-
-  - name: backroom_01_sub2
-    scene: backroom
-    rollout: baseline
-    setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00001.pt
-    sub_idx: 2
-
-  - name: backroom_01_sub3
-    scene: backroom
-    rollout: baseline
-    setup_from: data/raw/backroom_exp_04-29-26/trajectories_val00001.pt
-    sub_idx: 3
-
-  # ---- packardpark scene: stack 0, all 4 sub-trajectories ----
-  - name: packardpark_00_sub0
-    scene: packardpark
-    rollout: baseline
-    setup_from: data/raw/packardpark_exp_04-29-26/trajectories_val00000.pt
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_064652_training_mode_shuffled_trajs/trajectories00002.pt
     sub_idx: 0
 
-  - name: packardpark_00_sub1
-    scene: packardpark
+  - name: flightroom_064652_q03
+    scene: flightroom_ssv_exp
     rollout: baseline
-    setup_from: data/raw/packardpark_exp_04-29-26/trajectories_val00000.pt
-    sub_idx: 1
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_064652_training_mode_shuffled_trajs/trajectories00003.pt
+    sub_idx: 0
 
-  - name: packardpark_00_sub2
-    scene: packardpark
+  # ---- 071718 training run: queries 0-3 ----
+  - name: flightroom_071718_q00
+    scene: flightroom_ssv_exp
     rollout: baseline
-    setup_from: data/raw/packardpark_exp_04-29-26/trajectories_val00000.pt
-    sub_idx: 2
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00000.pt
+    sub_idx: 0
 
-  - name: packardpark_00_sub3
-    scene: packardpark
+  - name: flightroom_071718_q01
+    scene: flightroom_ssv_exp
     rollout: baseline
-    setup_from: data/raw/packardpark_exp_04-29-26/trajectories_val00000.pt
-    sub_idx: 3
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00001.pt
+    sub_idx: 0
+
+  - name: flightroom_071718_q02
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00002.pt
+    sub_idx: 0
+
+  - name: flightroom_071718_q03
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00003.pt
+    sub_idx: 0
+
+  # ---- 071353 training run: queries 0-3 ----
+  - name: flightroom_071353_q00
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00000.pt
+    sub_idx: 0
+
+  - name: flightroom_071353_q01
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00001.pt
+    sub_idx: 0
+
+  - name: flightroom_071353_q02
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00002.pt
+    sub_idx: 0
+
+  - name: flightroom_071353_q03
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00003.pt
+    sub_idx: 0

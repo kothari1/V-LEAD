@@ -33,28 +33,16 @@ from torch.utils.data import DataLoader
 
 from nav_policy.data.normalization import CommandStats
 from nav_policy.data.rgb_horizon_dataset import RGBHorizonDataset
-from nav_policy.model.rgb_velocity_policy import RGBVelocityPolicy
+from nav_policy.model.factory import build_model, model_uses_depth
 
 
 CMD_NAMES = ("vx", "vy", "vz", "psi_dot")
 
 
-def _build_model_from_ckpt(ckpt: dict) -> RGBVelocityPolicy:
-    cfg = ckpt["config"]
-    m = RGBVelocityPolicy(
-        T=int(cfg["window"]["T"]),
-        H=int(cfg["window"]["H"]),
-        cmd_dim=int(cfg["model"]["cmd_dim"]),
-        gru_hidden=int(cfg["model"]["gru_hidden"]),
-        gru_layers=int(cfg["model"]["gru_layers"]),
-        mlp_hidden=tuple(cfg["model"]["mlp_hidden"]),
-        mlp_dropout=float(cfg["model"].get("mlp_dropout", 0.1)),
-        goal_emb_dim=int(cfg["model"].get("goal_emb_dim", 32)),
-        goal_input_dim=int(cfg["model"].get("goal_input_dim", 2)),
-        freeze_stem_and_layer1=bool(cfg["model"].get("freeze_stem_and_layer1", True)),
-    )
-    m.load_state_dict(ckpt["model"])
-    return m
+def _build_model_from_ckpt(ckpt: dict) -> torch.nn.Module:
+    model = build_model(ckpt["config"])
+    model.load_state_dict(ckpt["model"])
+    return model
 
 
 def _collate(batch):
@@ -63,9 +51,12 @@ def _collate(batch):
     goal = torch.stack(goals, dim=0)
     u_star = torch.stack(u_stars, dim=0)
     u_raw = torch.stack([m["u_raw"] for m in metas], dim=0)
+    depth = None
+    if metas[0].get("depth") is not None:
+        depth = torch.stack([m["depth"] for m in metas], dim=0)
     ks = np.array([int(m["k"]) for m in metas], dtype=np.int32)
     caches = [m["cache"] for m in metas]
-    return rgb, goal, u_star, u_raw, ks, caches
+    return rgb, goal, u_star, u_raw, depth, ks, caches
 
 
 def evaluate(config_path: Path, checkpoint_path: Path, output_dir: Path) -> Dict[str, float]:
@@ -79,6 +70,7 @@ def evaluate(config_path: Path, checkpoint_path: Path, output_dir: Path) -> Dict
     ckpt = torch.load(checkpoint_path, weights_only=False, map_location="cpu")
     stats = CommandStats.from_dict(ckpt["stats"])
     model = _build_model_from_ckpt(ckpt).eval()
+    uses_depth = model_uses_depth(ckpt["config"])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
@@ -103,6 +95,7 @@ def evaluate(config_path: Path, checkpoint_path: Path, output_dir: Path) -> Dict
         zero_goal_heading=zero_goal_eval,
         goal_input_dim=goal_input_dim,
         goal_distance_scale=goal_distance_scale,
+        use_depth=uses_depth,
     )
     if ds.T != model.T or ds.H != model.H:
         raise ValueError(
@@ -124,14 +117,19 @@ def evaluate(config_path: Path, checkpoint_path: Path, output_dir: Path) -> Dict
     caches_all: List[List[str]] = []
 
     with torch.inference_mode():
-        for rgb, goal, _u_star, u_raw, ks, caches in loader:
+        for rgb, goal, _u_star, u_raw, depth, ks, caches in loader:
             rgb = rgb.to(device, non_blocking=True)
             goal = goal.to(device, non_blocking=True)
             u_raw_np = u_raw.numpy()
+            if depth is not None:
+                depth = depth.to(device, non_blocking=True)
 
             torch.cuda.synchronize() if device.type == "cuda" else None
             t0 = time.time()
-            u_hat_z = model(rgb, goal)
+            if uses_depth:
+                u_hat_z = model(rgb, goal, depth)
+            else:
+                u_hat_z = model(rgb, goal)
             torch.cuda.synchronize() if device.type == "cuda" else None
             latencies.append((time.time() - t0) / rgb.shape[0])  # per-sample seconds
 
@@ -186,6 +184,7 @@ def evaluate(config_path: Path, checkpoint_path: Path, output_dir: Path) -> Dict
         "zero_goal_heading": bool(zero_goal_eval),
         "goal_input_dim": int(goal_input_dim),
         "goal_distance_scale": float(goal_distance_scale),
+        "model_arch": str(ckpt_model_cfg.get("arch", "rgb_resnet18")),
         "train_epochs": int(ckpt_train_cfg.get("epochs", 0)),
     }
     print(json.dumps(summary, indent=2))

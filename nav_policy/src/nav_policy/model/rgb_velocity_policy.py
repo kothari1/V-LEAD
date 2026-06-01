@@ -118,6 +118,7 @@ class RGBVelocityPolicy(nn.Module):
         self.gru_hidden = gru_hidden
         self.goal_emb_dim = goal_emb_dim
         self.goal_input_dim = int(goal_input_dim)
+        self.use_depth = False
 
         self.visual = _PerFrameResNet18(freeze_stem_and_layer1=freeze_stem_and_layer1)
         self.gru = nn.GRU(
@@ -148,34 +149,6 @@ class RGBVelocityPolicy(nn.Module):
     def feature_dim(self) -> int:
         return self.gru_hidden + self.goal_emb_dim
 
-    def encode(self,
-               rgb_seq: torch.Tensor,
-               goal: torch.Tensor) -> torch.Tensor:
-        """Shared visual+goal encoder. Returns fused feature [B, feature_dim].
-
-        Exposed for reuse by RL actor-critic heads — BC warm-start copies these
-        weights 1:1 from a BC checkpoint into the actor's encoder.
-        """
-        if rgb_seq.ndim != 5:
-            raise ValueError(f"expected rgb_seq [B,T,3,S,S], got {tuple(rgb_seq.shape)}")
-        B, T, C, S1, S2 = rgb_seq.shape
-        if T != self.T:
-            raise ValueError(f"T mismatch: config={self.T}, input={T}")
-        if goal.shape != (B, self.goal_input_dim):
-            raise ValueError(
-                f"goal must be [B,{self.goal_input_dim}], got {tuple(goal.shape)}"
-            )
-
-        flat = rgb_seq.reshape(B * T, C, S1, S2)
-        feats = self.visual(flat)
-        seq = feats.view(B, T, self.visual.out_dim)
-
-        _, h_n = self.gru(seq)
-        h = self.gru_norm(h_n[-1])
-
-        g = self.goal_embed(goal)
-        return torch.cat([h, g], dim=-1)
-
     def forward(self,
                 rgb_seq: torch.Tensor,
                 goal: torch.Tensor) -> torch.Tensor:
@@ -187,10 +160,61 @@ class RGBVelocityPolicy(nn.Module):
         Returns:
             commands: [B, H, cmd_dim] float32, z-scored.
         """
-        B = rgb_seq.shape[0]
-        h_aug = self.encode(rgb_seq, goal)
-        out = self.head(h_aug)
+        if rgb_seq.ndim != 5:
+            raise ValueError(f"expected rgb_seq [B,T,3,S,S], got {tuple(rgb_seq.shape)}")
+        B, T, C, S1, S2 = rgb_seq.shape
+        if T != self.T:
+            raise ValueError(f"T mismatch: config={self.T}, input={T}")
+        if goal.shape != (B, self.goal_input_dim):
+            raise ValueError(
+                f"goal must be [B,{self.goal_input_dim}], got {tuple(goal.shape)}"
+            )
+
+        flat = rgb_seq.reshape(B * T, C, S1, S2)             # [B*T, 3, S, S]
+        feats = self.visual(flat)                            # [B*T, 512]
+        seq = feats.view(B, T, self.visual.out_dim)          # [B, T, 512]
+
+        _, h_n = self.gru(seq)                                # [num_layers, B, gru_hidden]
+        h = self.gru_norm(h_n[-1])                           # [B, gru_hidden], unit-scale
+
+        g = self.goal_embed(goal)                            # [B, goal_emb_dim]
+        h_aug = torch.cat([h, g], dim=-1)                    # [B, gru_hidden + goal_emb_dim]
+
+        out = self.head(h_aug)                               # [B, H * cmd_dim]
         return out.view(B, self.H, self.cmd_dim)
+
+    def forward_latent(self,
+                       rgb_seq: torch.Tensor,
+                       goal: torch.Tensor) -> torch.Tensor:
+        """Return fused GRU+goal features [B, gru_hidden + goal_emb_dim] before the MLP head."""
+        if rgb_seq.ndim != 5:
+            raise ValueError(f"expected rgb_seq [B,T,3,S,S], got {tuple(rgb_seq.shape)}")
+        B, T, C, S1, S2 = rgb_seq.shape
+        if T != self.T:
+            raise ValueError(f"T mismatch: config={self.T}, input={T}")
+        if goal.shape != (B, self.goal_input_dim):
+            raise ValueError(
+                f"goal must be [B,{self.goal_input_dim}], got {tuple(goal.shape)}"
+            )
+        flat = rgb_seq.reshape(B * T, C, S1, S2)
+        feats = self.visual(flat)
+        seq = feats.view(B, T, self.visual.out_dim)
+        _, h_n = self.gru(seq)
+        h = self.gru_norm(h_n[-1])
+        g = self.goal_embed(goal)
+        return torch.cat([h, g], dim=-1)
+
+    def predict_mean_first(self,
+                           rgb_seq: torch.Tensor,
+                           goal: torch.Tensor) -> torch.Tensor:
+        """Deterministic BC mean for the first horizon step [B, cmd_dim] in z-space."""
+        h_aug = self.forward_latent(rgb_seq, goal)
+        out = self.head(h_aug)
+        return out.view(-1, self.H, self.cmd_dim)[:, 0, :]
+
+    # Legacy alias for the deprecated SB3 feature extractor (nav_policy.rl.model.feature_extractor).
+    # Use forward_latent in new code.
+    encode = forward_latent
 
 
 def count_parameters(model: nn.Module, trainable_only: bool = True) -> int:

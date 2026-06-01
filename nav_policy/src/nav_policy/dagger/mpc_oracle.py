@@ -24,10 +24,78 @@ policy-visited step in that rollout.  Each ``label()`` call costs one OCP solve
 """
 from __future__ import annotations
 
+import json
+import os
+from pathlib import Path
 from typing import Tuple
 
 import numpy as np
 from scipy.spatial.transform import Rotation
+
+
+def mpc_reference_time(x: np.ndarray,
+                       expert_xro: np.ndarray,
+                       hz: float) -> float:
+    """
+    Map the current state to a reference time on the expert trajectory.
+
+    VehicleRateMPC.get_ydes() centers its search window on ``int(hz * t)``.
+    Wall-clock sim time is wrong after PID warm-up (time advances while the
+    drone holds at x0) and when the policy drifts off the expert schedule.
+    Nearest-neighbor position matching on the full expert path picks the
+    correct reference segment instead.
+    """
+    pos = np.asarray(x[0:3], dtype=np.float64).reshape(3, 1)
+    ref = np.asarray(expert_xro[0:3, :], dtype=np.float64)
+    idx = int(np.argmin(np.linalg.norm(ref - pos, axis=0)))
+    return idx / float(hz)
+
+
+def _figs_configs_path() -> Path:
+    """Locate FiGS-Standalone/configs in dev, Docker, and editable installs."""
+    import figs
+
+    if figs.__file__:
+        return Path(figs.__file__).resolve().parent.parent.parent / "configs"
+
+    data_path = os.environ.get("DATA_PATH")
+    if data_path:
+        candidate = Path(data_path).parents[1] / "configs"
+        if candidate.exists():
+            return candidate
+
+    nav_root = Path(__file__).resolve().parents[3]
+    candidate = nav_root.parent / "FiGS-Standalone" / "configs"
+    if candidate.exists():
+        return candidate
+
+    raise FileNotFoundError("Could not locate FiGS configs directory")
+
+
+def _load_mpc_horizon(policy: str) -> int:
+    """Read the MPC prediction horizon from FiGS policy config."""
+    with open(_figs_configs_path() / "policy" / f"{policy}.json") as f:
+        return int(json.load(f)["horizon"])
+
+
+def _pad_expert_for_mpc(Xro: np.ndarray,
+                        Uro: np.ndarray,
+                        horizon: int) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Hold the final expert pose so VehicleRateMPC.get_ydes() has enough
+    reference length for its horizon lookup window.
+
+    Choppy flightroom segments can be as short as 2 s (~41 states at 20 Hz),
+    which is shorter than vrmpc_rrt's horizon (40).  Without padding,
+    get_ydes() sees an empty nearest-neighbor slice and raises on argmin([]).
+    """
+    ncol = int(Xro.shape[1])
+    if ncol > horizon + 1:
+        return Xro, Uro
+    pad = horizon
+    Xro = np.hstack([Xro, np.tile(Xro[:, -1:], (1, pad))])
+    Uro = np.hstack([Uro, np.tile(Uro[:, -1:], (1, pad))])
+    return Xro, Uro
 
 
 class MPCRelabeler:
@@ -76,6 +144,10 @@ class MPCRelabeler:
                 f"Xro should have N+1={N+1} columns to match Uro N={N}; got {Xro.shape[1]}"
             )
 
+        horizon = _load_mpc_horizon(policy)
+        Xro, Uro = _pad_expert_for_mpc(Xro, Uro, horizon=horizon)
+        N = int(Uro.shape[1])
+
         # VehicleRateMPC accepts either a string config name or a "bypass" array
         # of shape (>=18, M) where:
         #   rows 0:11  -> [time, state(10)]
@@ -101,7 +173,23 @@ class MPCRelabeler:
         )
         return cls(mpc=mpc, control_hz=control_hz)
 
-    def label(self, t: float, x_policy: np.ndarray) -> Tuple[np.ndarray, float]:
+    def _plan_velocity_label(self,
+                             x_policy_64: np.ndarray,
+                             plan_x1: np.ndarray) -> Tuple[np.ndarray, float]:
+        vel_world = np.asarray(plan_x1[3:6], dtype=np.float32)
+        yaw0 = float(Rotation.from_quat(x_policy_64[6:10])
+                     .as_euler("xyz", degrees=False)[2])
+        yaw1 = float(Rotation.from_quat(np.asarray(plan_x1[6:10], dtype=np.float64))
+                     .as_euler("xyz", degrees=False)[2])
+        dyaw = (yaw1 - yaw0 + np.pi) % (2 * np.pi) - np.pi
+        psi_dot = float(dyaw * self.control_hz)
+        return vel_world, psi_dot
+
+    def label(self,
+              t: float,
+              x_policy: np.ndarray,
+              *,
+              expert_xro: np.ndarray | None = None) -> Tuple[np.ndarray, float]:
         """
         Re-solve the OCP at (t, x_policy) and return the implied velocity-space
         DAgger label.
@@ -113,18 +201,38 @@ class MPCRelabeler:
         if x_policy.shape != (10,):
             raise ValueError(f"x_policy must be (10,); got {x_policy.shape}")
 
-        # Solves the OCP starting from x_policy.  After this call, the
-        # solver's internal stage-k state can be queried for the plan.
         x_policy_64 = np.asarray(x_policy, dtype=np.float64)
-        self.mpc.control(float(t), x_policy_64)
-        plan_x1 = self.mpc.solver.get(1, "x")  # (10,)
+        t_mpc = (
+            mpc_reference_time(x_policy_64, expert_xro, self.control_hz)
+            if expert_xro is not None else float(t)
+        )
+        self.mpc.control(t_mpc, x_policy_64)
+        plan_x1 = self.mpc.solver.get(1, "x")
+        return self._plan_velocity_label(x_policy_64, plan_x1)
 
-        vel_world = np.asarray(plan_x1[3:6], dtype=np.float32)
+    def control_and_label(self,
+                          t: float,
+                          x_policy: np.ndarray,
+                          *,
+                          expert_xro: np.ndarray) -> Tuple[np.ndarray, np.ndarray, float, np.ndarray]:
+        """
+        One OCP solve: return FiGS motor command plus velocity-space label.
 
-        yaw0 = float(Rotation.from_quat(x_policy_64[6:10])
-                     .as_euler("xyz", degrees=False)[2])
-        yaw1 = float(Rotation.from_quat(np.asarray(plan_x1[6:10], dtype=np.float64))
-                     .as_euler("xyz", degrees=False)[2])
-        dyaw = (yaw1 - yaw0 + np.pi) % (2 * np.pi) - np.pi  # wrap to [-pi, pi]
-        psi_dot = float(dyaw * self.control_hz)
-        return vel_world, psi_dot
+        Expert collection runs VehicleRateMPC directly (body-rate/thrust).
+        Execution must use the same path, not a VelocityController wrapper
+        around planned velocities.
+        """
+        if x_policy.shape != (10,):
+            raise ValueError(f"x_policy must be (10,); got {x_policy.shape}")
+
+        x_policy_64 = np.asarray(x_policy, dtype=np.float64)
+        t_mpc = mpc_reference_time(x_policy_64, expert_xro, self.control_hz)
+        ucr, _, _, tsol = self.mpc.control(t_mpc, x_policy_64)
+        plan_x1 = self.mpc.solver.get(1, "x")
+        vel_world, psi_dot = self._plan_velocity_label(x_policy_64, plan_x1)
+        return (
+            np.asarray(ucr, dtype=np.float64),
+            vel_world,
+            psi_dot,
+            np.asarray(tsol, dtype=np.float64),
+        )

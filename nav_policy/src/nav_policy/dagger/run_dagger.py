@@ -28,6 +28,7 @@ Two expert-oracle modes are supported, selected by the config field
 
 Outputs:
     data/processed/<output_run>/cache/dagger_r{round}_<name>.pt
+    data/processed/<output_run>/rollouts/<name>/video.mp4   (when save_videos=true)
     data/processed/manifest.json   (extended with new entries tagged "round")
     data/processed/<output_run>/dagger_summary.json   (run metadata for the
                                                        ablation collector)
@@ -41,7 +42,7 @@ import json
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 import torch
@@ -57,7 +58,29 @@ except ImportError:
 from nav_policy.data.build_dataset import CONTROL_HZ, write_cache
 from nav_policy.data.normalization import CommandStats
 from nav_policy.deploy.policy_controller import RGBVelocityController
+from nav_policy.dagger.intervention_rollout import (
+    MPCDirectExpert,
+    intervention_config_from_dict,
+    simulate_with_intervention,
+)
+from nav_policy.dagger.mpc_oracle import MPCRelabeler
 from nav_policy.evaluate.closed_loop import load_expert_setup
+from nav_policy.evaluate.sim_rollout import RolloutConfig, make_hold_controller, rollout_config_from_dict, simulate_with_early_exit
+
+
+def _goal_yaw_from_expert(expert) -> float:
+    quat_cols = expert.Xro[6:10, -1:]
+    yaw = Rotation.from_quat(quat_cols.T).as_euler("xyz", degrees=False)[:, 2]
+    return float(np.unwrap(yaw)[-1])
+
+
+def _save_rollout_video(frames: np.ndarray, path: Path, fps: int = 20) -> None:
+    import imageio.v3 as iio
+
+    if frames.ndim != 4 or frames.shape[-1] != 3:
+        raise ValueError(f"expected (N,H,W,3), got {frames.shape}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    iio.imwrite(str(path), frames.astype(np.uint8), plugin="FFMPEG", fps=fps)
 
 
 def _resize_uint8(frame: np.ndarray, size: int) -> np.ndarray:
@@ -84,7 +107,14 @@ def _relabel_one(rollout_cfg: dict,
                  dagger_round: int,
                  oracle: str = "reference",
                  mpc_policy: str = "vrmpc_rrt",
-                 frame: str = "carl") -> Dict[str, object]:
+                 frame: str = "carl",
+                 *,
+                 extended_horizon: bool = True,
+                 rollout_sim_cfg: Optional[RolloutConfig] = None,
+                 video_dir: Optional[Path] = None,
+                 intervention_cfg: Optional[dict] = None,
+                 Kv: float = 2.0,
+                 Ka: float = 5.0) -> Dict[str, object]:
     """Run the policy on one expert-setup, build a DAgger cache, return its summary."""
     from figs.simulator import Simulator
 
@@ -98,12 +128,116 @@ def _relabel_one(rollout_cfg: dict,
     )
 
     goal_pos_xy = expert.Xro[0:2, -1].astype(np.float64)
+    goal_xyz = expert.Xro[0:3, -1].astype(np.float64)
+    goal_yaw = _goal_yaw_from_expert(expert)
     controller.reset(goal_pos_xy=goal_pos_xy)
     t0 = time.time()
+    sim_cfg = rollout_sim_cfg or RolloutConfig()
+    iv_cfg = intervention_config_from_dict(intervention_cfg or {})
+    use_intervention = iv_cfg.enabled and oracle == "mpc"
+    termination = "expert_horizon"
+    intervention_step = -1
+    intervention_reason = ""
+    n_policy_steps = 0
+    n_expert_steps = 0
+    n_warmup_steps = 0
+    warmup_rgb = None
+    inline_labels = False
     try:
-        Tpol, Xpol, Upol, Imgs, Tsol, _ = sim.simulate(
-            controller, expert.t0, expert.tf, expert.x0,
-        )
+        if use_intervention and extended_horizon:
+            policy_relabeler = MPCRelabeler.from_expert(
+                Xro=expert.Xro,
+                Uro=expert.Uro,
+                frame=frame,
+                policy=mpc_policy,
+                control_hz=CONTROL_HZ,
+                use_RTI=False,
+            )
+            expert_relabeler = MPCRelabeler.from_expert(
+                Xro=expert.Xro,
+                Uro=expert.Uro,
+                frame=frame,
+                policy=mpc_policy,
+                control_hz=CONTROL_HZ,
+                use_RTI=iv_cfg.mpc_use_rti_for_execution,
+            )
+            warmup_cfg = RolloutConfig(
+                warmup_steps=iv_cfg.warmup_steps,
+                warmup_kp_pos=iv_cfg.warmup_kp_pos,
+                warmup_kd_vel=iv_cfg.warmup_kd_vel,
+                warmup_kp_yaw=iv_cfg.warmup_kp_yaw,
+                warmup_max_vel=iv_cfg.warmup_max_vel,
+                warmup_max_yaw_rate=iv_cfg.warmup_max_yaw_rate,
+                warmup_prime_policy_buffer=iv_cfg.warmup_prime_policy_buffer,
+            )
+            hold_controller = make_hold_controller(
+                warmup_cfg, frame_name=frame, Kv=Kv, Ka=Ka, hz=CONTROL_HZ,
+            )
+            mpc_expert = MPCDirectExpert(
+                relabeler=expert_relabeler,
+                expert_xro=expert.Xro,
+            )
+            result = simulate_with_intervention(
+                sim,
+                controller,
+                mpc_expert,
+                policy_relabeler,
+                t0=expert.t0,
+                expert_tf=expert.tf,
+                x0=expert.x0,
+                expert_xro=expert.Xro,
+                expert_uro=expert.Uro,
+                goal_xyz=goal_xyz,
+                goal_yaw=goal_yaw,
+                goal_xy=goal_pos_xy,
+                rollout_cfg=sim_cfg,
+                intervention_cfg=iv_cfg,
+                hold_controller=hold_controller if iv_cfg.warmup_steps > 0 else None,
+                mpc_frame=frame,
+                mpc_policy=mpc_policy,
+                Kv=Kv,
+                Ka=Ka,
+            )
+            Tpol, Xpol, Upol, Imgs, Tsol, _Adv = (
+                result.Tro, result.Xro, result.Uro, result.Imgs, result.Tsol, result.Adv,
+            )
+            termination = result.termination
+            intervention_step = result.intervention_step
+            intervention_reason = result.intervention_reason
+            n_policy_steps = result.n_policy_steps
+            n_expert_steps = result.n_expert_steps
+            n_warmup_steps = result.n_warmup_steps
+            vel = result.vel_labels
+            psi_dot = result.psi_dot_labels
+            warmup_rgb = getattr(result, "warmup_rgb", None)
+            inline_labels = True
+        elif extended_horizon:
+            inline_labels = False
+            result = simulate_with_early_exit(
+                sim,
+                controller,
+                t0=expert.t0,
+                expert_tf=expert.tf,
+                x0=expert.x0,
+                goal_xyz=goal_xyz,
+                goal_yaw=goal_yaw,
+                cfg=sim_cfg,
+                goal_xy=goal_pos_xy,
+                frame_name=frame,
+                Kv=Kv,
+                Ka=Ka,
+            )
+            Tpol, Xpol, Upol, Imgs, Tsol, _Adv = (
+                result.Tro, result.Xro, result.Uro, result.Imgs, result.Tsol, result.Adv,
+            )
+            termination = result.termination
+            n_warmup_steps = result.n_warmup_steps
+            warmup_rgb = result.warmup_rgb
+        else:
+            inline_labels = False
+            Tpol, Xpol, Upol, Imgs, Tsol, _Adv = sim.simulate(
+                controller, expert.t0, expert.tf, expert.x0,
+            )
     finally:
         # Free the 3DGS scene from GPU memory before the next rollout loads
         # its own scene, otherwise the second Simulator load triggers OOM.
@@ -118,23 +252,38 @@ def _relabel_one(rollout_cfg: dict,
     rgb_frames = Imgs["rgb"]                                  # (n_pol, H, W, 3) uint8
     n_pol = int(rgb_frames.shape[0])
 
-    # Align to whichever of (policy steps, expert steps) is shorter.
-    n_align = min(n_pol, int(expert.Xro.shape[1]) - 1)
+    if extended_horizon:
+        n_align = min(n_pol, int(Xpol.shape[1]) - 1)
+    else:
+        n_align = min(n_pol, int(expert.Xro.shape[1]) - 1)
+    if oracle == "reference":
+        n_align = min(n_align, int(expert.Xro.shape[1]) - 1)
     if n_align <= 0:
         raise RuntimeError(f"[{name}] no aligned control steps to relabel")
 
+    video_path: Optional[Path] = None
+    if video_dir is not None:
+        video_path = video_dir / "video.mp4"
+        video_frames = rgb_frames[:n_pol]
+        if warmup_rgb is not None and warmup_rgb.shape[0] > 0:
+            video_frames = np.concatenate([warmup_rgb, video_frames], axis=0)
+        _save_rollout_video(video_frames, video_path, fps=int(controller.hz))
+
     relabel_t0 = time.time()
-    if oracle == "reference":
+    if inline_labels:
+        vel = vel[:n_align]
+        psi_dot = psi_dot[:n_align]
+        relabel_wall = 0.0
+    elif oracle == "reference":
         # Fixed-reference oracle: copy expert state-traj velocity and yaw rate
         # at the matching time index, regardless of where the policy actually is.
         vel = expert.Xro[3:6, :n_align].T.astype(np.float32)        # (n, 3)
         quat_cols = expert.Xro[6:10, : n_align + 1]
         yaw = _quat_to_yaw_series(quat_cols)
         psi_dot = ((yaw[1:] - yaw[:-1]) * CONTROL_HZ).astype(np.float32)
+        relabel_wall = time.time() - relabel_t0
     elif oracle == "mpc":
         # Proper-DAgger oracle: re-solve the MPC at each policy-visited state.
-        from nav_policy.dagger.mpc_oracle import MPCRelabeler
-
         relabeler = MPCRelabeler.from_expert(
             Xro=expert.Xro,
             Uro=expert.Uro,
@@ -146,12 +295,14 @@ def _relabel_one(rollout_cfg: dict,
         vel = np.zeros((n_align, 3), dtype=np.float32)
         psi_dot = np.zeros((n_align,), dtype=np.float32)
         for k in range(n_align):
-            v_k, p_k = relabeler.label(float(Tpol[k]), Xpol[:, k])
+            v_k, p_k = relabeler.label(
+                float(Tpol[k]), Xpol[:, k], expert_xro=expert.Xro,
+            )
             vel[k] = v_k
             psi_dot[k] = p_k
+        relabel_wall = time.time() - relabel_t0
     else:
         raise ValueError(f"unknown oracle: {oracle!r} (expected 'reference' or 'mpc')")
-    relabel_wall = time.time() - relabel_t0
 
     # Goal heading + distance for the DAgger cache, both computed from the
     # POLICY's actual XY positions (not the recorded expert positions) so they
@@ -170,6 +321,10 @@ def _relabel_one(rollout_cfg: dict,
     )
     rgb = torch.from_numpy(resized).permute(0, 3, 1, 2).contiguous()
 
+    depth_uint8 = None
+    if controller.uses_depth:
+        depth_uint8 = controller.encode_depth_batch(rgb)
+
     write_cache(
         cache_path,
         rgb_uint8=rgb,
@@ -177,6 +332,7 @@ def _relabel_one(rollout_cfg: dict,
         psi_dot=torch.from_numpy(psi_dot),
         goal_heading=torch.from_numpy(goal_heading_np),
         goal_dist=torch.from_numpy(goal_dist_np),
+        depth_uint8=depth_uint8,
         meta={
             "run": cache_path.parent.parent.name,
             "stack_id": str(rollout_cfg.get("name", "")),
@@ -191,17 +347,43 @@ def _relabel_one(rollout_cfg: dict,
             "mpc_policy": mpc_policy if oracle == "mpc" else None,
             "setup_from": str(rollout_cfg["setup_from"]),
             "scene": rollout_cfg["scene"],
+            "extended_horizon": bool(extended_horizon),
+            "intervention": use_intervention,
+            "intervention_step": int(intervention_step),
+            "intervention_reason": intervention_reason,
+            "n_warmup_steps": int(n_warmup_steps),
+            "n_policy_steps": int(n_policy_steps),
+            "n_expert_steps": int(n_expert_steps),
+            "termination": termination,
         },
     )
 
-    print(f"  [{name}] wrote {cache_path.name}  n={n_align}  "
-          f"rollout={wall_time:.1f}s  relabel={relabel_wall:.1f}s  oracle={oracle}")
+    iv_msg = ""
+    if use_intervention:
+        iv_msg = (
+            f"  warmup={n_warmup_steps}"
+            f"  iv@{intervention_step}({intervention_reason or 'none'})"
+            f"  pol={n_policy_steps}  exp={n_expert_steps}"
+        )
+    print(f"  [{name}] wrote {cache_path.name}  n={n_align}  term={termination}  "
+          f"rollout={wall_time:.1f}s  relabel={relabel_wall:.1f}s  oracle={oracle}"
+          + iv_msg
+          + (f"  video={video_path.name}" if video_path else ""))
     return {
         "name": name,
         "cache": cache_path,
         "n_frames": int(n_align),
         "duration_s": float(Tpol[n_align] - Tpol[0]) if n_align < Tpol.shape[0] else float(Tpol[-1] - Tpol[0]),
         "oracle": oracle,
+        "termination": termination,
+        "intervention": use_intervention,
+        "intervention_step": int(intervention_step),
+        "intervention_reason": intervention_reason,
+        "n_warmup_steps": int(n_warmup_steps),
+        "n_policy_steps": int(n_policy_steps),
+        "n_expert_steps": int(n_expert_steps),
+        "goal_reached": termination == "goal_reached",
+        "video": str(video_path) if video_path else None,
         "rollout_wall_s": float(wall_time),
         "relabel_wall_s": float(relabel_wall),
     }
@@ -282,6 +464,19 @@ def run(config_path: Path) -> None:
     mpc_policy = str(cfg.get("mpc_policy", "vrmpc_rrt"))
     frame_name = str(cfg.get("frame", "carl"))
 
+    collection_cfg = dict(cfg.get("collection") or cfg.get("metrics") or {})
+    extended_horizon = bool(cfg.get("extended_horizon", collection_cfg.get("extended_horizon", True)))
+    iv_cfg = intervention_config_from_dict(cfg)
+    use_intervention = iv_cfg.enabled and default_oracle == "mpc"
+    if extended_horizon:
+        collection_cfg.setdefault("run_until_terminal", True)
+        collection_cfg.setdefault("check_collision", True)
+        collection_cfg.setdefault("check_goal", True)
+    rollout_sim_cfg = rollout_config_from_dict({"metrics": collection_cfg})
+    depth_stride = int(collection_cfg.get("depth_inference_stride", 3))
+    save_videos = bool(cfg.get("save_videos", collection_cfg.get("save_videos", True)))
+    video_root = processed_root / output_run / "rollouts"
+
     # Pre-resolve all setup_from paths before the first Simulator call.
     for rcfg in cfg.get("rollouts", []):
         if "setup_from" in rcfg:
@@ -293,7 +488,31 @@ def run(config_path: Path) -> None:
         Kv=float(cfg.get("Kv", 2.0)),
         Ka=float(cfg.get("Ka", 5.0)),
         device=device,
+        depth_inference_stride=depth_stride,
     )
+
+    print(
+        f"[dagger r{dagger_round}] extended_horizon={extended_horizon}  "
+        f"intervention={use_intervention}  "
+        f"run_until_terminal={rollout_sim_cfg.run_until_terminal}  "
+        f"max_rollout_s={rollout_sim_cfg.max_rollout_s}  depth_stride={depth_stride}  "
+        f"save_videos={save_videos}",
+        flush=True,
+    )
+    if use_intervention:
+        if iv_cfg.mpc_immediate_after_warmup:
+            print(
+                f"  mode: MPC verify (warmup={iv_cfg.warmup_steps} then expert only, no policy)",
+                flush=True,
+            )
+        else:
+            print(
+                f"  intervention: drift>={iv_cfg.drift_threshold_m}m  "
+                f"osc_rev>={iv_cfg.oscillation_reversals}  "
+                f"min_policy_steps={iv_cfg.min_policy_steps}  "
+                f"warmup_steps={iv_cfg.warmup_steps}",
+                flush=True,
+            )
 
     new_caches: List[Path] = []
     per_rollout_summaries: List[Dict[str, object]] = []
@@ -301,6 +520,7 @@ def run(config_path: Path) -> None:
         cache_name = f"dagger_r{dagger_round}_{rcfg['name']}.pt"
         cache_path = cache_dir / cache_name
         per_oracle = str(rcfg.get("oracle", default_oracle)).lower()
+        video_dir = (video_root / rcfg["name"]) if save_videos else None
         try:
             res = _relabel_one(
                 rcfg, controller, image_size=image_size,
@@ -308,6 +528,12 @@ def run(config_path: Path) -> None:
                 oracle=per_oracle,
                 mpc_policy=mpc_policy,
                 frame=frame_name,
+                extended_horizon=extended_horizon,
+                rollout_sim_cfg=rollout_sim_cfg,
+                video_dir=video_dir,
+                intervention_cfg=cfg,
+                Kv=float(cfg.get("Kv", 2.0)),
+                Ka=float(cfg.get("Ka", 5.0)),
             )
             new_caches.append(res["cache"])
             per_rollout_summaries.append({
@@ -315,6 +541,15 @@ def run(config_path: Path) -> None:
                 "n_frames": res["n_frames"],
                 "duration_s": res["duration_s"],
                 "oracle": res["oracle"],
+                "termination": res.get("termination"),
+                "intervention": res.get("intervention"),
+                "intervention_step": res.get("intervention_step"),
+                "intervention_reason": res.get("intervention_reason"),
+                "n_warmup_steps": res.get("n_warmup_steps"),
+                "n_policy_steps": res.get("n_policy_steps"),
+                "n_expert_steps": res.get("n_expert_steps"),
+                "goal_reached": res.get("goal_reached"),
+                "video": res.get("video"),
                 "rollout_wall_s": res["rollout_wall_s"],
                 "relabel_wall_s": res["relabel_wall_s"],
                 "cache": str(res["cache"].relative_to(processed_root).as_posix()),
@@ -331,11 +566,15 @@ def run(config_path: Path) -> None:
         print("[dagger] no caches written; manifest unchanged", file=sys.stderr)
         return
 
-    _append_to_manifest(
-        processed_root, new_caches, T=T, H=H,
-        dagger_round=dagger_round,
-        split_assignment=cfg.get("split_assignment", "train"),
-    )
+    verify_only = bool(cfg.get("verify_only", False))
+    if verify_only:
+        print("[dagger] verify_only=true — skipping manifest append", flush=True)
+    else:
+        _append_to_manifest(
+            processed_root, new_caches, T=T, H=H,
+            dagger_round=dagger_round,
+            split_assignment=cfg.get("split_assignment", "train"),
+        )
 
     summary_path = processed_root / output_run / "dagger_summary.json"
     summary_path.parent.mkdir(parents=True, exist_ok=True)
@@ -345,12 +584,21 @@ def run(config_path: Path) -> None:
             "output_run": output_run,
             "oracle_default": default_oracle,
             "mpc_policy": mpc_policy if default_oracle == "mpc" else None,
+            "extended_horizon": extended_horizon,
+            "intervention": iv_cfg.__dict__ if use_intervention else None,
+            "save_videos": save_videos,
+            "collection": collection_cfg,
             "checkpoint": str(ckpt_path),
             "config": str(config_path),
             "run_tag": str(cfg.get("run_tag", output_run)),
             "rollouts": per_rollout_summaries,
         }, f, indent=2)
     print(f"[dagger r{dagger_round}] summary -> {summary_path}")
+    if use_intervention:
+        reached = sum(1 for r in per_rollout_summaries if r.get("goal_reached"))
+        total = sum(1 for r in per_rollout_summaries if "error" not in r)
+        label = "mpc_verify goal_reached" if iv_cfg.mpc_immediate_after_warmup else "intervention goal_reached"
+        print(f"[dagger r{dagger_round}] {label}: {reached}/{total}")
     print(f"[dagger r{dagger_round}] done. Re-train with:\n"
           f"  python scripts/train_bc.py --config {base_cfg_path}")
 

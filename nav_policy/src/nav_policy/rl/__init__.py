@@ -1,6 +1,15 @@
-"""Online RL training for V-LEAD pilot networks.
+"""Reinforcement-learning fine-tuning for nav_policy (PPO / SAC).
 
-Env lives in `vlead_flight.env` (Gymnasium-compatible). This package owns
-the algorithm-side pieces: actor-critic feature extractor reusing the BC
-encoder, BC checkpoint -> RL actor warm-start, and SAC / PPO trainers.
+Canonical trainer: nav_policy.rl.train_rl (custom PPO + SAC).
+Legacy SB3-based scaffold lives in nav_policy/rl/train/train_sac.py but
+is no longer the recommended path.
 """
+
+from nav_policy.rl.stochastic_policy import StochasticVelocityPolicy, load_stochastic_from_checkpoint
+from nav_policy.rl.train_rl import train
+
+__all__ = [
+    "StochasticVelocityPolicy",
+    "load_stochastic_from_checkpoint",
+    "train",
+]

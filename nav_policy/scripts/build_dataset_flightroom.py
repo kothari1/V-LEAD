@@ -202,32 +202,23 @@ def _extract_labels(xro: np.ndarray,
 
 def _extract_goal(traj: dict, n: int) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Extract pre-computed goal heading and distance from a new-format traj dict.
-    Falls back to computing from Xro endpoint if fields are missing.
+    Goal heading and distance toward the expert sub-trajectory endpoint Xro[0:2,-1].
+
+    Matches closed-loop eval and DAgger.  Ignores semantic heading_vec/dist/goal_xy
+    when present in flightroom rollouts.
 
     Returns:
         goal_heading: (n, 2) float32
         goal_dist:    (n,)   float32 in raw metres
     """
+    from nav_policy.data.build_dataset import (
+        _compute_goal_distance,
+        _compute_goal_heading,
+    )
+
     xro = np.asarray(traj["Xro"])
-
-    if "heading_vec" in traj and "dist" in traj:
-        hv = np.asarray(traj["heading_vec"])    # (2, N+1) or (N+1, 2)
-        if hv.shape[0] == 2:
-            hv = hv.T                            # -> (N+1, 2)
-        goal_heading = hv[:n].astype(np.float32)
-
-        dv = np.asarray(traj["dist"])           # (N+1,)
-        goal_dist = dv[:n].astype(np.float32)
-    else:
-        # Fallback: compute from trajectory endpoint
-        from nav_policy.data.build_dataset import (
-            _compute_goal_heading,
-            _compute_goal_distance,
-        )
-        goal_heading = _compute_goal_heading(xro, n)
-        goal_dist    = _compute_goal_distance(xro, n)
-
+    goal_heading = _compute_goal_heading(xro, n)
+    goal_dist = _compute_goal_distance(xro, n)
     return goal_heading, goal_dist
 
 

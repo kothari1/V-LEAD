@@ -1,6 +1,5 @@
-# Offline evaluation on the flightroom validation set.
-# checkpoint is passed via --checkpoint CLI arg (not read from config here).
-# offline.py reads cfg["data"]["processed_root"] and cfg["train"]["batch_size"].
+# Offline evaluation on flightroom val split (071733).
+# Checkpoint passed via --checkpoint CLI (not stored here).
 
 data:
   processed_root: "data/processed_flightroom"
@@ -9,3 +8,5 @@ data:
 
 train:
   batch_size: 128
+
+run_tag: flightroom_offline_val

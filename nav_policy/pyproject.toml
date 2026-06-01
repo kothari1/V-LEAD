@@ -17,6 +17,8 @@ dependencies = [
     "tqdm",
     "imageio[ffmpeg]",
     "av",
+    "opencv-python-headless",
+    "pytorch-grad-cam",
 ]
 
 [project.optional-dependencies]
