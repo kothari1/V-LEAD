@@ -1,0 +1,24 @@
+# PPO RL fine-tuning from the balanced-DAgger r12 BC seed (flightroom-matched).
+# Inherits canonical PPO hyperparams + rollouts + rewards from
+# configs/train_rl_flightroom.yaml. Only three fields change:
+#   - checkpoint  (point at the new BC/DAgger seed)
+#   - rl.run_tag, rl.checkpoint_dir  (separate output namespace)
+# init_log_std and freeze_backbone stay at canonical defaults (-0.5, false)
+# because the seed is at ~60% success on flightroom — we still need
+# exploration + encoder flexibility to push past the BC prior.
+
+base_config: configs/train_rl_flightroom.yaml
+
+checkpoint: data/checkpoints/bc_best_balanced_dagger_r12_new.pt
+
+rl:
+  run_tag: rl_ppo_dagger_r12
+  checkpoint_dir: data/checkpoints_rl_dagger_r12
+  # First-iter diagnosis on seed=0 SAC: drone consistently navigated to
+  # final_dist 0.14-0.51 m (well inside goal_position_tol_m: 0.5) but
+  # never satisfied settle_vel_mps: 0.12 (hovers at non-zero velocity),
+  # so success_bonus never fired and every episode timed out at 60 s.
+  # Loosen velocity threshold to give success signal; isolate this single
+  # knob before touching max_rollout_s / settle_steps / yaw tolerances.
+  rollout:
+    settle_vel_mps: 0.4
