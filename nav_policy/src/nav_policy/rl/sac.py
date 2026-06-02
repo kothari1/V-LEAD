@@ -20,6 +20,7 @@ class SACStats:
     q2_loss: float
     policy_loss: float
     alpha: float
+    ref_kl: float = 0.0
 
 
 class SACTrainer:
@@ -33,11 +34,15 @@ class SACTrainer:
                  tau: float = 0.005,
                  alpha: float = 0.2,
                  auto_alpha: bool = True,
+                 ref_kl_coef: float = 0.0,
+                 reference_policy: Optional[StochasticVelocityPolicy] = None,
                  device: torch.device) -> None:
         self.policy = policy
         self.device = device
         self.gamma = gamma
         self.tau = tau
+        self.ref_kl_coef = float(ref_kl_coef)
+        self.reference_policy = reference_policy
         latent_dim = int(policy.base.gru_hidden) + int(policy.base.goal_emb_dim)
         self.critic = TwinQCritic(latent_dim, policy.cmd_dim).to(device)
         self.critic_target = copy.deepcopy(self.critic)
@@ -112,6 +117,14 @@ class SACTrainer:
         alpha = self.alpha.detach()
         policy_loss = (alpha * log_prob - q_pi).mean()
 
+        # BC KL anchor: keep current policy close to reference BC seed.
+        # Mirrors ppo_update's ref_kl_coef * KL(ref || current) term.
+        ref_kl_val = 0.0
+        if self.reference_policy is not None and self.ref_kl_coef > 0.0:
+            ref_kl = self.policy.kl_to(self.reference_policy, rgb, goal, depth).mean()
+            policy_loss = policy_loss + self.ref_kl_coef * ref_kl
+            ref_kl_val = float(ref_kl.item())
+
         self.policy_opt.zero_grad(set_to_none=True)
         policy_loss.backward()
         self.policy_opt.step()
@@ -130,17 +143,21 @@ class SACTrainer:
             q2_loss=float(q2_loss.item()),
             policy_loss=float(policy_loss.item()),
             alpha=alpha_val,
+            ref_kl=ref_kl_val,
         )
 
 
 def sac_config_from_dict(cfg: Dict) -> Dict:
     s = cfg.get("sac", {}) or {}
+    anchor = cfg.get("bc_anchor", {}) or {}
+    ref_kl_coef = s.get("ref_kl_coef", anchor.get("kl_coef", 0.0))
     return {
         "lr": float(s.get("lr", 3e-4)),
         "gamma": float(s.get("gamma", 0.99)),
         "tau": float(s.get("tau", 0.005)),
         "alpha": float(s.get("alpha", 0.2)),
         "auto_alpha": bool(s.get("auto_alpha", True)),
+        "ref_kl_coef": float(ref_kl_coef),
         "batch_size": int(s.get("batch_size", 256)),
         "updates_per_iter": int(s.get("updates_per_iter", 4)),
         "replay_capacity": int(s.get("replay_capacity", 100_000)),

@@ -13,21 +13,33 @@ checkpoint: data/checkpoints/bc_best_balanced_dagger_r12_new.pt
 
 rl:
   run_tag: rl_sac_dagger_r12
-  # Absolute path to project drive; ~/autonomy_projects has low storage and
-  # videos + checkpoints add up fast. Videos auto-follow ckpt_dir.
   checkpoint_dir: /project/kothari1/vlead_data/rl_runs/dagger_r12
-  # Round 2 (settle_vel_mps 0.12 -> 0.4) unlocked legitimate goal_reached
-  # successes. Round 2 (LPF alpha 0.4 + smooth weight 0.3) only partially
-  # damped the shake. Round 3 attacks the per-step Gaussian noise that
-  # the LPF has to filter: shrink the noise std at the source, and
-  # tighten the LPF further.
-  init_log_std: -1.0
+  # v4 SAC actor diverged catastrophically by iter 19 (mean_return -19287,
+  # q1_loss 4 -> 150, alpha stuck at 0.98, 0% success). Stabilization
+  # adopts Rahul's stable PPO config style:
+  #   - freeze_backbone: true     (no vision-encoder drift)
+  #   - init_log_std: -2.5        (very tight Gaussian noise)
+  #   - bc_anchor.kl_coef: 0.02   (penalize KL(BC || current) in policy_loss)
+  #   - timeout_penalty: -20      (discourage hover-near-goal)
+  #   - collision_penalty: -50    (stop trading collisions for distance)
+  #   - max_rollout_s: 35         (cut wasted timeout cost)
+  # Auto-alpha disabled (auto_alpha: false) since it stuck at 0.98 in v4;
+  # fix alpha at 0.1 instead so the entropy bonus can't overwhelm Q.
+  init_log_std: -2.5
+  freeze_backbone: true
+  bc_anchor:
+    kl_coef: 0.02
   rollout:
+    max_rollout_s: 35.0
     settle_vel_mps: 0.4
-    # Tighter LPF: ~3 Hz cutoff at 20 Hz control rate. cmd_used =
-    # 0.25*new + 0.75*prev. Cmd lags new samples by ~3-4 ctrl steps.
+    # LPF keeps controller-side smoothing on top of the very tight
+    # init_log_std + frozen backbone; jitter should be near-zero now.
     action_lpf_alpha: 0.25
   rewards:
-    # Learned smoothness pressure; keep at round 2 value to isolate the
-    # round-3 axes (init_log_std + action_lpf_alpha).
+    collision_penalty: -50.0
+    timeout_penalty: -20.0
     action_smooth_weight: 0.3
+  sac:
+    ref_kl_coef: 0.02
+    auto_alpha: false
+    alpha: 0.1

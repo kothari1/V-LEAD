@@ -256,7 +256,11 @@ def train(config_path: Path,
         eval_suite_name = eval_cfg_path.stem
 
     reference_policy = None
-    if algorithm == "ppo" and float(ppo_kw.get("ref_kl_coef", 0.0)) > 0.0:
+    if algorithm == "ppo":
+        active_ref_kl_coef = float(ppo_kw.get("ref_kl_coef", 0.0))
+    else:
+        active_ref_kl_coef = float(sac_kw.get("ref_kl_coef", 0.0))
+    if active_ref_kl_coef > 0.0:
         anchor_cfg = rl_cfg.get("bc_anchor", {}) or {}
         anchor_path = (nav_root / anchor_cfg.get("checkpoint", cfg["checkpoint"])).resolve()
         if anchor_path.resolve() == init_ckpt.resolve():
@@ -267,7 +271,7 @@ def train(config_path: Path,
             )
             reference_policy = ref_policy.frozen_reference_copy()
         print(
-            f"[rl] BC KL anchor  coef={ppo_kw['ref_kl_coef']}  ref={anchor_path.name}",
+            f"[rl] BC KL anchor  coef={active_ref_kl_coef}  ref={anchor_path.name}",
             flush=True,
         )
 
@@ -281,10 +285,16 @@ def train(config_path: Path,
     else:
         optimizer = None
         replay = ReplayBuffer(capacity=sac_kw["replay_capacity"])
-        sac_trainer = SACTrainer(policy, device=device, **{
-            k: sac_kw[k]
-            for k in ("lr", "gamma", "tau", "alpha", "auto_alpha")
-        })
+        sac_trainer = SACTrainer(
+            policy,
+            device=device,
+            ref_kl_coef=sac_kw.get("ref_kl_coef", 0.0),
+            reference_policy=reference_policy,
+            **{
+                k: sac_kw[k]
+                for k in ("lr", "gamma", "tau", "alpha", "auto_alpha")
+            },
+        )
 
     best_return = float("-inf")
     best_eval_success = float("-inf")
@@ -460,6 +470,7 @@ def train(config_path: Path,
                     "q1_loss": sac_stats.q1_loss,
                     "q2_loss": sac_stats.q2_loss,
                     "alpha": sac_stats.alpha,
+                    "ref_kl": sac_stats.ref_kl,
                 })
 
         meta = {
