@@ -419,6 +419,13 @@ def train(config_path: Path,
         for qname, ok in sorted(per_query.items()):
             print(f"    {qname}: {'ok' if ok else 'FAIL'}", flush=True)
 
+        # TB: log the publishable held-out eval metric + per-query breakdown.
+        tb.log_scalar("eval/goal_success_rate", eval_rate, global_episode)
+        tb.log_scalar("eval/n_success", int(eval_out.get("n_success", 0)), global_episode)
+        tb.log_scalar("eval/n_rollouts", int(eval_out.get("n_rollouts", 0)), global_episode)
+        for qname, ok in per_query.items():
+            tb.log_scalar(f"eval_per_query/{qname}", float(bool(ok)), global_episode)
+
         meta = {
             "iteration": it,
             "global_episode": global_episode,

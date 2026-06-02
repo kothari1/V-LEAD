@@ -29,6 +29,14 @@ rl:
   freeze_backbone: true
   bc_anchor:
     kl_coef: 0.02
+  # Publishable success metric: deterministic closed-loop eval on the 12-query
+  # held-out 071733 suite every 16 episodes (= every 4 iters with
+  # rollouts_per_iteration=4). Saves _best.pt based on eval success rate
+  # (not noisy training mean_return). Logs goal_success / n_rollouts per
+  # query to stdout + meta + TB text.
+  eval_every_episodes: 16
+  eval_config: configs/eval_closed_loop_flightroom_suite.yaml
+  eval_deterministic: true
   rollout:
     max_rollout_s: 35.0
     settle_vel_mps: 0.4
