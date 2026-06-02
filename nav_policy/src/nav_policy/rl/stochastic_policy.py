@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -90,6 +91,26 @@ class StochasticVelocityPolicy(nn.Module):
         entropy = dist.entropy().sum(dim=-1)
         value = self.critic(latent).squeeze(-1)
         return log_prob, value, entropy
+
+    def kl_to(self,
+              other: "StochasticVelocityPolicy",
+              rgb_seq: torch.Tensor,
+              goal: torch.Tensor,
+              depth_seq: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """KL(other || self) per sample, shape [B]. Keeps policy close to reference BC."""
+        mean = self._mean(rgb_seq, goal, depth_seq)
+        other_mean = other._mean(rgb_seq, goal, depth_seq)
+        dist = self._distribution(mean)
+        other_dist = other._distribution(other_mean)
+        return torch.distributions.kl_divergence(other_dist, dist).sum(dim=-1)
+
+    def frozen_reference_copy(self) -> "StochasticVelocityPolicy":
+        """Deep copy for BC/KL anchoring; parameters do not receive gradients."""
+        ref = copy.deepcopy(self)
+        ref.eval()
+        for param in ref.parameters():
+            param.requires_grad = False
+        return ref
 
     def q_input(self,
                 rgb_seq: torch.Tensor,

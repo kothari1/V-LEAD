@@ -25,21 +25,28 @@ rl:
   checkpoint_dir: data/checkpoints_rl_100_expert_x0
   seed: 0
   total_episodes: 100
-  rollouts_per_iteration: 1
-  ppo_update_every_episodes: 4
+  rollouts_per_iteration: 8
+  ppo_update_every_episodes: 8
+  eval_every_episodes: 24
+  eval_config: configs/eval_closed_loop_flightroom_suite.yaml
   reuse_simulator: true
   compress_transitions: true
   save_every_n_iterations: 4
   init_log_std: -2
-  freeze_backbone: false
+  freeze_backbone: true
   eval_deterministic: false
+
+  bc_anchor:
+    checkpoint: data/checkpoints_dagger_balanced_r12/bc_best.pt
+    kl_coef: 0.02
 
   rewards:
     progress_weight: 1.0
     heading_weight: 0.1
     step_penalty: -0.01
     action_smooth_weight: 0.05
-    collision_penalty: -10.0
+    collision_penalty: -50.0
+    timeout_penalty: -20.0
     bbox_penalty: -5.0
     success_bonus: 5.0
     success_position_tol: 0.4
@@ -69,14 +76,15 @@ rl:
     settle_steps: 10
 
   ppo:
-    lr: 1.0e-4
+    lr: 3.0e-5
     gamma: 0.99
     gae_lambda: 0.95
-    clip_eps: 0.2
+    clip_eps: 0.1
     value_coef: 0.5
     entropy_coef: 0.01
+    ref_kl_coef: 0.02
     max_grad_norm: 1.0
-    n_epochs: 2
+    n_epochs: 1
     batch_size: 128
 
 rollouts:

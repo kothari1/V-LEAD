@@ -66,6 +66,14 @@ if ! python -c 'import nav_policy' >/dev/null 2>&1; then
             exit 1
         }
 fi
+if ! python -c 'import pytorch_grad_cam' >/dev/null 2>&1; then
+    runuser -u "$USERNAME" -- python -m pip install grad-cam -q \
+        >>"$INSTALL_LOG" 2>&1 || {
+            echo "FATAL: failed to install grad-cam" >&2
+            tail -n 30 "$INSTALL_LOG" >&2
+            exit 1
+        }
+fi
 # When no command was supplied, drop into an interactive login shell.
 if [ "$#" -eq 0 ]; then
     set -- bash -l

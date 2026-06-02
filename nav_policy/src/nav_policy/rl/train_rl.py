@@ -29,6 +29,7 @@ from nav_policy.rl.buffer import ReplayBuffer, episodes_to_buffer
 from nav_policy.rl.ppo import ppo_config_from_dict, ppo_update
 from nav_policy.rl.rewards import reward_config_from_dict
 from nav_policy.rl.paths import expert_semantic_slug, rollout_video_path
+from nav_policy.rl.train_eval import eval_train_rollouts_goal_success
 from nav_policy.evaluate.closed_loop import load_expert_setup
 from nav_policy.rl.rollout import RLTrainingController, collect_episode
 from nav_policy.rl.sac import SACTrainer, sac_config_from_dict
@@ -78,12 +79,38 @@ def _resolve_rollouts(cfg: dict, nav_root: Path) -> List[dict]:
     return rollouts
 
 
+def _load_eval_suite(
+    eval_config_path: Path,
+    nav_root: Path,
+) -> tuple[List[dict], RolloutConfig, int]:
+    """Load held-out eval rollouts + sim metrics from a closed-loop eval YAML."""
+    with open(eval_config_path, "r") as f:
+        eval_cfg = yaml.safe_load(f) or {}
+    rollouts = _resolve_rollouts(eval_cfg, nav_root)
+    if not rollouts:
+        raise ValueError(f"eval_config has no rollouts: {eval_config_path}")
+    metrics = eval_cfg.get("metrics", {}) or {}
+    sim_cfg = rollout_config_from_dict(eval_cfg)
+    depth_stride = int(metrics.get("depth_inference_stride", 3))
+    return rollouts, sim_cfg, depth_stride
+
+
 def _maybe_freeze_backbone(policy, freeze: bool) -> None:
     if not freeze:
         return
     for name, p in policy.base.named_parameters():
         if any(k in name for k in ("visual", "depth_enc", "fusion")):
             p.requires_grad = False
+
+
+def _clear_sim_cache(sim_cache: Dict[tuple, Any]) -> None:
+    """Drop cached FiGS Simulator instances to reclaim RAM."""
+    if not sim_cache:
+        return
+    sim_cache.clear()
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
 
 def _ensure_writable_dir(path: Path, label: str) -> None:
@@ -143,6 +170,8 @@ def train(config_path: Path,
     )
     _maybe_freeze_backbone(policy, bool(rl_cfg.get("freeze_backbone", False)))
 
+    zero_goal_heading = bool(model_cfg.get("train", {}).get("zero_goal_heading", False))
+
     frame_name = str(cfg.get("frame", "carl"))
     inner = VelocityController(
         hz=20,
@@ -176,17 +205,34 @@ def train(config_path: Path,
         if rollouts_per_iteration is not None
         else rl_cfg.get("rollouts_per_iteration", min(4, len(rollouts)))
     )
+    ppo_update_every = int(rl_cfg.get("ppo_update_every_episodes", rollouts_per_iter))
     total_episodes_cfg = rl_cfg.get("total_episodes")
     if total_episodes_cfg is not None:
-        total_episodes = int(total_episodes_cfg)
+        requested_episodes = int(total_episodes_cfg)
+        if ppo_update_every > 0:
+            total_episodes = (
+                (requested_episodes + ppo_update_every - 1)
+                // ppo_update_every
+                * ppo_update_every
+            )
+        else:
+            total_episodes = requested_episodes
+        if total_episodes != requested_episodes:
+            print(
+                f"[rl] adjusted total_episodes {requested_episodes} -> {total_episodes} "
+                f"(multiple of ppo_update_every={ppo_update_every})",
+                flush=True,
+            )
         n_iters = max(1, (total_episodes + rollouts_per_iter - 1) // rollouts_per_iter)
     else:
         total_episodes = None
         n_iters = int(n_iterations if n_iterations is not None else rl_cfg.get("n_iterations", 20))
 
     reuse_simulator = bool(rl_cfg.get("reuse_simulator", True))
+    sim_cache_clear_every = int(rl_cfg.get("sim_cache_clear_every_episodes", 0))
+    if not reuse_simulator:
+        sim_cache_clear_every = 0
     compress_transitions = bool(rl_cfg.get("compress_transitions", True))
-    ppo_update_every = int(rl_cfg.get("ppo_update_every_episodes", rollouts_per_iter))
     save_every_n_iters = int(rl_cfg.get("save_every_n_iterations", 1))
     store_next_state = algorithm == "sac"
     record_videos = bool(save_videos if save_videos is not None else cfg.get("save_videos", False))
@@ -196,6 +242,34 @@ def train(config_path: Path,
 
     ppo_kw = ppo_config_from_dict(rl_cfg)
     sac_kw = sac_config_from_dict(rl_cfg)
+    eval_every_episodes = int(rl_cfg.get("eval_every_episodes", 0))
+    select_best_by_eval = eval_every_episodes > 0
+    eval_rollouts = rollouts
+    eval_sim_cfg = rollout_sim_cfg
+    eval_depth_stride = depth_stride
+    eval_suite_name = "train"
+    if select_best_by_eval and rl_cfg.get("eval_config"):
+        eval_cfg_path = (nav_root / rl_cfg["eval_config"]).resolve()
+        eval_rollouts, eval_sim_cfg, eval_depth_stride = _load_eval_suite(
+            eval_cfg_path, nav_root,
+        )
+        eval_suite_name = eval_cfg_path.stem
+
+    reference_policy = None
+    if algorithm == "ppo" and float(ppo_kw.get("ref_kl_coef", 0.0)) > 0.0:
+        anchor_cfg = rl_cfg.get("bc_anchor", {}) or {}
+        anchor_path = (nav_root / anchor_cfg.get("checkpoint", cfg["checkpoint"])).resolve()
+        if anchor_path.resolve() == init_ckpt.resolve():
+            reference_policy = policy.frozen_reference_copy()
+        else:
+            ref_policy, _, _ = load_stochastic_from_checkpoint(
+                anchor_path, init_log_std=init_log_std, device=device,
+            )
+            reference_policy = ref_policy.frozen_reference_copy()
+        print(
+            f"[rl] BC KL anchor  coef={ppo_kw['ref_kl_coef']}  ref={anchor_path.name}",
+            flush=True,
+        )
 
     if algorithm == "ppo":
         optimizer = torch.optim.Adam(
@@ -213,9 +287,10 @@ def train(config_path: Path,
         })
 
     best_return = float("-inf")
+    best_eval_success = float("-inf")
     log_fields = [
         "iteration", "algorithm", "mean_return", "mean_steps", "success_rate",
-        "policy_loss", "value_loss", "entropy", "approx_kl",
+        "policy_loss", "value_loss", "entropy", "approx_kl", "ref_kl",
         "q1_loss", "q2_loss", "alpha",
     ]
     write_header = not log_path.exists()
@@ -231,9 +306,23 @@ def train(config_path: Path,
               f"rollouts_per_iter={rollouts_per_iter}  ppo_update_every={ppo_update_every}")
     else:
         print(f"[rl] {len(rollouts)} rollout configs; {rollouts_per_iter} per iteration x {n_iters}")
-    print(f"[rl] reuse_simulator={reuse_simulator}  compress_transitions={compress_transitions}")
+    clear_msg = (
+        f"  clear_every={sim_cache_clear_every} eps"
+        if sim_cache_clear_every > 0
+        else ""
+    )
+    print(
+        f"[rl] reuse_simulator={reuse_simulator}{clear_msg}  "
+        f"compress_transitions={compress_transitions}"
+    )
     if record_videos:
         print(f"[rl] saving videos -> {video_root}")
+    if select_best_by_eval:
+        print(
+            f"[rl] eval-based checkpointing every {eval_every_episodes} episodes "
+            f"({len(eval_rollouts)} {eval_suite_name} queries, deterministic)",
+            flush=True,
+        )
 
     global_episode = 0
     sim_cache: Dict[tuple, Any] = {}
@@ -250,6 +339,59 @@ def train(config_path: Path,
     )
     print(f"[rl] action_lpf_alpha={action_lpf_alpha}  (1.0 = off)", flush=True)
     pending_episodes: List[Any] = []
+
+    def _maybe_eval_and_save_best(it: int, mean_return: float, success_rate: float, *, force: bool = False) -> None:
+        nonlocal best_eval_success
+        if not select_best_by_eval or global_episode <= 0:
+            return
+        if not force and global_episode % eval_every_episodes != 0:
+            return
+
+        eval_out = eval_train_rollouts_goal_success(
+            policy,
+            stats,
+            eval_rollouts,
+            eval_sim_cfg,
+            image_size=image_size,
+            frame_name=frame_name,
+            Kv=float(cfg.get("Kv", 2.0)),
+            Ka=float(cfg.get("Ka", 5.0)),
+            device=device,
+            depth_inference_stride=eval_depth_stride,
+            depth_model=depth_model,
+            zero_goal_heading=zero_goal_heading,
+            goal_distance_scale=goal_distance_scale,
+        )
+        eval_rate = float(eval_out["goal_success_rate"])
+        per_query = eval_out.get("per_query", {})
+        print(
+            f"[rl] {eval_suite_name} eval @ ep {global_episode}: "
+            f"goal_success={eval_out['n_success']}/{eval_out['n_rollouts']} ({eval_rate:.0%})",
+            flush=True,
+        )
+        for qname, ok in sorted(per_query.items()):
+            print(f"    {qname}: {'ok' if ok else 'FAIL'}", flush=True)
+
+        meta = {
+            "iteration": it,
+            "global_episode": global_episode,
+            "algorithm": algorithm,
+            "mean_return": mean_return,
+            "success_rate": success_rate,
+            "eval_goal_success_rate": eval_rate,
+            "eval_suite": eval_suite_name,
+            "eval_per_query": per_query,
+            "init_checkpoint": str(init_ckpt),
+            "run_tag": tag,
+        }
+        if eval_rate > best_eval_success:
+            best_eval_success = eval_rate
+            best_path = ckpt_dir / f"{tag}_best.pt"
+            save_rl_checkpoint(best_path, policy, stats, model_cfg, meta)
+            print(
+                f"[rl] new eval best  success={best_eval_success:.0%}  -> {best_path.name}",
+                flush=True,
+            )
 
     def _run_training_step(it: int, episodes: List[Any]) -> None:
         nonlocal best_return, write_header
@@ -270,6 +412,7 @@ def train(config_path: Path,
             "value_loss": "",
             "entropy": "",
             "approx_kl": "",
+            "ref_kl": "",
             "q1_loss": "",
             "q2_loss": "",
             "alpha": "",
@@ -281,12 +424,15 @@ def train(config_path: Path,
                 episodes,
                 gamma=ppo_kw["gamma"],
                 gae_lambda=ppo_kw["gae_lambda"],
+                buffer_fp16=compress_transitions,
             )
             stats_out = ppo_update(
                 policy, buffer, optimizer, device=device,
                 clip_eps=ppo_kw["clip_eps"],
                 value_coef=ppo_kw["value_coef"],
                 entropy_coef=ppo_kw["entropy_coef"],
+                ref_kl_coef=ppo_kw["ref_kl_coef"],
+                reference_policy=reference_policy,
                 max_grad_norm=ppo_kw["max_grad_norm"],
                 n_epochs=ppo_kw["n_epochs"],
                 batch_size=min(ppo_kw["batch_size"], len(buffer)),
@@ -297,6 +443,7 @@ def train(config_path: Path,
                 "value_loss": stats_out.value_loss,
                 "entropy": stats_out.entropy,
                 "approx_kl": stats_out.approx_kl,
+                "ref_kl": stats_out.ref_kl,
             })
         else:
             assert replay is not None and sac_trainer is not None
@@ -329,7 +476,7 @@ def train(config_path: Path,
         ):
             latest_path = ckpt_dir / f"{tag}_latest.pt"
             save_rl_checkpoint(latest_path, policy, stats, model_cfg, meta)
-            if mean_return > best_return:
+            if not select_best_by_eval and mean_return > best_return:
                 best_return = mean_return
                 best_path = ckpt_dir / f"{tag}_best.pt"
                 save_rl_checkpoint(best_path, policy, stats, model_cfg, meta)
@@ -365,7 +512,10 @@ def train(config_path: Path,
         if n_collect <= 0:
             break
 
-        subset = random.sample(rollouts, k=min(n_collect, len(rollouts)))
+        subset = list(rollouts)
+        random.shuffle(subset)
+        if rollouts_per_iter < len(subset):
+            subset = subset[:n_collect]
         iter_collected = 0
 
         for rcfg in subset:
@@ -436,6 +586,20 @@ def train(config_path: Path,
                     batch_eps = list(pending_episodes)
                     pending_episodes.clear()
                     _run_training_step(it, batch_eps)
+
+                if (
+                    reuse_simulator
+                    and sim_cache_clear_every > 0
+                    and global_episode % sim_cache_clear_every == 0
+                ):
+                    print(
+                        f"[rl] clearing sim cache after ep {global_episode} "
+                        f"(reload on next episode)",
+                        flush=True,
+                    )
+                    _clear_sim_cache(sim_cache)
+
+                _maybe_eval_and_save_best(it, ep.total_return, float(ep.success))
             except Exception as exc:
                 print(f"  [{rcfg.get('name', '?')}] FAILED: {exc}", file=sys.stderr)
 
@@ -451,9 +615,20 @@ def train(config_path: Path,
             print(f"[rl] iter {it}: no episodes collected; skipping update", file=sys.stderr)
 
     if pending_episodes:
-        batch_eps = list(pending_episodes)
-        pending_episodes.clear()
-        _run_training_step(max(n_iters - 1, 0), batch_eps)
+        if algorithm == "ppo" and len(pending_episodes) >= ppo_update_every:
+            batch_eps = list(pending_episodes)
+            pending_episodes.clear()
+            _run_training_step(max(n_iters - 1, 0), batch_eps)
+        elif pending_episodes:
+            print(
+                f"[rl] skipping final partial batch ({len(pending_episodes)} episodes; "
+                f"need {ppo_update_every} for PPO update)",
+                flush=True,
+            )
+            pending_episodes.clear()
+
+    if global_episode > 0 and select_best_by_eval and global_episode % eval_every_episodes != 0:
+        _maybe_eval_and_save_best(max(n_iters - 1, 0), 0.0, 0.0, force=True)
 
     if global_episode > 0:
         latest_path = ckpt_dir / f"{tag}_latest.pt"
@@ -472,6 +647,7 @@ def train(config_path: Path,
         "algorithm": algorithm,
         "total_episodes": global_episode,
         "best_mean_return": best_return,
+        "best_eval_goal_success_rate": best_eval_success if select_best_by_eval else None,
         "init_checkpoint": str(init_ckpt),
         "episode_log": str(episode_log_path),
         "iteration_log": str(log_path),
@@ -480,6 +656,12 @@ def train(config_path: Path,
         json.dump(summary, sf, indent=2)
 
     best_path = ckpt_dir / f"{tag}_best.pt"
+    latest_path = ckpt_dir / f"{tag}_latest.pt"
+    if global_episode > 0 and not best_path.exists() and latest_path.exists():
+        import shutil
+        shutil.copy2(latest_path, best_path)
+        print(f"[rl] no eval best saved; copied latest -> {best_path.name}", flush=True)
+
     print(f"[rl] done. Best checkpoint: {best_path}")
     return best_path
 

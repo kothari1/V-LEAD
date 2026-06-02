@@ -208,13 +208,43 @@ def _bbox_violation(positions: np.ndarray,
 
     """Return (any_violation, first_violation_step) using a bbox grown from the expert."""
 
-    lo = ref_positions.min(axis=1) - margin
+    pos = np.asarray(positions, dtype=np.float64)
 
-    hi = ref_positions.max(axis=1) + margin
+    ref = np.asarray(ref_positions, dtype=np.float64)
 
-    out = (positions < lo) | (positions > hi)             # (N, 3)
+    # Positions in closed_loop are (3, N); accept (N, 3) as well.
 
-    bad = out.any(axis=1)                                      # (N,)
+    if pos.ndim != 2 or ref.ndim != 2:
+
+        raise ValueError(f"positions and ref_positions must be 2-D; got {pos.shape}, {ref.shape}")
+
+    if pos.shape[0] != 3:
+
+        if pos.shape[1] == 3:
+
+            pos = pos.T
+
+        else:
+
+            raise ValueError(f"positions must be (3, N) or (N, 3); got {pos.shape}")
+
+    if ref.shape[0] != 3:
+
+        if ref.shape[1] == 3:
+
+            ref = ref.T
+
+        else:
+
+            raise ValueError(f"ref_positions must be (3, M) or (M, 3); got {ref.shape}")
+
+    lo = ref.min(axis=1, keepdims=True) - margin          # (3, 1)
+
+    hi = ref.max(axis=1, keepdims=True) + margin          # (3, 1)
+
+    out = (pos < lo) | (pos > hi)                           # (3, N)
+
+    bad = out.any(axis=0)                                   # (N,)
 
     if bad.any():
 
