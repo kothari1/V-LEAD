@@ -77,7 +77,13 @@ def _inference_latency(policy: StochasticVelocityPolicy,
                        batch_size: int = 1,
                        n_warmup: int = 5,
                        n_timed: int = 20) -> Dict[str, float]:
-    """Time policy.act on a dummy batch. Reports mean / std ms."""
+    """Time policy.act on a dummy batch. Reports mean / std ms.
+
+    Restores the policy's training mode before returning so the caller's
+    subsequent .backward() through the GRU is not blocked by cuDNN's
+    "RNN backward only in training mode" rule.
+    """
+    was_training = policy.training
     policy.eval()
     rgb = torch.randn(batch_size, T, 3, image_size, image_size, device=device)
     goal = torch.randn(batch_size, goal_dim, device=device)
@@ -96,6 +102,9 @@ def _inference_latency(policy: StochasticVelocityPolicy,
         if device.type == "cuda":
             torch.cuda.synchronize()
         samples.append((time.perf_counter() - t0) * 1000.0)
+
+    if was_training:
+        policy.train()
 
     n = len(samples)
     mean = sum(samples) / n

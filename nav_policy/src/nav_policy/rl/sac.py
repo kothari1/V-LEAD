@@ -75,6 +75,9 @@ class SACTrainer:
             pt.data.mul_(1.0 - self.tau).add_(self.tau * p.data)
 
     def update(self, batch: dict) -> SACStats:
+        # cuDNN refuses RNN backward when the GRU is in eval() mode; mirror
+        # PPO's pattern and put the policy in train() before the backward.
+        self.policy.train()
         # Cast everything to float32; the replay buffer may store rgb/depth as
         # float16 when compress_transitions=true, but model weights are float32.
         rgb = batch["rgb"].to(self.device).float()
