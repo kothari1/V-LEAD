@@ -14,22 +14,18 @@ checkpoint: data/checkpoints/bc_best_balanced_dagger_r12_new.pt
 rl:
   run_tag: rl_ppo_dagger_r12
   checkpoint_dir: data/checkpoints_rl_dagger_r12
-  # First-iter diagnosis on seed=0 SAC: drone consistently navigated to
-  # final_dist 0.14-0.51 m (well inside goal_position_tol_m: 0.5) but
-  # never satisfied settle_vel_mps: 0.12 (hovers at non-zero velocity),
-  # so success_bonus never fired and every episode timed out at 60 s.
-  # Loosen velocity threshold to give success signal; isolate this single
-  # knob before touching max_rollout_s / settle_steps / yaw tolerances.
+  # Round 2 (settle_vel_mps 0.12 -> 0.4) unlocked legitimate goal_reached
+  # successes. Round 2 (LPF alpha 0.4 + smooth weight 0.3) only partially
+  # damped the shake. Round 3 attacks the per-step Gaussian noise that
+  # the LPF has to filter: shrink the noise std at the source, and
+  # tighten the LPF further.
+  init_log_std: -1.0
   rollout:
     settle_vel_mps: 0.4
-    # Action low-pass filter at the controller side. EMA on the
-    # de-z-scored velocity command before it reaches the inner
-    # VelocityController. alpha=1.0 disables; alpha=0.4 = ~4 Hz cutoff
-    # given the 20 Hz control rate. Smooths the visible jitter that comes
-    # from independent Normal(mean, exp(log_std)) samples per step.
-    action_lpf_alpha: 0.4
+    # Tighter LPF: ~3 Hz cutoff at 20 Hz control rate. cmd_used =
+    # 0.25*new + 0.75*prev. Cmd lags new samples by ~3-4 ctrl steps.
+    action_lpf_alpha: 0.25
   rewards:
-    # Bump learned action-smoothness weight 0.05 -> 0.3 so the policy
-    # gradient itself prefers small Delta-action (longer-arc fix than the
-    # LPF above).
+    # Learned smoothness pressure; keep at round 2 value to isolate the
+    # round-3 axes (init_log_std + action_lpf_alpha).
     action_smooth_weight: 0.3
