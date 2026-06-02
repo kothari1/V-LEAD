@@ -35,7 +35,10 @@ rl:
   # (not noisy training mean_return). Logs goal_success / n_rollouts per
   # query to stdout + meta + TB text.
   eval_every_episodes: 16
-  eval_config: configs/eval_closed_loop_flightroom_suite.yaml
+  # 14 stratified held-out queries from 071733 pool (q12, 19, 26, 33, 40, 47,
+  # 54, 61, 68, 75, 82, 89, 96, 103) — distinct from Rahul's first-12 suite
+  # so the dagger_r12 runs report on our own dedicated held-out set.
+  eval_config: configs/eval_closed_loop_flightroom_holdout_14.yaml
   eval_deterministic: true
   rollout:
     max_rollout_s: 35.0

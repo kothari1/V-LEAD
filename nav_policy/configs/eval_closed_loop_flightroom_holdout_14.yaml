@@ -1,0 +1,61 @@
+# Held-out flightroom eval suite: 14 stratified queries from the 110-traj
+# 071733 pool. Distinct from Rahul's first-12 suite
+# (eval_closed_loop_flightroom_suite.yaml). Used for in-training deterministic
+# eval + best-ckpt selection on the dagger_r12 SAC + PPO runs.
+#
+# Stratified picks (every ~7th index, starting at q12 to skip Rahul's set):
+#   12, 19, 26, 33, 40, 47, 54, 61, 68, 75, 82, 89, 96, 103
+# These indices give even coverage of the 071733 pool without overlapping
+# Rahul's q00-q11.
+
+frame: carl
+Kv: 2.0
+Ka: 5.0
+
+metrics:
+  time_buffer_s: 5.0
+  collision_depth_threshold_m: 0.25
+  goal_position_tol_m: 0.5
+  goal_yaw_tol_rad: 0.5
+  success_tracking_tol_m: 1.0
+  bbox_margin: 2.0
+  depth_inference_stride: 3
+  check_collision: true
+  check_goal: true
+  warmup_steps: 30
+  warmup_kp_pos: 2.0
+  warmup_kd_vel: 1.0
+  warmup_kp_yaw: 2.0
+  warmup_max_vel: 0.8
+  warmup_max_yaw_rate: 1.0
+  warmup_prime_policy_buffer: true
+
+rollouts:
+  - {name: flightroom_holdout_q12, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00012.pt, sub_idx: 0}
+  - {name: flightroom_holdout_q19, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00019.pt, sub_idx: 0}
+  - {name: flightroom_holdout_q26, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00026.pt, sub_idx: 0}
+  - {name: flightroom_holdout_q33, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00033.pt, sub_idx: 0}
+  - {name: flightroom_holdout_q40, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00040.pt, sub_idx: 0}
+  - {name: flightroom_holdout_q47, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00047.pt, sub_idx: 0}
+  - {name: flightroom_holdout_q54, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00054.pt, sub_idx: 0}
+  - {name: flightroom_holdout_q61, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00061.pt, sub_idx: 0}
+  - {name: flightroom_holdout_q68, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00068.pt, sub_idx: 0}
+  - {name: flightroom_holdout_q75, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00075.pt, sub_idx: 0}
+  - {name: flightroom_holdout_q82, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00082.pt, sub_idx: 0}
+  - {name: flightroom_holdout_q89, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00089.pt, sub_idx: 0}
+  - {name: flightroom_holdout_q96, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00096.pt, sub_idx: 0}
+  - {name: flightroom_holdout_q103, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/trajectories_val00103.pt, sub_idx: 0}
