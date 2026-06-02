@@ -50,8 +50,16 @@ if ! python -c 'import gemsplat' >/dev/null 2>&1; then
             exit 1
         }
 fi
+if ! python -c 'import vlead_flight' >/dev/null 2>&1; then
+    runuser -u "$USERNAME" -- python -m pip install -e /workspace/vlead --no-deps -q \
+        >>"$INSTALL_LOG" 2>&1 || {
+            echo "FATAL: failed to install vlead_flight" >&2
+            tail -n 30 "$INSTALL_LOG" >&2
+            exit 1
+        }
+fi
 if ! python -c 'import nav_policy' >/dev/null 2>&1; then
-    runuser -u "$USERNAME" -- python -m pip install -e /workspace/nav_policy --no-deps -q \
+    runuser -u "$USERNAME" -- python -m pip install -e "/workspace/nav_policy[rl]" -q \
         >>"$INSTALL_LOG" 2>&1 || {
             echo "FATAL: failed to install nav_policy" >&2
             tail -n 30 "$INSTALL_LOG" >&2

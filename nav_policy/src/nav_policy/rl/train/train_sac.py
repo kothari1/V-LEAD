@@ -46,6 +46,7 @@ def _build_env(cfg: Dict[str, Any]):
     reward_cfg = RewardConfig(**cfg.get("reward", {}))
     term_cfg = TerminationConfig(**cfg.get("termination", {}))
 
+    model_cfg = cfg.get("model", {})
     env = FigsDroneEnv(
         scene_name=env_cfg["scene_name"],
         rollout_name=env_cfg.get("rollout_name", "baseline"),
@@ -60,6 +61,7 @@ def _build_env(cfg: Dict[str, Any]):
         sampler=sampler,
         reward_cfg=reward_cfg,
         term_cfg=term_cfg,
+        use_depth=model_cfg.get("use_depth", False),
     )
     return env
 
@@ -81,6 +83,7 @@ def _build_sac(env, cfg: Dict[str, Any], device: str):
             mlp_hidden=tuple(model_cfg.get("mlp_hidden", (256, 128))),
             goal_emb_dim=model_cfg.get("goal_emb_dim", 32),
             freeze_visual=model_cfg.get("freeze_visual", True),
+            use_depth=model_cfg.get("use_depth", False),
         ),
         net_arch=dict(
             pi=list(model_cfg.get("actor_mlp", [256, 128])),
@@ -188,6 +191,9 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=None,
                         help="Override cfg.seed for multi-seed runs.")
     args = parser.parse_args()
+
+    # TF32: free ~20-30% speedup on Ampere+ GPUs with no accuracy loss for RL.
+    torch.set_float32_matmul_precision("high")
 
     with open(args.config, "r") as f:
         cfg = yaml.safe_load(f)

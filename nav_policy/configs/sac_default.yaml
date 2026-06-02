@@ -4,15 +4,15 @@
 seed: 0
 output_dir: data/rl_runs/sac_default
 total_timesteps: 100000
-log_interval: 4
+log_interval: 100
 
 env:
-  scene_name: "flightroom_ssv_exp/gemsplat/2026-02-28_205058"
+  scene_name: "flightroom_ssv_exp/gemsplat/2026-02-23_043616"
   rollout_name: "baseline"
   frame_name: "carl"
   hz: 20
   frame_window: 4
-  img_resolution: [224, 224]
+  img_resolution: [128, 128]
   goal_distance_scale: 5.0
   goal_input_dim: 4              # [hx, hy, hz, d/scale]; set 3 to drop hz
   # Tightened vz range (-0.5/+0.5 m/s) to dampen vertical exploration at init;
@@ -27,13 +27,13 @@ env:
 # NED convention: z increases downward. z=0 is floor, z=-2 is ceiling.
 # Sampler gets a slightly shrunk bbox so spawned goals stay safely inside.
 sampler:
-  start_xyz_low: [-1.0, -1.0, -1.6]
-  start_xyz_high: [1.0, 1.0, -1.0]
+  start_xyz_low: [-1.0, -1.0, -1.3]   # was -1.6; 0.65m from ceiling instead of 0.35m
+  start_xyz_high: [1.0, 1.0, -0.8]    # was -1.0; centered around alt_target=-1.2
   goal_radius_min: 1.5
   goal_radius_max: 5.0
-  goal_z_low: -1.7
-  goal_z_high: -0.5
-  yaw_jitter: 0.0
+  goal_z_low: -1.4                     # was -1.7; goals never closer than 0.55m from ceiling
+  goal_z_high: -0.4                    # was -0.5; allow goals slightly closer to floor too
+  yaw_jitter: 0.5                 # ±0.5 rad (~±29°) orientation randomization
   velocity_jitter: 0.0
   bbox_xyz_low: [-3.4, -7.7, -1.9]
   bbox_xyz_high: [3.4, 7.7, -0.15]
@@ -41,7 +41,7 @@ sampler:
 reward:
   w_progress: 1.0
   w_success: 50.0
-  w_alive: 0.01
+  w_alive: 0.05                   # increased from 0.01; total -15 over 300 steps encourages efficiency
   w_crash: 50.0
   w_smooth: 0.05
   w_yaw: 0.05
@@ -70,6 +70,7 @@ model:
   mlp_hidden: [256, 128]
   goal_emb_dim: 32
   freeze_visual: true
+  use_depth: false
   actor_mlp: [256, 128]
   critic_mlp: [256, 128]
 
@@ -78,9 +79,11 @@ sac:
   # Replay buffer RAM = buffer_size * frame_window * 3 * H * W bytes (uint8).
   # At T=4, 224x224: 5000 -> ~3 GB, 20000 -> ~12 GB, 50000 -> ~30 GB.
   # Container shm_size is 12 GB. Keep buffer_size * obs_bytes < shm to avoid hangs.
+  # With depth obs (float32 [T,1,H,W]), buffer RAM ≈ buffer_size × (RGB ~750KB + depth ~800KB).
+  # Keep buffer_size small to stay within host RAM limits.
   buffer_size: 5000
-  learning_starts: 500
-  batch_size: 64
+  learning_starts: 2000           # ~100 episodes of pure exploration before first gradient step
+  batch_size: 32
   tau: 0.005
   gamma: 0.99
   train_freq: 1
@@ -89,7 +92,7 @@ sac:
   target_update_interval: 1
 
 warm_start:
-  bc_checkpoint: /project/kothari1/vlead_data/checkpoints/bc_best.pt
+  bc_checkpoint: /home/yashr/CS231N/checkpoints/bc_best_balanced_dagger_r12_new.pt  # mounted from /home/yashr/CS231N/checkpoints/
   # If true, copies BC head's Linear layers into SAC actor.latent_pi + actor.mu
   # so the actor's initial action mean matches BC's t=0 velocity command (not
   # just the encoder). Requires model.actor_mlp == BC config's mlp_hidden.
@@ -98,7 +101,7 @@ warm_start:
 callbacks:
   eval:
     enabled: true
-    freq: 2500                   # eval every N env steps
+    freq: 5000                   # eval every N env steps
     n_episodes: 3
     seed: 42
   checkpoint:
@@ -107,6 +110,9 @@ callbacks:
   reward_components:
     enabled: true
     log_freq: 200
+  trajectory:
+    enabled: true
+    plot_freq: 10                # save a trajectory plot every N episodes
   wandb:
     enabled: false               # set true to mirror logs to W&B
     project: vlead-sac

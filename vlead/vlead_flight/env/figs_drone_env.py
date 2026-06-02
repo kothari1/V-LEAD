@@ -64,6 +64,7 @@ class FigsDroneEnv(gym.Env):
         reward_cfg: Optional[RewardConfig] = None,
         term_cfg: Optional[TerminationConfig] = None,
         device: Optional[str] = None,
+        use_depth: bool = False,
     ) -> None:
         super().__init__()
 
@@ -118,6 +119,11 @@ class FigsDroneEnv(gym.Env):
         )
         self._buf_idx = 0
         self._buf_filled = False
+        self._use_depth = use_depth
+        if use_depth:
+            self._dep_buf_np = np.zeros(
+                (frame_window, 1, self.img_h, self.img_w), dtype=np.float32
+            )
 
         # Sampling, reward, termination
         self._sampler = sampler if sampler is not None else EpisodeSampler()
@@ -139,7 +145,7 @@ class FigsDroneEnv(gym.Env):
             high=np.array(action_high, dtype=np.float32),
             dtype=np.float32,
         )
-        self.observation_space = spaces.Dict({
+        obs_spaces = {
             "rgb": spaces.Box(
                 low=0, high=255,
                 shape=(frame_window, 3, self.img_h, self.img_w),
@@ -149,7 +155,14 @@ class FigsDroneEnv(gym.Env):
                 low=-np.inf, high=np.inf,
                 shape=(goal_input_dim,), dtype=np.float32,
             ),
-        })
+        }
+        if use_depth:
+            obs_spaces["depth"] = spaces.Box(
+                low=0.0, high=np.inf,
+                shape=(frame_window, 1, self.img_h, self.img_w),
+                dtype=np.float32,
+            )
+        self.observation_space = spaces.Dict(obs_spaces)
 
         # Rollout state
         self._t = 0.0
@@ -160,49 +173,67 @@ class FigsDroneEnv(gym.Env):
 
     # ── helpers ────────────────────────────────────────────────────────────
 
-    def _render(self, x: np.ndarray) -> np.ndarray:
-        """Render current-pose RGB via gsplat. Returns (H, W, 3) uint8."""
+    def _render(self, x: np.ndarray):
+        """Render current-pose via gsplat. Returns (rgb_hwc, depth_hw or None)."""
         T_b2w = self._xv_to_T(x)
         T_c2w = T_b2w @ self._T_c2b
         img_dict = self._sim.gsplat.render_rgb(self._gs_camera, T_c2w)
-        return img_dict["rgb"]
+        depth = img_dict.get("depth_raw") if self._use_depth else None
+        return img_dict["rgb"], depth
 
-    def _push_frame(self, rgb_raw_hwc: np.ndarray) -> None:
-        # Resize via torch then store uint8 in the buffer (replay-friendly).
-        # No normalization here.
-        rgb_t = torch.from_numpy(np.ascontiguousarray(rgb_raw_hwc)).permute(2, 0, 1)  # [3,H,W] uint8
-        rgb_t = rgb_t.unsqueeze(0).float()
+    def _push_frame(self, rgb_raw_hwc: np.ndarray, depth_hw: Optional[np.ndarray] = None) -> None:
+        rgb_t = torch.from_numpy(np.ascontiguousarray(rgb_raw_hwc)).permute(2, 0, 1).unsqueeze(0).float()
         if rgb_t.shape[-2:] != (self.img_h, self.img_w):
             rgb_t = torch.nn.functional.interpolate(
-                rgb_t, size=(self.img_h, self.img_w),
-                mode="bilinear", align_corners=False,
+                rgb_t, size=(self.img_h, self.img_w), mode="bilinear", align_corners=False,
             )
         rgb_u8 = rgb_t.squeeze(0).clamp(0, 255).to(torch.uint8).cpu().numpy()
+
+        if self._use_depth and depth_hw is not None:
+            dep_t = torch.from_numpy(np.ascontiguousarray(depth_hw)).float()
+            if dep_t.ndim == 2:
+                dep_t = dep_t.unsqueeze(0).unsqueeze(0)  # [1,1,H,W]
+            elif dep_t.ndim == 3:
+                dep_t = dep_t.unsqueeze(0)
+            if dep_t.shape[-2:] != (self.img_h, self.img_w):
+                dep_t = torch.nn.functional.interpolate(
+                    dep_t, size=(self.img_h, self.img_w), mode="bilinear", align_corners=False,
+                )
+            dep_np = dep_t.squeeze(0).cpu().numpy()  # [1, H, W]
+
         if not self._buf_filled:
             for k in range(self.frame_window):
                 self._rgb_buf_np[k] = rgb_u8
+                if self._use_depth and depth_hw is not None:
+                    self._dep_buf_np[k] = dep_np
             self._buf_idx = 1 % self.frame_window
             self._buf_filled = True
         else:
             self._rgb_buf_np[self._buf_idx] = rgb_u8
+            if self._use_depth and depth_hw is not None:
+                self._dep_buf_np[self._buf_idx] = dep_np
             self._buf_idx = (self._buf_idx + 1) % self.frame_window
 
-    def _frame_stack(self) -> np.ndarray:
+    def _frame_stack(self) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         order = [(self._buf_idx + k) % self.frame_window for k in range(self.frame_window)]
-        return self._rgb_buf_np[order].copy()
+        rgb = self._rgb_buf_np[order].copy()
+        dep = self._dep_buf_np[order].copy() if self._use_depth else None
+        return rgb, dep
 
     def _make_obs(self, heading: np.ndarray, dist: float) -> Dict[str, np.ndarray]:
         if self.goal_input_dim == 3:
             goal = np.array(
-                [heading[0], heading[1], dist / self.goal_distance_scale],
-                dtype=np.float32,
+                [heading[0], heading[1], dist / self.goal_distance_scale], dtype=np.float32,
             )
         else:
             goal = np.array(
-                [heading[0], heading[1], heading[2], dist / self.goal_distance_scale],
-                dtype=np.float32,
+                [heading[0], heading[1], heading[2], dist / self.goal_distance_scale], dtype=np.float32,
             )
-        return {"rgb": self._frame_stack(), "goal": goal}
+        rgb, dep = self._frame_stack()
+        obs = {"rgb": rgb, "goal": goal}
+        if self._use_depth and dep is not None:
+            obs["depth"] = dep
+        return obs
 
     # ── Gymnasium API ──────────────────────────────────────────────────────
 
@@ -222,8 +253,8 @@ class FigsDroneEnv(gym.Env):
         self._buf_idx = 0
         self._buf_filled = False
 
-        rgb_raw = self._render(self._x)
-        self._push_frame(rgb_raw)
+        rgb_raw, depth_raw = self._render(self._x)
+        self._push_frame(rgb_raw, depth_raw)
 
         heading, dist = compute_goal(self._x, self._target)
         self._prev_dist = dist
@@ -252,8 +283,8 @@ class FigsDroneEnv(gym.Env):
         self._step_idx += 1
 
         # 4. Render new pose, push frame.
-        rgb_raw = self._render(self._x)
-        self._push_frame(rgb_raw)
+        rgb_raw, depth_raw = self._render(self._x)
+        self._push_frame(rgb_raw, depth_raw)
 
         # 5. Goal/reward/termination.
         heading, new_dist = compute_goal(self._x, self._target)
@@ -278,6 +309,7 @@ class FigsDroneEnv(gym.Env):
             "reward_components": reward_comp,
             "x": self._x.copy(),
             "ucr": ucr.copy(),
+            "target_xyz": self._target.copy(),
         }
         return obs, float(reward_comp["total"]), bool(terminated), bool(truncated), info
 

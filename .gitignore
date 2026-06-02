@@ -3,8 +3,43 @@ vlead_runs/
 vlead/**/*.egg-info/
 vlead/**/__pycache__/
 
-# stray rollout videos
-*.mp4
+# Python build / cache
+__pycache__/
+*.egg-info/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
 
-# editor
+# SAC / RL training outputs
+nav_policy/data/
+
+# 3DGS scene data
+3dgs/
+FiGS-Standalone/3dgs/
+
+# Checkpoints and model weights
+*.pt
+*.pth
+*.ckpt
+*.zip
+
+# Large data files
+*.npz
+*.npy
+*.h5
+*.hdf5
+
+# Videos
+*.mp4
+*.avi
+*.mov
+
+# Venv
+.venv/
+
+# Editor / OS
 .vscode/
+.idea/
+.DS_Store
+Thumbs.db

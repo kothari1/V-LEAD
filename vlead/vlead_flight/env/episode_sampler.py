@@ -60,14 +60,22 @@ class EpisodeSampler:
         # Goal: sample a direction in the XY plane + a Z within configured range,
         # then scale to a radius drawn from [goal_radius_min, goal_radius_max].
         # Retry until the goal is inside the optional bbox.
+        target = None
         for _ in range(50):
             theta = rng.uniform(0.0, 2 * np.pi)
             radius_xy = rng.uniform(self.goal_radius_min, self.goal_radius_max)
             goal_xy = start_xyz[0:2] + radius_xy * np.array([np.cos(theta), np.sin(theta)])
             goal_z = rng.uniform(self.goal_z_low, self.goal_z_high)
-            target = np.array([goal_xy[0], goal_xy[1], goal_z], dtype=np.float64)
-            if self._in_bbox(target):
+            candidate = np.array([goal_xy[0], goal_xy[1], goal_z], dtype=np.float64)
+            if self._in_bbox(candidate):
+                target = candidate
                 break
+        if target is None:
+            raise RuntimeError(
+                f"EpisodeSampler: could not find a valid goal inside bbox after 50 tries. "
+                f"start={start_xyz}, radius=[{self.goal_radius_min},{self.goal_radius_max}], "
+                f"bbox_low={self.bbox_xyz_low}, bbox_high={self.bbox_xyz_high}"
+            )
 
         # Initial attitude: identity quaternion + optional yaw jitter
         yaw = rng.uniform(-self.yaw_jitter, self.yaw_jitter) if self.yaw_jitter > 0 else 0.0

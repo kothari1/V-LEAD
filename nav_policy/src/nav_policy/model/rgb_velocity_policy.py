@@ -82,6 +82,51 @@ class _MLPHead(nn.Module):
         return self.net(x)
 
 
+class DepthEncoder(nn.Module):
+    """Small CNN encoding a single-channel depth map to a 256-D vector.
+    Matches BC checkpoint depth_enc architecture exactly."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Conv2d(1, 32, 3, padding=1),   # net.0
+            nn.ReLU(inplace=True),              # net.1
+            nn.Conv2d(32, 64, 3, padding=1),   # net.2
+            nn.ReLU(inplace=True),              # net.3
+            nn.Conv2d(64, 128, 3, padding=1),  # net.4
+            nn.ReLU(inplace=True),              # net.5
+            nn.AdaptiveAvgPool2d(1),            # net.6
+            nn.Flatten(),                        # net.7
+            nn.Linear(128, 256),                # net.8
+        )
+        self.out_dim = 256
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.net(x)
+
+
+class RGBDepthFusion(nn.Module):
+    """Cross-attention fusion: RGB (512D) queries depth (256D→512D).
+    Matches BC checkpoint fusion architecture exactly."""
+
+    def __init__(self, rgb_dim: int = 512, dep_dim: int = 256, num_heads: int = 4) -> None:
+        super().__init__()
+        self.rgb_norm = nn.LayerNorm(rgb_dim)
+        self.dep_norm = nn.LayerNorm(dep_dim)
+        self.dep_to_rgb = nn.Linear(dep_dim, rgb_dim)
+        self.attn = nn.MultiheadAttention(rgb_dim, num_heads=num_heads, batch_first=True)
+        self.out_norm = nn.LayerNorm(rgb_dim)
+        self.out_dim = rgb_dim
+
+    def forward(self, rgb_feat: torch.Tensor, dep_feat: torch.Tensor) -> torch.Tensor:
+        rgb_n = self.rgb_norm(rgb_feat)
+        dep_proj = self.dep_to_rgb(self.dep_norm(dep_feat))
+        q = rgb_n.unsqueeze(1)
+        kv = dep_proj.unsqueeze(1)
+        attn_out, _ = self.attn(q, kv, kv)
+        return self.out_norm(attn_out.squeeze(1))
+
+
 class RGBVelocityPolicy(nn.Module):
     """
     RGB sequence + goal vector -> velocity command horizon.
@@ -108,7 +153,8 @@ class RGBVelocityPolicy(nn.Module):
                  mlp_dropout: float = 0.1,
                  goal_emb_dim: int = 32,
                  goal_input_dim: int = 2,
-                 freeze_stem_and_layer1: bool = True) -> None:
+                 freeze_stem_and_layer1: bool = True,
+                 use_depth: bool = False) -> None:
         super().__init__()
         if goal_input_dim not in (2, 3):
             raise ValueError(f"goal_input_dim must be 2 or 3; got {goal_input_dim}")
@@ -118,10 +164,20 @@ class RGBVelocityPolicy(nn.Module):
         self.gru_hidden = gru_hidden
         self.goal_emb_dim = goal_emb_dim
         self.goal_input_dim = int(goal_input_dim)
+        self.use_depth = use_depth
 
         self.visual = _PerFrameResNet18(freeze_stem_and_layer1=freeze_stem_and_layer1)
+
+        # Depth encoder + fusion (optional, matches BC checkpoint architecture).
+        if use_depth:
+            self.depth_enc = DepthEncoder()
+            self.fusion = RGBDepthFusion(rgb_dim=self.visual.out_dim, dep_dim=self.depth_enc.out_dim)
+            gru_input_size = self.fusion.out_dim
+        else:
+            gru_input_size = self.visual.out_dim
+
         self.gru = nn.GRU(
-            input_size=self.visual.out_dim,
+            input_size=gru_input_size,
             hidden_size=gru_hidden,
             num_layers=gru_layers,
             batch_first=True,
@@ -150,11 +206,14 @@ class RGBVelocityPolicy(nn.Module):
 
     def encode(self,
                rgb_seq: torch.Tensor,
-               goal: torch.Tensor) -> torch.Tensor:
+               goal: torch.Tensor,
+               depth_seq: Optional[torch.Tensor] = None) -> torch.Tensor:
         """Shared visual+goal encoder. Returns fused feature [B, feature_dim].
 
-        Exposed for reuse by RL actor-critic heads — BC warm-start copies these
-        weights 1:1 from a BC checkpoint into the actor's encoder.
+        Args:
+            rgb_seq:   [B, T, 3, S, S] float32, ImageNet-normalized.
+            goal:      [B, goal_input_dim] float32.
+            depth_seq: [B, T, 1, S, S] float32 metric depth (optional, requires use_depth=True).
         """
         if rgb_seq.ndim != 5:
             raise ValueError(f"expected rgb_seq [B,T,3,S,S], got {tuple(rgb_seq.shape)}")
@@ -167,9 +226,14 @@ class RGBVelocityPolicy(nn.Module):
             )
 
         flat = rgb_seq.reshape(B * T, C, S1, S2)
-        feats = self.visual(flat)
-        seq = feats.view(B, T, self.visual.out_dim)
+        feats = self.visual(flat)  # [B*T, 512]
 
+        if self.use_depth and depth_seq is not None:
+            dep_flat = depth_seq.reshape(B * T, *depth_seq.shape[2:])  # [B*T, 1, S, S]
+            dep_feats = self.depth_enc(dep_flat)                        # [B*T, 256]
+            feats = self.fusion(feats, dep_feats)                       # [B*T, 512]
+
+        seq = feats.view(B, T, -1)
         _, h_n = self.gru(seq)
         h = self.gru_norm(h_n[-1])
 
@@ -178,17 +242,10 @@ class RGBVelocityPolicy(nn.Module):
 
     def forward(self,
                 rgb_seq: torch.Tensor,
-                goal: torch.Tensor) -> torch.Tensor:
-        """
-        Args:
-            rgb_seq: [B, T, 3, S, S] float32, ImageNet-normalized.
-            goal:    [B, goal_input_dim] float32 -- [hx, hy] or [hx, hy, d/scale].
-
-        Returns:
-            commands: [B, H, cmd_dim] float32, z-scored.
-        """
+                goal: torch.Tensor,
+                depth_seq: Optional[torch.Tensor] = None) -> torch.Tensor:
         B = rgb_seq.shape[0]
-        h_aug = self.encode(rgb_seq, goal)
+        h_aug = self.encode(rgb_seq, goal, depth_seq=depth_seq)
         out = self.head(h_aug)
         return out.view(B, self.H, self.cmd_dim)
 

@@ -63,6 +63,7 @@ class BCEncoderFeatureExtractor(BaseFeaturesExtractor):  # type: ignore[misc]
         mlp_hidden: Sequence[int] = (256, 128),
         goal_emb_dim: int = 32,
         freeze_visual: bool = True,
+        use_depth: bool = False,
     ) -> None:
         feature_dim = gru_hidden + goal_emb_dim
         super().__init__(observation_space, features_dim=feature_dim)
@@ -79,15 +80,18 @@ class BCEncoderFeatureExtractor(BaseFeaturesExtractor):  # type: ignore[misc]
                 f"goal obs dim must be 2, 3, or 4; got {goal_space.shape[0]}"
             )
 
+        self._use_depth = use_depth and ("depth" in observation_space.spaces)
+
         # Pre-build the inner BC policy so weights can be loaded 1:1 from a BC ckpt.
         self._policy = RGBVelocityPolicy(
             T=T, H=H_pred, cmd_dim=cmd_dim,
             gru_hidden=gru_hidden, gru_layers=gru_layers,
             mlp_hidden=tuple(mlp_hidden),
-            mlp_dropout=0.0,                  # no dropout during RL rollouts
+            mlp_dropout=0.0,
             goal_emb_dim=goal_emb_dim,
             goal_input_dim=goal_input_dim,
             freeze_stem_and_layer1=True,
+            use_depth=self._use_depth,
         )
 
         if feature_dim != self._policy.feature_dim:
@@ -122,7 +126,12 @@ class BCEncoderFeatureExtractor(BaseFeaturesExtractor):  # type: ignore[misc]
         rgb = (rgb - self._mean) / self._std
 
         if self._drop_goal_z:
-            # Env emits [hx, hy, hz, d/scale]; encoder wants [hx, hy, d/scale].
             goal = torch.cat([goal[:, :2], goal[:, 3:4]], dim=-1)
 
-        return self._policy.encode(rgb, goal)
+        depth_seq = None
+        if self._use_depth and "depth" in observations:
+            # Normalize metric depth (meters) to ~[0, 1] using flightroom max depth.
+            # Scene diagonal ≈ 18m; clip at 10m to avoid outliers from sky/holes.
+            depth_seq = observations["depth"].float().clamp(0.0, 10.0) / 10.0
+
+        return self._policy.encode(rgb, goal, depth_seq=depth_seq)
