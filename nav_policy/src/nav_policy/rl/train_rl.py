@@ -163,9 +163,13 @@ def train(config_path: Path,
     if resume_from is not None:
         init_ckpt = resume_from.resolve()
 
-    ckpt_dir = nav_root / rl_cfg.get("checkpoint_dir", "data/checkpoints_rl")
-    _ensure_writable_dir(ckpt_dir, "checkpoint_dir")
+    ckpt_dir_root = nav_root / rl_cfg.get("checkpoint_dir", "data/checkpoints_rl")
     tag = run_tag or rl_cfg.get("run_tag", f"rl_{algorithm}")
+    # Each run gets its own subfolder under checkpoint_dir so logs, videos,
+    # TB, and checkpoints stay grouped per run instead of fighting for
+    # filename uniqueness via {tag}_ prefixes.
+    ckpt_dir = ckpt_dir_root / tag
+    _ensure_writable_dir(ckpt_dir, "checkpoint_dir")
     log_path = ckpt_dir / f"{tag}_log.csv"
     episode_log_path = ckpt_dir / f"{tag}_episodes.csv"
 
@@ -305,7 +309,7 @@ def train(config_path: Path,
     # TensorBoard writer (one per run).
     tb_cfg = rl_cfg.get("tb", {}) or {}
     tb_enabled = bool(tb_cfg.get("enabled", True))
-    tb_log_dir = Path(tb_cfg.get("log_dir") or (ckpt_dir / "tb" / tag))
+    tb_log_dir = Path(tb_cfg.get("log_dir") or (ckpt_dir / "tb"))
     tb = TBLogger(tb_log_dir, enabled=tb_enabled)
     if tb_enabled:
         print(f"[rl] tensorboard log dir -> {tb_log_dir}", flush=True)
