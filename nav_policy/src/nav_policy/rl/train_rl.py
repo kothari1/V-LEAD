@@ -147,7 +147,8 @@ def train(config_path: Path,
           run_tag: Optional[str] = None,
           n_iterations: Optional[int] = None,
           rollouts_per_iteration: Optional[int] = None,
-          save_videos: Optional[bool] = None) -> Path:
+          save_videos: Optional[bool] = None,
+          seed: Optional[int] = None) -> Path:
     cfg = _load_config(config_path)
 
     nav_root = config_path.resolve().parent.parent
@@ -156,7 +157,7 @@ def train(config_path: Path,
     if algorithm not in ("ppo", "sac"):
         raise ValueError(f"rl.algorithm must be 'ppo' or 'sac'; got {algorithm!r}")
 
-    seed = int(rl_cfg.get("seed", 0))
+    seed = int(seed if seed is not None else rl_cfg.get("seed", 0))
     _set_seed(seed)
 
     init_ckpt = (nav_root / cfg["checkpoint"]).resolve()
@@ -771,6 +772,8 @@ def main() -> None:
                    help="Override rl.n_iterations (use 1 for smoke tests).")
     p.add_argument("--rollouts-per-iteration", type=int, default=None,
                    help="Override rl.rollouts_per_iteration (use 2 for smoke tests).")
+    p.add_argument("--seed", type=int, default=None,
+                   help="Override rl.seed (for multi-seed runs).")
     args = p.parse_args()
     train(
         args.config,
@@ -779,6 +782,7 @@ def main() -> None:
         n_iterations=args.n_iterations,
         rollouts_per_iteration=args.rollouts_per_iteration,
         save_videos=args.save_videos if args.save_videos else None,
+        seed=args.seed,
     )
 
 
