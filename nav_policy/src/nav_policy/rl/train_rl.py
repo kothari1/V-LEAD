@@ -439,6 +439,14 @@ def train(config_path: Path,
             except Exception as exc:
                 print(f"  [{rcfg.get('name', '?')}] FAILED: {exc}", file=sys.stderr)
 
+        # SAC: flush per-iteration so the critic + actor see gradients every
+        # iter instead of one shot at the end. Without this, SAC would only
+        # do `updates_per_iter` total grad steps over the entire run.
+        if algorithm == "sac" and pending_episodes:
+            batch_eps = list(pending_episodes)
+            pending_episodes.clear()
+            _run_training_step(it, batch_eps)
+
         if iter_collected == 0:
             print(f"[rl] iter {it}: no episodes collected; skipping update", file=sys.stderr)
 

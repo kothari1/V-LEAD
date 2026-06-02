@@ -68,19 +68,23 @@ class SACTrainer:
             pt.data.mul_(1.0 - self.tau).add_(self.tau * p.data)
 
     def update(self, batch: dict) -> SACStats:
-        rgb = batch["rgb"].to(self.device)
-        goal = batch["goal"].to(self.device)
-        depth = batch["depth"].to(self.device) if batch.get("depth") is not None else None
-        next_rgb = batch["next_rgb"].to(self.device)
-        next_goal = batch["next_goal"].to(self.device)
-        next_depth = (
-            batch["next_depth"].to(self.device)
-            if batch.get("next_depth") is not None
-            else None
+        # Cast everything to float32; the replay buffer may store rgb/depth as
+        # float16 when compress_transitions=true, but model weights are float32.
+        rgb = batch["rgb"].to(self.device).float()
+        goal = batch["goal"].to(self.device).float()
+        depth = (
+            batch["depth"].to(self.device).float()
+            if batch.get("depth") is not None else None
         )
-        actions = batch["actions"].to(self.device)
-        rewards = batch["rewards"].to(self.device)
-        dones = batch["dones"].to(self.device)
+        next_rgb = batch["next_rgb"].to(self.device).float()
+        next_goal = batch["next_goal"].to(self.device).float()
+        next_depth = (
+            batch["next_depth"].to(self.device).float()
+            if batch.get("next_depth") is not None else None
+        )
+        actions = batch["actions"].to(self.device).float()
+        rewards = batch["rewards"].to(self.device).float()
+        dones = batch["dones"].to(self.device).float()
 
         with torch.no_grad():
             next_actions, next_log_prob, _ = self.policy.act(

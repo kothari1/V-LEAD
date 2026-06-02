@@ -13,7 +13,9 @@ checkpoint: data/checkpoints/bc_best_balanced_dagger_r12_new.pt
 
 rl:
   run_tag: rl_sac_dagger_r12
-  checkpoint_dir: data/checkpoints_rl_dagger_r12
+  # Absolute path to project drive; ~/autonomy_projects has low storage and
+  # videos + checkpoints add up fast. Videos auto-follow ckpt_dir.
+  checkpoint_dir: /project/kothari1/vlead_data/rl_runs/dagger_r12
   # Round 2 (settle_vel_mps 0.12 -> 0.4) unlocked legitimate goal_reached
   # successes. Round 2 (LPF alpha 0.4 + smooth weight 0.3) only partially
   # damped the shake. Round 3 attacks the per-step Gaussian noise that
