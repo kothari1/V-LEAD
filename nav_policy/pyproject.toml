@@ -18,7 +18,7 @@ dependencies = [
     "imageio[ffmpeg]",
     "av",
     "opencv-python-headless",
-    "pytorch-grad-cam",
+    "grad-cam",
 ]
 
 [project.optional-dependencies]

@@ -436,6 +436,9 @@ class RLTrainingController:
             rollout_result is not None and getattr(rollout_result, "goal_reached", False)
         )
 
+        collision = bool(rollout_result.collision) if rollout_result is not None else any(self._collision_steps)
+        termination = str(rollout_result.termination) if rollout_result is not None else "timeout"
+
         rewards = compute_episode_rewards(
             self._states,
             expert.Xro[0:2, -1],
@@ -444,6 +447,7 @@ class RLTrainingController:
             collision_steps=self._collision_steps,
             actions=self._actions,
             goal_settled=goal_settled,
+            termination=termination,
             **reward_cfg,
         )
 
@@ -488,10 +492,6 @@ class RLTrainingController:
             final_yaw_err = float(abs((yaw - goal_yaw + np.pi) % (2 * np.pi) - np.pi))
 
 
-
-        collision = bool(rollout_result.collision) if rollout_result is not None else any(self._collision_steps)
-
-        termination = str(rollout_result.termination) if rollout_result is not None else "timeout"
 
         success = goal_settled and not collision
 

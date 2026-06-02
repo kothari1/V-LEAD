@@ -74,9 +74,11 @@ def compute_episode_rewards(
 
     step_penalty: float = -0.01,
 
-    collision_penalty: float = -10.0,
+    collision_penalty: float = -50.0,
 
     bbox_penalty: float = -5.0,
+
+    timeout_penalty: float = -20.0,
 
     success_bonus: float = 5.0,
 
@@ -93,6 +95,8 @@ def compute_episode_rewards(
     action_smooth_weight: float = 0.0,
 
     goal_settled: bool = False,
+
+    termination: str = "",
 
 ) -> List[float]:
 
@@ -206,7 +210,13 @@ def compute_episode_rewards(
 
 
 
-    final_pos_err = float(np.linalg.norm(positions[-1, 0:2] - goal_xy))
+    if rewards:
+        if (
+            str(termination).lower() == "timeout"
+            and not goal_settled
+            and not collision_bad.any()
+        ):
+            rewards[-1] += timeout_penalty
 
     if (
         goal_settled
@@ -235,9 +245,11 @@ def reward_config_from_dict(cfg: Dict) -> Dict:
 
         "step_penalty": float(r.get("step_penalty", -0.01)),
 
-        "collision_penalty": float(r.get("collision_penalty", -10.0)),
+        "collision_penalty": float(r.get("collision_penalty", -50.0)),
 
         "bbox_penalty": float(r.get("bbox_penalty", -5.0)),
+
+        "timeout_penalty": float(r.get("timeout_penalty", -20.0)),
 
         "success_bonus": float(r.get("success_bonus", 5.0)),
 

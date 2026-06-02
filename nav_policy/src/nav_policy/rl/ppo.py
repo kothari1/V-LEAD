@@ -18,6 +18,7 @@ class PPOStats:
     value_loss: float
     entropy: float
     approx_kl: float
+    ref_kl: float = 0.0
 
 
 def ppo_update(policy: StochasticVelocityPolicy,
@@ -27,6 +28,8 @@ def ppo_update(policy: StochasticVelocityPolicy,
                clip_eps: float = 0.2,
                value_coef: float = 0.5,
                entropy_coef: float = 0.01,
+               ref_kl_coef: float = 0.0,
+               reference_policy: Optional[StochasticVelocityPolicy] = None,
                max_grad_norm: float = 1.0,
                n_epochs: int = 4,
                batch_size: int = 256,
@@ -35,7 +38,7 @@ def ppo_update(policy: StochasticVelocityPolicy,
     n = len(buffer)
     idx = torch.arange(n)
 
-    total_pl = total_vl = total_ent = total_kl = 0.0
+    total_pl = total_vl = total_ent = total_kl = total_ref_kl = 0.0
     n_updates = 0
 
     for _ in range(n_epochs):
@@ -63,6 +66,11 @@ def ppo_update(policy: StochasticVelocityPolicy,
                 value_loss = nn.functional.mse_loss(values, returns)
                 ent = entropy.mean()
                 loss = policy_loss + value_coef * value_loss - entropy_coef * ent
+                ref_kl_val = 0.0
+                if reference_policy is not None and ref_kl_coef > 0.0:
+                    ref_kl = policy.kl_to(reference_policy, rgb, goal, depth).mean()
+                    loss = loss + ref_kl_coef * ref_kl
+                    ref_kl_val = float(ref_kl.item())
 
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
@@ -76,6 +84,7 @@ def ppo_update(policy: StochasticVelocityPolicy,
             total_vl += float(value_loss.item())
             total_ent += float(ent.item())
             total_kl += approx_kl
+            total_ref_kl += ref_kl_val
             n_updates += 1
 
     n_updates = max(n_updates, 1)
@@ -84,15 +93,19 @@ def ppo_update(policy: StochasticVelocityPolicy,
         value_loss=total_vl / n_updates,
         entropy=total_ent / n_updates,
         approx_kl=total_kl / n_updates,
+        ref_kl=total_ref_kl / n_updates,
     )
 
 
 def ppo_config_from_dict(cfg: Dict) -> Dict:
     p = cfg.get("ppo", {}) or {}
+    anchor = cfg.get("bc_anchor", {}) or {}
+    ref_kl_coef = p.get("ref_kl_coef", anchor.get("kl_coef", 0.0))
     return {
         "clip_eps": float(p.get("clip_eps", 0.2)),
         "value_coef": float(p.get("value_coef", 0.5)),
         "entropy_coef": float(p.get("entropy_coef", 0.01)),
+        "ref_kl_coef": float(ref_kl_coef),
         "max_grad_norm": float(p.get("max_grad_norm", 1.0)),
         "n_epochs": int(p.get("n_epochs", 4)),
         "batch_size": int(p.get("batch_size", 256)),

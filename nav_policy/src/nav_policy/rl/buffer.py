@@ -49,20 +49,43 @@ def _compute_gae(rewards: np.ndarray,
     return advantages, returns
 
 
+def _subsample_transitions(transitions: List[Transition],
+                           max_steps: int) -> List[Transition]:
+    if max_steps <= 0 or len(transitions) <= max_steps:
+        return transitions
+    idx = np.linspace(0, len(transitions) - 1, max_steps, dtype=np.int64)
+    out = [transitions[int(i)] for i in idx]
+    out[-1].done = True
+    return out
+
+
+def _cat_obs(tensors: List[torch.Tensor], *, buffer_fp16: bool) -> torch.Tensor:
+    out = torch.cat(tensors, dim=0)
+    if buffer_fp16:
+        return out.half() if out.dtype != torch.float16 else out
+    return out.float() if out.dtype != torch.float32 else out
+
+
 def episodes_to_buffer(episodes: List[EpisodeBatch],
                        *,
                        gamma: float = 0.99,
-                       gae_lambda: float = 0.95) -> RolloutBuffer:
+                       gae_lambda: float = 0.95,
+                       max_steps_per_episode: int = 0,
+                       buffer_fp16: bool = True) -> RolloutBuffer:
     transitions: List[Transition] = []
     for ep in episodes:
-        transitions.extend(ep.transitions)
+        trs = _subsample_transitions(ep.transitions, max_steps_per_episode)
+        if trs:
+            trs[-1].done = True
+        transitions.extend(trs)
+        ep.transitions.clear()
     if not transitions:
         raise RuntimeError("no transitions collected")
 
-    rgb = torch.cat([t.rgb.float() for t in transitions], dim=0)
+    rgb = _cat_obs([t.rgb for t in transitions], buffer_fp16=buffer_fp16)
     goal = torch.cat([t.goal for t in transitions], dim=0)
     depth = (
-        torch.cat([t.depth.float() for t in transitions if t.depth is not None], dim=0)
+        _cat_obs([t.depth for t in transitions if t.depth is not None], buffer_fp16=buffer_fp16)
         if transitions[0].depth is not None
         else None
     )
