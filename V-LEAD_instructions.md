@@ -581,6 +581,14 @@ python scripts/eval_in_figs.py \
     --checkpoint .../<run_tag>_best.pt \
     --output-dir .../<run_tag>/test110_eval \
     --rollouts-from-dir data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110
+
+# Queue evals on many checkpoints overnight; writes per-ckpt summary +
+# roll-up table to {output-root}/queue_table.csv. ~55 min per ckpt.
+python scripts/eval_queue.py \
+    --config configs/eval_closed_loop_flightroom_holdout_14.yaml \
+    --output-root /project/kothari1/vlead_data/rl_runs/dagger_r12/_eval_batch \
+    --rollouts-from-dir data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110 \
+    --ckpt-list /tmp/eval_targets.txt        # or --ckpt path --ckpt path ...
 ```
 
 TensorBoard (host side):
