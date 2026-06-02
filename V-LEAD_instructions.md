@@ -547,6 +547,56 @@ ACADOS compiles C solver libraries per call and previously wrote them to a share
 
 ---
 
+## RL Fine-Tuning (PPO / SAC)
+
+RL training and held-out evaluation live in `nav_policy/`. Full command
+cheat-sheet, TB tag map, train/val/test split, and reward decomposition
+are documented in
+[`nav_policy/src/nav_policy/rl/README.md`](nav_policy/src/nav_policy/rl/README.md).
+
+Most-used commands:
+
+```bash
+# Enter the vlead container (per-GPU)
+cd ~/autonomy_projects/V-LEAD
+CUDA_VISIBLE_DEVICES=0 docker compose run --rm vlead
+cd /workspace/nav_policy
+
+# Train SAC (BC anchor + held-out eval + TB + perf summary)
+python -m nav_policy.rl.train_rl \
+    --config configs/train_rl_flightroom_sac_dagger_r12.yaml \
+    --run-tag rl_sac_dagger_r12_v8 \
+    --save-videos
+# Add --seed 42 for multi-seed runs
+
+# Eval against held-out 14-query suite
+python scripts/eval_in_figs.py \
+    --config configs/eval_closed_loop_flightroom_holdout_14.yaml \
+    --checkpoint /project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/<run_tag>_best.pt \
+    --output-dir /project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/holdout14_eval
+
+# Publishable: eval against the full 110-traj pool
+python scripts/eval_in_figs.py \
+    --config configs/eval_closed_loop_flightroom_holdout_14.yaml \
+    --checkpoint .../<run_tag>_best.pt \
+    --output-dir .../<run_tag>/test110_eval \
+    --rollouts-from-dir data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110
+```
+
+TensorBoard (host side):
+```bash
+~/.local/bin/tensorboard \
+    --logdir /project/kothari1/vlead_data/rl_runs/dagger_r12 \
+    --port 6006
+```
+
+See the RL README for: train/val/test split, reward terms,
+known gotchas (RNN backward in eval mode, replay-buffer footprint),
+TB tag map (`rollout/*`, `train/*`, `reward/*`, `episode/*`,
+`eval/*`, `eval_per_query/*`).
+
+---
+
 ## Quick Reference Commands
 
 ```bash

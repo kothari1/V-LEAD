@@ -1,515 +1,310 @@
-# V-LEAD Online RL
+# V-LEAD RL — quick reference
 
-Gymnasium-compatible Reinforcement Learning scaffold for the V-LEAD pilot
-network. Wraps the FiGS drone simulator + 3DGS renderer in a `gym.Env`,
-plugs Stable-Baselines3 SAC on top with the BC visual encoder reused as
-the actor-critic feature extractor, and supports warm-starting both the
-encoder and the actor head from a BC checkpoint.
+Canonical PPO + SAC fine-tuning for the V-LEAD pilot network, with BC KL
+anchor, held-out deterministic eval, TensorBoard, and per-run perf summary.
 
-> **All commands at the [end of this README](#quick-command-reference).**
+> **All commands at the [end of this README](#commands).** Skip there for
+> the cheat-sheet.
 
----
+## What's in this folder
 
-## Table of contents
+| File | Role |
+|---|---|
+| `train_rl.py` | trainer entry; routes PPO vs SAC via yaml `rl.algorithm` |
+| `stochastic_policy.py` | Gaussian-actor wrapper around BC policy + critic + KL anchor |
+| `ppo.py` | clipped-objective PPO update + BC anchor term |
+| `sac.py` | twin-Q SAC update + BC anchor term |
+| `buffer.py` | `RolloutBuffer` (PPO) and `ReplayBuffer` (SAC) |
+| `rollout.py` | `RLTrainingController` (FiGS-compatible) + episode collection |
+| `rewards.py` | `compute_episode_rewards`; returns per-step list + per-term components |
+| `train_eval.py` | deterministic eval-on-suite for in-training checkpoint selection |
+| `tb_logger.py` | thin SummaryWriter wrapper with no-op fallback |
+| `perf_summary.py` | startup model + memory + latency summary |
+| `paths.py` | rollout-video path helpers |
 
-1. [What this gives you](#what-this-gives-you)
-2. [Repo layout](#repo-layout)
-3. [Environment (`FigsDroneEnv`)](#environment-figsdroneenv)
-4. [Reward](#reward) — **most-tuned thing, where to change it**
-5. [Termination](#termination)
-6. [Episode sampler](#episode-sampler)
-7. [Network + warm-start](#network--warm-start)
-8. [Training: config + callbacks](#training-config--callbacks)
-9. [Evaluation](#evaluation)
-10. [Tuning recipes](#tuning-recipes)
-11. [Known gotchas](#known-gotchas)
-12. [Quick command reference](#quick-command-reference)
-
----
-
-## What this gives you
-
-- **One pilot network, three training modes**: offline Behavior Cloning
-  (existing `nav_policy.train.train_bc`), online RL via SAC
-  (`nav_policy.rl.train.train_sac`), and DAgger relabeling (existing).
-- **Reuse of the BC visual encoder** in the RL actor-critic so an RL run
-  doesn't have to learn vision from scratch.
-- **Two-level warm-start** from BC: encoder weights (always), and
-  optionally the actor latent-MLP + mean head from BC's MLPHead.
-- **Composable per-step reward** that is logged term-by-term to
-  TensorBoard so you can see exactly which signal drives the policy.
-- **Drop-in SB3 callbacks**: periodic eval, checkpointing,
-  per-component reward logging, optional W&B.
-- **Closed-loop evaluation** script that loads a saved SAC `.zip` and
-  rolls out deterministic episodes in FiGS.
-
----
-
-## Repo layout
-
-The RL code lives in two packages — `vlead_flight` owns everything that
-touches the FiGS simulator; `nav_policy` owns model / algorithm / config.
+## Run layout (per-run subfolders)
 
 ```
-V-LEAD/
-├── vlead/vlead_flight/
-│   ├── observation.py             # compute_goal, preprocess_rgb/depth, FrameBuffer
-│   ├── _torch_compat.py           # torch>=2.6 weights_only fix for nerfstudio ckpts
-│   └── env/
-│       ├── figs_drone_env.py      # FigsDroneEnv (Gymnasium)
-│       ├── episode_sampler.py     # EpisodeSampler (start + goal randomization)
-│       ├── reward.py              # GoalReward + RewardConfig            ← edit weights here
-│       └── termination.py         # TerminationConfig + check_termination
-│
-└── nav_policy/
-    ├── configs/
-    │   └── sac_default.yaml       # ← the one yaml that drives everything
-    ├── scripts/
-    │   ├── train_sac.py           # CLI: train
-    │   ├── eval_sac.py            # CLI: evaluate saved ckpt
-    │   └── smoke_env.py           # CLI: random-action env smoke
-    └── src/nav_policy/rl/
-        ├── model/
-        │   └── feature_extractor.py   # BCEncoderFeatureExtractor (SB3)
-        ├── warm_start/
-        │   └── bc_to_rl.py            # BC ckpt → SAC encoder + actor
-        ├── train/
-        │   ├── train_sac.py           # main trainer
-        │   └── callbacks.py           # eval / ckpt / reward-components / W&B
-        └── eval/
-            └── eval_sac.py            # closed-loop evaluation
+{checkpoint_dir}/
+  {run_tag}/
+    {run_tag}_log.csv            # per-iter scalars
+    {run_tag}_episodes.csv       # per-episode rows
+    {run_tag}_summary.json
+    {run_tag}_perf.json          # startup model+memory+latency snapshot
+    {run_tag}_best.pt            # best by eval/goal_success_rate
+    {run_tag}_latest.pt
+    tb/                          # TensorBoard event files
+    videos/iter*_*.mp4           # one per episode if --save-videos
 ```
 
----
+## TensorBoard tags
 
-## Environment (`FigsDroneEnv`)
+| Group | Tags |
+|---|---|
+| `rollout/` | `mean_return`, `mean_steps`, `success_rate` (per-iter, on training rollouts) |
+| `train/` | `policy_loss`, `value_loss`, `entropy`, `approx_kl`, `ref_kl`, `q1_loss`, `q2_loss`, `alpha`, `policy_log_std_mean` |
+| `reward/` | per-iter mean of each reward term: `progress_mean`, `heading_mean`, `step_mean`, `action_smooth_mean`, `bbox_mean`, `collision_mean`, `timeout_mean`, `success_mean`, `total_mean` |
+| `episode/` | `return`, `steps`, `final_pos_err_m`, `success`, `collision`, `goal_settled` (per-episode, indexed by global_episode) |
+| `eval/` | `goal_success_rate`, `n_success`, `n_rollouts` (per eval event, every `eval_every_episodes` eps) |
+| `eval_per_query/` | one 0/1 per held-out query name (per eval event) |
+| `perf/summary` | startup JSON dump (text panel) |
 
-Class: `vlead_flight.env.FigsDroneEnv` ([figs_drone_env.py](../../../../../vlead/vlead_flight/env/figs_drone_env.py))
+## Train rollouts vs held-out eval rollouts
 
-**Action space** (`Box`, 4-dim):
-`[vx, vy, vz, psi_dot]` in world frame (NED). Defaults from yaml:
-`low = [-3, -3, -0.3, -1.5]`, `high = [3, 3, 0.3, 1.5]` (m/s, m/s, m/s, rad/s).
-Actions are converted to body-rate commands `[uf, ωx, ωy, ωz]` by a
-P-cascaded `figs.control.VelocityController`, which is then integrated
-by ACADOS for `hz_sim / hz_ctrl` substeps per env step.
-
-**Observation space** (`Dict`):
-- `rgb`: `Box(0, 255, (T, 3, H, W), uint8)` — T=4 frames temporal stack,
-  224×224 each. Stored as `uint8` to keep replay buffer compact;
-  ImageNet-normalized on GPU inside the feature extractor.
-- `goal`: `Box(-inf, inf, (4,), float32)` — `[hx, hy, hz, d/scale]`
-  (unit heading vector + scale-normalized distance). Set
-  `env.goal_input_dim=3` to drop `hz`.
-
-**Per-step flow:**
-1. Clip the action to `action_space`.
-2. `VelocityController.control(action)` → body-rate command.
-3. Loop `n_sim2ctl` ACADOS substeps with held cmd.
-4. `gsplat.render_rgb(camera, T_c2w)` at the new pose → new RGB frame.
-5. Compute `goal_heading`, `dist_to_goal`, reward components,
-   termination.
-6. Return Gymnasium 5-tuple. `info` contains
-   `reward_components` (dict), `term_reason` (str), `dist_to_goal`,
-   `x` (full state), `ucr` (body-rate cmd).
-
-The env **does not** drive `Simulator.simulate()` — it owns
-`Simulator.solver`, `Simulator.gsplat`, and `VelocityController`
-directly so it has clean per-step control.
-
----
-
-## Reward
-
-File: [vlead/vlead_flight/env/reward.py](../../../../../vlead/vlead_flight/env/reward.py)
-Class: `GoalReward(cfg: RewardConfig)`
-Configured in: `nav_policy/configs/sac_default.yaml` under `reward:`
-
-Each step, `GoalReward.__call__` computes:
-
-| Term | Formula | Default weight | What it does |
-|---|---|---|---|
-| `progress` | `(prev_dist - new_dist)` | `w_progress = 1.0` | Reward for closing distance to goal. Positive when drone is moving toward target. |
-| `success` | `+1` at terminal if `dist < success_radius`, else `0` | `w_success = 50.0` | One-shot bonus when goal reached. |
-| `alive` | `-1` per step | `w_alive = 0.01` | Constant per-step cost (encourages finishing). |
-| `crash` | `-1` at terminal if `term_reason ∈ {bbox_violation, ground_crash, ceiling_crash, overspeed}`, else `0` | `w_crash = 50.0` | One-shot penalty for any crash mode. |
-| `smooth` | `-‖a_t − a_{t-1}‖²` (zero on first step) | `w_smooth = 0.05` | Penalizes jittery action sequences. |
-| `yaw` | `−` arc-cos angle between drone body-x axis (XY) and unit goal heading (XY) | `w_yaw = 0.05` | Encourages drone to face the goal. |
-| `altitude` | `−(pz − alt_target)²` | `w_altitude = 1.0` | Holds drone at `alt_target = -1.2` m (NED). |
-| `speedcap` | `−max(0, ‖v‖ − speed_cap)²` | `w_speedcap = 0.1`, `speed_cap = 3.0` | Penalizes runaway speeds. |
-
-Total reward is the weighted sum: `sum(w_i * term_i)`. The per-term and
-total values are stored in `info["reward_components"]` so the
-`RewardComponentsCallback` can log each to TensorBoard:
-
-```
-reward_components/progress
-reward_components/success
-reward_components/alive
-reward_components/crash
-reward_components/smooth
-reward_components/yaw
-reward_components/altitude
-reward_components/speedcap
-reward_components/total
-```
-
-### Editing the reward
-
-- **Reweight an existing term**: change `reward.w_*` in
-  `sac_default.yaml`. Restart training.
-- **Add a new term**: add it to `GoalReward.__call__` in `reward.py`,
-  include it in the `comp` dict, and add a `w_*` field to
-  `RewardConfig`. It will automatically appear in TensorBoard via the
-  reward-components callback (no callback change needed).
-- **Change `alt_target`, `speed_cap`, `success_radius`**: these are
-  fields of `RewardConfig` and live in the same `reward:` yaml block.
-
-### Practical heuristics
-
-- The `crash` term dominates total reward at episode boundaries because
-  it fires once with weight 50. If your TB shows `reward_components/total`
-  hovering around `-1` per step but you also see `reward_components/crash`
-  in the same magnitude, almost all the "total" is crash penalty —
-  the policy needs to learn to not crash before anything else matters.
-- `progress` going positive is the first sign of real learning. Until
-  then the policy is just reducing crash rate, not navigating.
-- The yaw term computes the angle between the drone's body-x axis and
-  the goal heading **in the XY plane only**, so vertical heading is
-  ignored.
-
----
-
-## Termination
-
-File: [vlead/vlead_flight/env/termination.py](../../../../../vlead/vlead_flight/env/termination.py)
-Function: `check_termination(xcr, dist_to_goal, step_idx, cfg)`
-
-Returns `(terminated, truncated, reason)` per Gymnasium semantics:
-**terminated** = the task ended in-domain (success/crash), **truncated** =
-ran out of steps.
-
-| Reason | Trigger | Setting |
+| Set | Source | Used by |
 |---|---|---|
-| `success` | `dist_to_goal < success_radius` | `success_radius = 0.5` m |
-| `bbox_violation` | drone position outside `[bbox_xyz_low, bbox_xyz_high]` | scene-shaped box |
-| `ground_crash` | `pz > ground_z` (NED: positive pz = closer to floor) | `ground_z = -0.05` m |
-| `ceiling_crash` | `pz < ceiling_z` | `ceiling_z = -1.95` m |
-| `overspeed` | `‖vel‖ > speed_kill` | `speed_kill = 5` m/s |
-| `timeout` | step count ≥ `max_episode_steps` | `max_episode_steps = 300` (=15s @ 20Hz) |
+| TRAIN | `data/raw/flightroom_ssv_exp_2026-05-22_071353/` + `..._071718/` | RL on-policy collection (yaml's `rollouts:` list, 4 queries) |
+| HELDOUT VAL | `data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110/` (q12, 19, 26, 33, 40, 47, 54, 61, 68, 75, 82, 89, 96, 103) | `configs/eval_closed_loop_flightroom_holdout_14.yaml` — in-training deterministic eval + `_best.pt` selection |
+| FULL 110 (TEST) | same dir, all 110 | One-shot post-training eval via `--rollouts-from-dir` |
 
-`term_reason` is published to `info` and logged as cumulative counters
-to TB: `term_reason_count/success`, `term_reason_count/ceiling_crash`,
-etc.
+`/project/.../2026-05-22_071733/...` is symlinked at
+`nav_policy/data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110`.
 
----
+## Reward function
 
-## Episode sampler
+File: `rewards.py::compute_episode_rewards`. Per step `i`:
 
-File: [vlead/vlead_flight/env/episode_sampler.py](../../../../../vlead/vlead_flight/env/episode_sampler.py)
-Class: `EpisodeSampler`
+- `progress_weight * (prev_dist_xy - dist_xy)`
+- `heading_weight * cos(angle(vel_xy, goal_dir_xy))`
+- `step_penalty`
+- `bbox_penalty` if outside expert bbox + margin
+- `collision_penalty` if FiGS reports a collision
+- `- action_smooth_weight * ||a_t − a_{t-1}||²`
 
-`reset()` calls `sample()` to get an `EpisodeSpec(x0, target_xyz)`:
+Terminal one-shot:
+- `success_bonus` only if `goal_settled` AND no bbox / collision in episode
+- `timeout_penalty` only if `termination == "timeout"` AND not settled / collided
 
-1. Start position: uniform in `[start_xyz_low, start_xyz_high]`.
-2. Goal direction: random angle θ in XY plane.
-3. Goal radius: uniform in `[goal_radius_min, goal_radius_max]`.
-4. Goal Z: uniform in `[goal_z_low, goal_z_high]`.
-5. Reject + retry (50x) if goal outside `[bbox_xyz_low, bbox_xyz_high]`.
-6. Initial attitude: identity quaternion (+ `yaw_jitter` if > 0).
-7. Initial velocity: zero (+ `velocity_jitter` if > 0).
+XY-plane only for progress and heading. Returns `(rewards, components)`
+where the dict has each term's total contribution across the episode —
+fed into TB `reward/*_mean`.
 
-All knobs live under `sampler:` in `sac_default.yaml`. Curriculum
-trick: shrink `goal_radius_max` early in training (easier task → more
-success signal) and bump it back later. Currently a manual yaml edit;
-auto-curriculum callback is a future addition.
+## BC KL anchor
 
----
-
-## Network + warm-start
-
-### Shared encoder
-
-`BCEncoderFeatureExtractor`
-([feature_extractor.py](model/feature_extractor.py)) wraps a
-`RGBVelocityPolicy.encode(rgb, goal)` call so the 288-dim feature
-(`gru_hidden + goal_emb_dim`) feeds SB3 SAC's actor and twin critics.
-
-```
-rgb [B, T, 3, H, W] uint8     goal [B, 4 or 3]
-       │                              │
-       │ /255  ImageNet stats         │
-       ▼                              │
-   _PerFrameResNet18 (T frames)       │
-       │ → [B, T, 512]                │
-       ▼                              │
-       GRU (256) → LayerNorm          │
-       │ → [B, 256]                   │
-       └──────────────┬───────────────┘
-                      ▼
-            concat → [B, 288]   ← SB3 features
-```
-
-### Two-level warm-start
-
-File: [warm_start/bc_to_rl.py](warm_start/bc_to_rl.py)
-
-1. **Encoder warm-start** (`load_bc_into_feature_extractor`):
-   copies BC's `_PerFrameResNet18` + GRU + LayerNorm + goal-embed
-   weights into the extractor. BC's MLPHead keys are dropped. Always
-   safe.
-
-2. **Actor head warm-start** (`load_bc_into_sac_actor`):
-   copies BC's MLPHead Linear layers into SAC actor's `latent_pi` MLP,
-   and the first `cmd_dim` (=4) rows of BC's final Linear into
-   SAC `actor.mu`. Result: the SAC actor's initial mean action is
-   BC's t=0 velocity command. Requires
-   `policy_kwargs.net_arch.pi == BC config's mlp_hidden` (default
-   `[256, 128]`).
-
-Toggle the actor warm-start via `warm_start.init_actor_from_bc_head: true`
-in yaml. Failure logs a WARNING and falls back to encoder-only.
-
-### SB3 quirk: share_features_extractor
-
-In SB3 2.2.1, `policy.features_extractor` can be `None` even with
-`share_features_extractor=True`. The shared extractor lives on
-`policy.actor.features_extractor` and `policy.critic.features_extractor`.
-`_find_bc_extractors` in `train_sac.py` collects every distinct
-extractor instance and warm-starts each. When sharing fails silently,
-this prints `warm-started 2 extractor instance(s)` instead of 1.
-
----
-
-## Training: config + callbacks
-
-### `sac_default.yaml` structure
+Both PPO and SAC add `ref_kl_coef × KL(BC ‖ current)` to their policy loss
+(Round 4 work). Yaml block (works for either algorithm):
 
 ```yaml
-seed:               # int
-output_dir:         # path
-total_timesteps:    # int
-
-env:                # FigsDroneEnv constructor args (scene_name, frame_name, hz, ...)
-sampler:            # EpisodeSampler fields
-reward:             # RewardConfig fields  ← see Reward section
-termination:        # TerminationConfig fields
-model:              # feature extractor dims (T, gru_hidden, mlp_hidden, etc.) + actor/critic net_arch
-sac:                # SB3 SAC hyperparams (lr, buffer_size, batch_size, tau, gamma, ent_coef, ...)
-warm_start:
-  bc_checkpoint:    # path to bc_best.pt, or null
-  init_actor_from_bc_head: true
-
-callbacks:
-  eval:             # {enabled, freq, n_episodes, seed}
-  checkpoint:       # {enabled, freq}
-  reward_components:# {enabled, log_freq}
-  wandb:            # {enabled, project, run_name, log_freq}
-
-eval:               # optional eval-env sampler overrides
+rl:
+  bc_anchor:
+    kl_coef: 0.02
+  sac:
+    ref_kl_coef: 0.02   # SAC reads
+  ppo:
+    ref_kl_coef: 0.02   # PPO reads
 ```
 
-### Callbacks
-
-File: [train/callbacks.py](train/callbacks.py)
-
-- `EvalCallback` (SB3): every `freq` env steps, run `n_episodes`
-  deterministic eval rollouts in a separate `Monitor`-wrapped env. Saves
-  `best_model.zip` whenever `mean_reward` improves and writes
-  `eval/evaluations.npz`.
-- `CheckpointCallback` (SB3): saves `sac_<step>_steps.zip` every `freq` steps.
-- `RewardComponentsCallback` (ours): pulls `info["reward_components"]`
-  + `info["term_reason"]`, logs per-term means and per-reason
-  cumulative counts to TB every `log_freq` steps.
-- `WandbSyncCallback` (ours): re-emits SB3's scalars to W&B if `wandb`
-  is enabled.
-
-### Outputs of a training run
-
-`<output_dir>/`
-```
-tb/SAC_1/                events.out.tfevents.*  # TB logs
-best/best_model.zip      # checkpoint with the highest eval mean_reward so far
-ckpt/sac_<step>_steps.zip  # periodic checkpoints
-eval/evaluations.npz     # timesteps + per-eval rewards/lengths
-sac_final.zip            # last model
-```
-
-**Use `best/best_model.zip`** for deployment / eval — not `sac_final.zip`.
-SAC commonly degrades late if ent_coef collapses; the best checkpoint
-captures the high-water mark.
-
----
-
-## Evaluation
-
-File: [eval/eval_sac.py](eval/eval_sac.py)
-CLI: `scripts/eval_sac.py`
-
-Loads a saved SAC `.zip`, builds `FigsDroneEnv` from the same yaml,
-runs N deterministic episodes, prints per-episode rows and writes:
-
-- `per_episode.csv`: `episode, ep_reward, ep_length, term_reason, success, start_dist, final_dist, dist_closed`
-- `summary.json`: `success_rate, ep_reward_{mean,std}, ep_length_{mean,std}, final_dist_{mean,std}, term_reason_counts`
-
-You can also use SB3's `evaluate_policy` directly, but this script
-preserves V-LEAD-specific metrics (distance closed, terminal reason)
-that SB3 doesn't track.
-
----
-
-## Tuning recipes
-
-| Symptom | Most likely cause | First thing to try |
-|---|---|---|
-| `term_reason_count/ceiling_crash` dominant, linear growth | Random actor exploration crashes upward | Tighten `env.action_low/high` `vz` range; bump `reward.w_altitude` |
-| `term_reason_count/bbox_violation` dominant | Goals or starts too close to scene wall | Shrink `sampler.bbox_xyz_*` further from scene bounds; check `sampler.start_xyz_*` margin from walls |
-| `reward_components/progress` stays ~0 forever | Actor not learning to approach goal | Verify BC warm-start fired (look for `[sac] warm-started actor latent_pi`); consider lower `goal_radius_max` curriculum |
-| `eval/mean_reward` peaks then regresses | `ent_coef` collapsed too early, policy overfits to narrow region | Fix `sac.ent_coef: 0.1` (disable auto) or raise `sac.target_entropy` |
-| `train/critic_loss` exploding | Reward scale too big (huge crash penalty + huge progress) | Lower `reward.w_crash` and/or `reward.w_success`, or apply reward clipping |
-| Eval reward swings ±50 between adjacent evals | `callbacks.eval.n_episodes` too small | Bump to ≥10 |
-| `train/actor_loss` stays positive +30 | Entropy bonus dominating Q-value; policy over-confident | Lower `model.freeze_visual: false` to give actor more capacity, or fix ent_coef as above |
-| Training fps < 2 it/s | cuDNN nvrtc fallback + grad-step compute | `pip install nvidia-cuda-nvrtc-cu11` in container; consider `sac.train_freq: 4` for 4× rollout/train ratio |
-| OOM during SAC build | Replay buffer too large (`buffer_size * T * 3 * H * W` bytes) | Drop `sac.buffer_size` (5000 ≈ 3 GB at 4×224²) |
-
----
+`StochasticVelocityPolicy.frozen_reference_copy()` produces the lean
+reference (no critic deepcopy). `policy.kl_to(other, rgb, goal, depth)`
+computes the per-sample KL.
 
 ## Known gotchas
 
-- **PyTorch ≥ 2.6 + nerfstudio**: nerfstudio's gsplat checkpoint
-  contains numpy scalars; torch 2.6+ defaults `weights_only=True` and
-  blocks the load.
-  [`vlead_flight/_torch_compat.py`](../../../../../vlead/vlead_flight/_torch_compat.py)
-  fixes this with `add_safe_globals` + `weights_only=False` fallback.
-  Already wired into every entry point that touches FiGS.
-
-- **`stable-baselines3 ≥ 2.3` upgrades torch**: requires torch ≥ 2.3
-  and silently breaks the image's pinned `torch==2.1.2+cu118` →
-  `gsplat==1.5.3+pt21cu118` mismatch → CUDA backend stops loading.
-  `vlead/pyproject.toml` pins `stable-baselines3==2.2.1`, and the
-  docker compose entrypoint also installs that exact version.
-
-- **`vlead-site-packages` Docker volume**: the V-LEAD compose file used
-  to mount a named volume over `/usr/local/lib/python3.10/dist-packages`,
-  which captured a stale snapshot of the image's Python packages. After
-  any image rebuild the container still saw the old gsplat. The volume
-  was removed; if you re-add it, expect very confusing behavior.
-
-- **GPU compatibility**: `figs:latest` is built against CUDA 11.8.
-  Blackwell GPUs (sm_120) are **incompatible**. Stick to L40S / A100 /
-  earlier Ampere.
-
-- **First-time runs download a 1.26 GB CLIP model** and a ResNet-18 + AlexNet
-  bundle. These cache to `~/.cache` (= the `vlead-model-cache` named
-  volume in compose) and persist across runs.
-
-- **`info["reward_components"]` keys are dynamic** — if you add a new
-  reward term to `GoalReward`, the TB tag `reward_components/<your_key>`
-  will appear automatically without touching the callback.
-
-- **CUDA_VISIBLE_DEVICES** is set by the compose `environment:` field
-  (defaults to GPU 0). Override per-run from the host:
-  `CUDA_VISIBLE_DEVICES=1 docker compose run --rm vlead`.
+- **`policy.eval()` blocks RNN backward.** Anything that calls
+  `policy.eval()` (perf summary; closed-loop eval) must restore the prior
+  mode or the next SAC/PPO backward crashes with
+  `RuntimeError: cudnn RNN backward can only be called in training mode`.
+  Both `perf_summary._inference_latency` and `SACTrainer.update` are now
+  guarded.
+- **`compress_transitions=True` stores rgb in float16.** SAC casts to
+  float32 at `SACTrainer.update`'s top; PPO casts at `ppo_update` batch
+  build.
+- **Replay theoretical footprint = capacity × per-tr bytes.** Perf summary
+  prints it. At `replay_capacity: 100000`, `T=4`, `224²`, fp16 with depth
+  off it's ~300 GB. Container has 251 GB RAM; actual usage caps at the
+  episodes you actually collect (~16k transitions for a 20-iter run = ~48
+  GB). Drop `sac.replay_capacity` if you bump iters.
+- **`policy.act` and `policy.q_input` share `_encode`** (one backbone
+  forward instead of two). SAC.update uses `policy.act_full(...)` to also
+  reuse the encoder latent for the Q-net forward.
 
 ---
 
-## Quick command reference
+# Commands
 
-All commands run **inside the `vlead` Docker container** unless noted.
+All commands assume you're **inside** the `vlead` Docker container at
+`/workspace/nav_policy` unless noted otherwise.
 
-### 0. Enter the container
+## 0. Enter the container
 
 ```bash
+# from host
 cd ~/autonomy_projects/V-LEAD
-CUDA_VISIBLE_DEVICES=1 docker compose run --rm vlead
-# inside container:
+CUDA_VISIBLE_DEVICES=<gpu_id> docker compose run --rm vlead
+# then inside:
 cd /workspace/nav_policy
 ```
 
-### 1. Env smoke (no model, random actions)
+Wrap the launch in `tmux` if you want the run to survive logging out:
 
 ```bash
-python scripts/smoke_env.py \
-    --scene flightroom_ssv_exp/gemsplat/2026-02-28_205058 \
-    --steps 20
+# host
+tmux new -s sac_run
+# inside tmux:
+cd ~/autonomy_projects/V-LEAD
+CUDA_VISIBLE_DEVICES=0 docker compose run --rm vlead bash -c "
+cd /workspace/nav_policy && \
+python -m nav_policy.rl.train_rl \
+    --config configs/train_rl_flightroom_sac_dagger_r12.yaml \
+    --run-tag rl_sac_dagger_r12_v8 --save-videos
+"
+# detach: Ctrl-B then D
+# reattach: tmux attach -t sac_run
 ```
 
-Verifies env reset/step, observation shapes, reward components, and
-termination.
-
-### 2. SAC training
+## 1. Train SAC
 
 ```bash
-python scripts/train_sac.py \
-    --config configs/sac_default.yaml \
-    --total-timesteps 100000 \
-    --seed 0 \
-    --output-dir /project/kothari1/vlead_data/rl_runs/sac_v1_seed0
+python -m nav_policy.rl.train_rl \
+    --config configs/train_rl_flightroom_sac_dagger_r12.yaml \
+    --run-tag rl_sac_dagger_r12_v8 \
+    --save-videos
 ```
 
-`--seed` overrides yaml `seed:`. Edit `configs/sac_default.yaml` for
-everything else (reward weights, action range, warm-start path, ...).
+Optional flags:
+- `--seed 42` — override `rl.seed` for multi-seed runs
+- `--n-iterations 1` — smoke test (1 iter only)
+- `--rollouts-per-iteration 2` — smoke test
+- `--resume-from /path/to/run/{tag}_latest.pt` — continue a run
 
-### 3. TensorBoard (on host)
+## 2. Train PPO
+
+Same trainer, different yaml; `rl.algorithm: ppo` is set in the canonical
+PPO config.
 
 ```bash
-# host, not container
+python -m nav_policy.rl.train_rl \
+    --config configs/train_rl_flightroom_ppo_dagger_r12.yaml \
+    --run-tag rl_ppo_dagger_r12_v8 \
+    --save-videos
+```
+
+## 3. Watch progress
+
+Per-iter CSV tail:
+```bash
+# host
+cd ~/autonomy_projects/V-LEAD
+tail -F /project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/<run_tag>_log.csv
+```
+
+Per-episode CSV pretty-print:
+```bash
+column -s, -t \
+    < /project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/<run_tag>_episodes.csv \
+    | tail -20
+```
+
+TensorBoard (host or container; host preferred):
+```bash
+# host — point at the per-run-tag root to see all runs side by side
 ~/.local/bin/tensorboard \
-    --logdir /project/kothari1/vlead_data/rl_runs/sac_v1_seed0/tb \
+    --logdir /project/kothari1/vlead_data/rl_runs/dagger_r12 \
     --port 6006
+# open http://coruscant:6006
 ```
 
-Or `python -m tensorboard.main --logdir ... --port 6006 --host 0.0.0.0`
-from inside the container (compose uses `network_mode: host`).
-
-### 4. Closed-loop evaluation of a saved checkpoint
-
+Inspect the startup perf snapshot:
 ```bash
-python scripts/eval_sac.py \
-    --config configs/sac_default.yaml \
-    --checkpoint /project/kothari1/vlead_data/rl_runs/sac_v1_seed0/best/best_model.zip \
-    --n-episodes 20 \
-    --output-dir /project/kothari1/vlead_data/rl_runs/sac_v1_seed0/closed_loop_eval
+cat /project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/<run_tag>_perf.json | jq
 ```
 
-Writes `per_episode.csv` and `summary.json`. **Use `best/best_model.zip`,
-not `sac_final.zip`.**
+## 4. Closed-loop eval against a fixed yaml suite
 
-### 5. BC dataset / BC baseline (existing scripts, for warm-start ckpt)
+Standard pattern: use the held-out 14-query suite that's also used during
+in-training eval.
 
 ```bash
-python scripts/build_dataset.py --config configs/default.yaml
-python scripts/train_bc.py     --config configs/default.yaml
+python scripts/eval_in_figs.py \
+    --config configs/eval_closed_loop_flightroom_holdout_14.yaml \
+    --checkpoint /project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/<run_tag>_best.pt \
+    --output-dir /project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/holdout14_eval
 ```
 
-Output: `<checkpoint_dir>/bc_best.pt` — point `warm_start.bc_checkpoint`
-at this in `sac_default.yaml`.
+Output: `summary.json` + per-rollout artifacts under `--output-dir`.
 
-### 6. Quick scalars dump from a TB run
+## 5. Closed-loop eval against the full 110-traj pool (publishable test number)
 
 ```bash
-python -c "
+python scripts/eval_in_figs.py \
+    --config configs/eval_closed_loop_flightroom_holdout_14.yaml \
+    --checkpoint /project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/<run_tag>_best.pt \
+    --output-dir /project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/test110_eval \
+    --rollouts-from-dir data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110
+```
+
+`--rollouts-from-dir` overrides the yaml's `rollouts:` block with **every**
+`trajectories_val*.pt` in the directory (sorted by index). The yaml's
+`metrics:` block still drives tolerances + warmup.
+
+Cap for smoke testing:
+```bash
+... --rollouts-from-dir data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110 \
+    --rollouts-limit 5
+```
+
+## 6. Eval the BC baseline (un-fine-tuned)
+
+Same script, point at the BC ckpt directly:
+
+```bash
+python scripts/eval_in_figs.py \
+    --config configs/eval_closed_loop_flightroom_holdout_14.yaml \
+    --checkpoint data/checkpoints/bc_best_balanced_dagger_r12_new.pt \
+    --output-dir /project/kothari1/vlead_data/rl_runs/bc_baseline/holdout14_eval \
+    --rollouts-from-dir data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110
+```
+
+Use the same `--rollouts-from-dir` arg to get the "BC over the full 110"
+baseline for the paper.
+
+## 7. Inspect a checkpoint's eval meta
+
+The RL checkpoint pickle includes the meta dict written at save time
+(includes `eval_goal_success_rate`, `eval_per_query`, `eval_suite`,
+`global_episode`, etc.).
+
+```bash
+python - <<'PY'
+import torch
+ckpt = torch.load(
+    "/project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/<run_tag>_best.pt",
+    weights_only=False, map_location="cpu",
+)
+m = ckpt.get("rl_meta", {})
+print(f"global_episode={m.get('global_episode')}")
+print(f"eval_suite={m.get('eval_suite')}")
+print(f"eval_goal_success_rate={m.get('eval_goal_success_rate')}")
+for q, ok in (m.get("eval_per_query") or {}).items():
+    print(f"  {q}: {'ok' if ok else 'FAIL'}")
+PY
+```
+
+## 8. Quick scalars from TB
+
+```bash
+python - <<'PY'
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 import glob
-tb = glob.glob('/project/kothari1/vlead_data/rl_runs/sac_v1_seed0/tb/SAC_*')[-1]
-ea = EventAccumulator(tb, size_guidance={'scalars': 0}); ea.Reload()
-for k in ['rollout/ep_rew_mean', 'eval/mean_reward', 'train/ent_coef',
-          'reward_components/progress', 'reward_components/total']:
-    if k in ea.Tags()['scalars']:
+tb_dirs = sorted(glob.glob("/project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/tb"))
+ea = EventAccumulator(tb_dirs[-1], size_guidance={"scalars": 0}); ea.Reload()
+for k in ("rollout/mean_return", "rollout/success_rate", "eval/goal_success_rate",
+          "train/ref_kl", "train/policy_log_std_mean"):
+    if k in ea.Tags()["scalars"]:
         evs = ea.Scalars(k)
-        print(f'{k}: start={evs[0].value:+.3f} end={evs[-1].value:+.3f}')
-for k in ea.Tags()['scalars']:
-    if k.startswith('term_reason_count/'):
-        print(f'{k}: end={ea.Scalars(k)[-1].value:.0f}')
-"
+        print(f"{k}: start={evs[0].value:+.3f} end={evs[-1].value:+.3f}")
+PY
 ```
 
-### 7. Eval results from `evaluations.npz`
+## 9. BC stack (legacy, for ref)
 
 ```bash
-python -c "
-import numpy as np
-d = np.load('/project/kothari1/vlead_data/rl_runs/sac_v1_seed0/eval/evaluations.npz')
-print('best eval reward:', d['results'].mean(axis=1).max())
-print('final eval reward:', d['results'].mean(axis=1)[-1])
-"
+# build dataset (one-shot, takes ~30 min on first run)
+python scripts/build_dataset.py --config configs/default.yaml
+
+# train BC baseline (no RL)
+python scripts/train_bc.py --config configs/default.yaml
 ```
+
+Output BC ckpt under `<checkpoint_dir>/bc_best.pt`. Point
+`rl.checkpoint: data/checkpoints/<your_bc>.pt` at it in the RL yaml.
