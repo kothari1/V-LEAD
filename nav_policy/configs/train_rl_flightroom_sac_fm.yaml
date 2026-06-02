@@ -1,0 +1,23 @@
+# SAC fine-tuning ON TOP OF the flow-matching policy (fm_fulltrajs_best.pt) instead
+# of the BC+DAgger checkpoint.
+#
+# The FM policy (nav_policy.model.flow_matching_policy.FlowMatchingPolicy) is RGB-only.
+# Its encoder context (ResNet18->GRU->LayerNorm + goal_embed, 256+32=288-d) is the SAC
+# critic latent; its DETERMINISTIC flow readout (Euler-integrate the vector field from
+# x0=0, first horizon step) is the SAC actor mean, onto which StochasticVelocityPolicy
+# adds a Gaussian exploration head + twin-Q critics. SAC then fine-tunes the whole flow
+# policy. The policy architecture is read from the checkpoint's own config (which carries
+# an "fm" section), so model.arch in the inherited yaml is irrelevant here.
+#
+# Inherits rollouts + rewards + (looser) success metrics + 24GB SAC batch from the 24gb
+# config; only the checkpoint, run_tag, and output dir change.
+base_config: configs/train_rl_flightroom_sac_24gb.yaml
+
+checkpoint: data/checkpoints/fm_fulltrajs_best.pt
+
+rl:
+  run_tag: rl_sac_fm
+  checkpoint_dir: data/checkpoints_rl_fm
+  # The FM warm-start is a decent-but-uneven prior; smaller initial exploration std
+  # (exp(-1.0)=0.37 vs 0.61) keeps early rollouts from destabilizing into collisions.
+  init_log_std: -1.0
