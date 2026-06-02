@@ -258,7 +258,57 @@ python scripts/eval_in_figs.py \
 Use the same `--rollouts-from-dir` arg to get the "BC over the full 110"
 baseline for the paper.
 
-## 7. Inspect a checkpoint's eval meta
+## 7. Queue evals on many checkpoints (overnight batches)
+
+Runs `evaluate()` on each ckpt sequentially. Single roll-up CSV + JSON
+under `--output-root`.
+
+```bash
+# Option A: pass --ckpt repeatedly
+python scripts/eval_queue.py \
+    --config configs/eval_closed_loop_flightroom_holdout_14.yaml \
+    --output-root /project/kothari1/vlead_data/rl_runs/dagger_r12/_eval_batch_$(date +%Y%m%d) \
+    --rollouts-from-dir data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110 \
+    --ckpt /project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_v7/rl_sac_dagger_r12_v7_best.pt \
+    --ckpt /project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_v8/rl_sac_dagger_r12_v8_best.pt \
+    --ckpt data/checkpoints/bc_best_balanced_dagger_r12_new.pt
+```
+
+```bash
+# Option B: list ckpts in a text file (one path per line; # comments allowed)
+cat > /tmp/eval_targets.txt <<'EOF'
+# BC baseline
+data/checkpoints/bc_best_balanced_dagger_r12_new.pt
+# SAC v7 / v8 best ckpts
+/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_v7/rl_sac_dagger_r12_v7_best.pt
+/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_v8/rl_sac_dagger_r12_v8_best.pt
+EOF
+
+python scripts/eval_queue.py \
+    --config configs/eval_closed_loop_flightroom_holdout_14.yaml \
+    --output-root /project/kothari1/vlead_data/rl_runs/dagger_r12/_eval_batch_$(date +%Y%m%d) \
+    --rollouts-from-dir data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110 \
+    --ckpt-list /tmp/eval_targets.txt
+```
+
+Outputs per ckpt: `{output-root}/{run_name}/summary.json` + per-rollout
+artifacts. Roll-up at `{output-root}/queue_log.json` and
+`{output-root}/queue_table.csv`. Each ckpt takes ~110 × 30 s ≈ 55 min on
+the full 110-traj pool.
+
+Wrap in tmux so the batch survives logout:
+```bash
+tmux new -s eval_batch
+docker compose run --rm vlead bash -c "
+cd /workspace/nav_policy && \
+python scripts/eval_queue.py --config ... --output-root ... --rollouts-from-dir ... --ckpt-list ...
+"
+# Ctrl-B D
+```
+
+Add `--rollouts-limit 5` for a fast smoke test before queuing the full pool.
+
+## 8. Inspect a checkpoint's eval meta
 
 The RL checkpoint pickle includes the meta dict written at save time
 (includes `eval_goal_success_rate`, `eval_per_query`, `eval_suite`,
@@ -280,7 +330,7 @@ for q, ok in (m.get("eval_per_query") or {}).items():
 PY
 ```
 
-## 8. Quick scalars from TB
+## 9. Quick scalars from TB
 
 ```bash
 python - <<'PY'
@@ -296,7 +346,7 @@ for k in ("rollout/mean_return", "rollout/success_rate", "eval/goal_success_rate
 PY
 ```
 
-## 9. BC stack (legacy, for ref)
+## 10. BC stack (legacy, for ref)
 
 ```bash
 # build dataset (one-shot, takes ~30 min on first run)
