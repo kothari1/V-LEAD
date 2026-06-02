@@ -158,6 +158,7 @@ def train(config_path: Path,
     rollout_yaml = rl_cfg.get("rollout", {}) or rl_cfg.get("metrics", {}) or {}
     rollout_sim_cfg = rollout_config_from_dict({"metrics": rollout_yaml})
     depth_stride = int(rollout_yaml.get("depth_inference_stride", 3))
+    action_lpf_alpha = float(rollout_yaml.get("action_lpf_alpha", 1.0))
     start_cfg = {
         k: rollout_yaml[k]
         for k in (
@@ -245,7 +246,9 @@ def train(config_path: Path,
         deterministic=bool(rl_cfg.get("eval_deterministic", False)),
         depth_inference_stride=depth_stride,
         compress_transitions=compress_transitions,
+        action_lpf_alpha=action_lpf_alpha,
     )
+    print(f"[rl] action_lpf_alpha={action_lpf_alpha}  (1.0 = off)", flush=True)
     pending_episodes: List[Any] = []
 
     def _run_training_step(it: int, episodes: List[Any]) -> None:

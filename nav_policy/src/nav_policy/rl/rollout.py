@@ -138,7 +138,9 @@ class RLTrainingController:
 
                  depth_inference_stride: int = 3,
 
-                 compress_transitions: bool = True) -> None:
+                 compress_transitions: bool = True,
+
+                 action_lpf_alpha: float = 1.0) -> None:
 
         self.policy = policy
 
@@ -204,6 +206,16 @@ class RLTrainingController:
 
         self._collision_steps: List[bool] = []
 
+        # Action-side low-pass filter to smooth velocity commands at the
+        # 20 Hz control rate. alpha=1.0 disables filtering (back-compat).
+        # Lower alpha = heavier smoothing (cmd_used = alpha*new + (1-alpha)*prev).
+        if not (0.0 < float(action_lpf_alpha) <= 1.0):
+            raise ValueError(
+                f"action_lpf_alpha must be in (0, 1]; got {action_lpf_alpha}"
+            )
+        self.action_lpf_alpha = float(action_lpf_alpha)
+        self._prev_cmd: Optional[np.ndarray] = None
+
 
 
     def set_goal(self, goal_pos_xy: np.ndarray) -> None:
@@ -227,6 +239,8 @@ class RLTrainingController:
         self._episode.clear()
 
         self._collision_steps.clear()
+
+        self._prev_cmd = None
 
         if goal_pos_xy is not None:
 
@@ -359,7 +373,19 @@ class RLTrainingController:
             action_z.view(1, 1, -1)
         )[0, 0].detach().cpu().numpy().astype(np.float64)
 
-        self._actions.append(cmd0.copy())
+        # Action LPF: smooth velocity command before the inner controller.
+        # No effect on action_z stored in the replay buffer (policy still
+        # learns from raw samples); only the executed cmd is filtered.
+        if self.action_lpf_alpha < 1.0 and self._prev_cmd is not None:
+            cmd_used = (
+                self.action_lpf_alpha * cmd0
+                + (1.0 - self.action_lpf_alpha) * self._prev_cmd
+            )
+        else:
+            cmd_used = cmd0
+        self._prev_cmd = cmd_used.copy()
+
+        self._actions.append(cmd_used.copy())
 
 
 
@@ -396,11 +422,11 @@ class RLTrainingController:
 
         ucr, _, _, _ = self.inner.control(
 
-            tcr=tcr, xcr=xcr, upr=upr, obj=cmd0, icr=None, zcr=None,
+            tcr=tcr, xcr=xcr, upr=upr, obj=cmd_used, icr=None, zcr=None,
 
         )
 
-        adv = cmd0.astype(np.float64)
+        adv = cmd_used.astype(np.float64)
 
         tsol = np.zeros(4, dtype=np.float64)
 
