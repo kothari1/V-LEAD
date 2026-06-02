@@ -106,6 +106,11 @@ class EpisodeBatch:
 
     course: str = ""
 
+    # Per-term reward breakdown (sum of contributions across the episode).
+    # Populated in finalize_episode via compute_episode_rewards's components
+    # dict. Used for TB reward decomposition.
+    reward_components: Dict[str, float] = field(default_factory=dict)
+
 
 
 
@@ -465,7 +470,7 @@ class RLTrainingController:
         collision = bool(rollout_result.collision) if rollout_result is not None else any(self._collision_steps)
         termination = str(rollout_result.termination) if rollout_result is not None else "timeout"
 
-        rewards = compute_episode_rewards(
+        rewards, reward_components = compute_episode_rewards(
             self._states,
             expert.Xro[0:2, -1],
             expert.Xro[0:3, :],
@@ -530,6 +535,7 @@ class RLTrainingController:
             termination=termination,
             final_pos_err_m=final_pos_err,
             goal_settled=goal_settled,
+            reward_components=reward_components,
         )
 
 

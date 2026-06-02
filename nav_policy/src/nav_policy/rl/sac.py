@@ -53,7 +53,9 @@ class SACTrainer:
         self.critic_opt = torch.optim.Adam(self.critic.parameters(), lr=lr)
 
         if auto_alpha:
-            self.log_alpha = torch.zeros(1, requires_grad=True, device=device)
+            # log_alpha is a scalar (shape ()) — broadcasts cleanly against
+            # per-sample log_prob without an extra squeeze.
+            self.log_alpha = torch.tensor(0.0, requires_grad=True, device=device)
             self.alpha_opt = torch.optim.Adam([self.log_alpha], lr=lr)
             self.target_entropy = -float(policy.cmd_dim)
         else:
@@ -92,10 +94,11 @@ class SACTrainer:
         dones = batch["dones"].to(self.device).float()
 
         with torch.no_grad():
-            next_actions, next_log_prob, _ = self.policy.act(
+            # act_full returns the encoder latent so we don't pay another
+            # backbone forward for q_input.
+            next_actions, next_log_prob, _, latent_next = self.policy.act_full(
                 next_rgb, next_goal, next_depth,
             )
-            latent_next = self.policy.q_input(next_rgb, next_goal, next_depth)
             q1_next, q2_next = self.critic_target(latent_next, next_actions)
             q_next = torch.min(q1_next, q2_next) - self.alpha.detach() * next_log_prob
             target = rewards + (1.0 - dones) * self.gamma * q_next
@@ -110,8 +113,9 @@ class SACTrainer:
         critic_loss.backward()
         self.critic_opt.step()
 
-        latent = self.policy.q_input(rgb, goal, depth)
-        new_actions, log_prob, _ = self.policy.act(rgb, goal, depth)
+        # Re-run with grad enabled for actor objective. act_full again gives
+        # us a fresh latent + sampled action in one backbone pass.
+        new_actions, log_prob, _, latent = self.policy.act_full(rgb, goal, depth)
         q1_pi, q2_pi = self.critic(latent, new_actions)
         q_pi = torch.min(q1_pi, q2_pi)
         alpha = self.alpha.detach()

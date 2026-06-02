@@ -98,7 +98,7 @@ def compute_episode_rewards(
 
     termination: str = "",
 
-) -> List[float]:
+) -> tuple[List[float], Dict[str, float]]:
 
     """
 
@@ -112,11 +112,21 @@ def compute_episode_rewards(
     sim rollouts (position + yaw + quiet hold), not merely ending near the goal
     on a timeout.
 
+    Returns:
+        (rewards, components) where `rewards` is the per-step reward list and
+        `components` is a dict mapping each term name -> total contribution
+        across the episode (sum of per-step weighted contributions for that
+        term). Useful for TB reward decomposition.
+
     """
 
     if not states:
 
-        return []
+        return [], {
+            "progress": 0.0, "heading": 0.0, "step": 0.0,
+            "action_smooth": 0.0, "bbox": 0.0, "collision": 0.0,
+            "timeout": 0.0, "success": 0.0, "total": 0.0,
+        }
 
 
 
@@ -143,6 +153,11 @@ def compute_episode_rewards(
 
 
     rewards: List[float] = []
+    components: Dict[str, float] = {
+        "progress": 0.0, "heading": 0.0, "step": 0.0,
+        "action_smooth": 0.0, "bbox": 0.0, "collision": 0.0,
+        "timeout": 0.0, "success": 0.0,
+    }
 
     prev_dist = float(np.linalg.norm(goal_xy - positions[0, 0:2]))
 
@@ -175,24 +190,23 @@ def compute_episode_rewards(
         align = float(np.dot(vel_xy / max(v_norm, 1e-6), heading)) if v_norm > 1e-3 else 0.0
 
 
-
-        r = (
-
-            progress_weight * progress
-
-            + heading_weight * align
-
-            + step_penalty
-
-        )
+        progress_term = progress_weight * progress
+        heading_term = heading_weight * align
+        step_term = step_penalty
+        r = progress_term + heading_term + step_term
+        components["progress"] += progress_term
+        components["heading"] += heading_term
+        components["step"] += step_term
 
         if bbox_bad[i]:
 
             r += bbox_penalty
+            components["bbox"] += bbox_penalty
 
         if collision_bad[i]:
 
             r += collision_penalty
+            components["collision"] += collision_penalty
 
         if (
             actions is not None
@@ -204,7 +218,9 @@ def compute_episode_rewards(
                 np.asarray(actions[i], dtype=np.float64)
                 - np.asarray(actions[i - 1], dtype=np.float64)
             )
-            r -= action_smooth_weight * float(np.sum(da * da))
+            smooth_term = -action_smooth_weight * float(np.sum(da * da))
+            r += smooth_term
+            components["action_smooth"] += smooth_term
 
         rewards.append(float(r))
 
@@ -217,6 +233,7 @@ def compute_episode_rewards(
             and not collision_bad.any()
         ):
             rewards[-1] += timeout_penalty
+            components["timeout"] += timeout_penalty
 
     if (
         goal_settled
@@ -224,8 +241,10 @@ def compute_episode_rewards(
         and not collision_bad.any()
     ):
         rewards[-1] += success_bonus
+        components["success"] += success_bonus
 
-    return rewards
+    components["total"] = float(sum(rewards))
+    return rewards, components
 
 
 

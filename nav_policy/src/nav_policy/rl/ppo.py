@@ -57,7 +57,7 @@ def ppo_update(policy: StochasticVelocityPolicy,
             advantages = buffer.advantages[batch_idx].to(device, non_blocking=True)
             returns = buffer.returns[batch_idx].to(device, non_blocking=True)
 
-            with torch.cuda.amp.autocast(enabled=device.type == "cuda"):
+            with torch.amp.autocast(device_type=device.type, enabled=device.type == "cuda"):
                 new_log_probs, values, entropy = policy.evaluate(rgb, goal, actions, depth)
                 ratio = torch.exp(new_log_probs - old_log_probs)
                 surr1 = ratio * advantages

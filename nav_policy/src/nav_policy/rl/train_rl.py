@@ -30,6 +30,12 @@ from nav_policy.rl.ppo import ppo_config_from_dict, ppo_update
 from nav_policy.rl.rewards import reward_config_from_dict
 from nav_policy.rl.paths import expert_semantic_slug, rollout_video_path
 from nav_policy.rl.train_eval import eval_train_rollouts_goal_success
+from nav_policy.rl.tb_logger import TBLogger
+from nav_policy.rl.perf_summary import (
+    format_perf_block,
+    persist_perf_summary,
+    summarize_perf,
+)
 from nav_policy.evaluate.closed_loop import load_expert_setup
 from nav_policy.rl.rollout import RLTrainingController, collect_episode
 from nav_policy.rl.sac import SACTrainer, sac_config_from_dict
@@ -296,6 +302,33 @@ def train(config_path: Path,
             },
         )
 
+    # TensorBoard writer (one per run).
+    tb_cfg = rl_cfg.get("tb", {}) or {}
+    tb_enabled = bool(tb_cfg.get("enabled", True))
+    tb_log_dir = Path(tb_cfg.get("log_dir") or (ckpt_dir / "tb" / tag))
+    tb = TBLogger(tb_log_dir, enabled=tb_enabled)
+    if tb_enabled:
+        print(f"[rl] tensorboard log dir -> {tb_log_dir}", flush=True)
+
+    # Startup model + memory + latency summary.
+    try:
+        perf = summarize_perf(
+            policy,
+            device=device,
+            algorithm=algorithm,
+            sac_kw=sac_kw if algorithm == "sac" else None,
+            ppo_kw=ppo_kw if algorithm == "ppo" else None,
+            compress_transitions=compress_transitions,
+            frame_window=int(policy.base.T),
+            image_size=image_size,
+            goal_dim=int(policy.base.goal_input_dim),
+        )
+        print(format_perf_block(perf), flush=True)
+        persist_perf_summary(perf, ckpt_dir / f"{tag}_perf.json")
+        tb.log_text("perf/summary", json.dumps(perf, indent=2), step=0)
+    except Exception as exc:
+        print(f"[rl] perf summary FAILED ({exc})", flush=True)
+
     best_return = float("-inf")
     best_eval_success = float("-inf")
     log_fields = [
@@ -500,6 +533,35 @@ def train(config_path: Path,
                 write_header = False
             w.writerow(row)
 
+        # TB: per-iter scalars (rollout + train) + reward decomposition.
+        for key in ("mean_return", "mean_steps", "success_rate"):
+            tb.log_scalar(f"rollout/{key}", float(row[key]), global_episode)
+        for key in ("policy_loss", "value_loss", "entropy", "approx_kl",
+                    "ref_kl", "q1_loss", "q2_loss", "alpha"):
+            val = row.get(key, "")
+            if val == "" or val is None:
+                continue
+            try:
+                tb.log_scalar(f"train/{key}", float(val), global_episode)
+            except (TypeError, ValueError):
+                pass
+        # Policy log_std mean (trainable nn.Parameter).
+        try:
+            tb.log_scalar(
+                "train/policy_log_std_mean",
+                float(policy.log_std.detach().mean().item()),
+                global_episode,
+            )
+        except Exception:
+            pass
+        # Reward decomposition averaged over this iter's episodes.
+        comp_keys = ("progress", "heading", "step", "action_smooth",
+                     "bbox", "collision", "timeout", "success", "total")
+        for ck in comp_keys:
+            vals = [ep.reward_components.get(ck, 0.0) for ep in episodes if ep.reward_components]
+            if vals:
+                tb.log_scalar(f"reward/{ck}_mean", float(sum(vals) / len(vals)), global_episode)
+
         print(
             f"[rl] iter {it}/{n_iters}  episodes={global_episode}  "
             f"return={mean_return:.2f}  success={success_rate:.0%}",
@@ -593,6 +655,14 @@ def train(config_path: Path,
                         "termination": ep.termination,
                     })
 
+                # TB: per-episode scalars, indexed by global_episode.
+                tb.log_scalar("episode/return", ep.total_return, global_episode)
+                tb.log_scalar("episode/steps", ep.n_steps, global_episode)
+                tb.log_scalar("episode/final_pos_err_m", ep.final_pos_err_m, global_episode)
+                tb.log_scalar("episode/success", int(ep.success), global_episode)
+                tb.log_scalar("episode/collision", int(ep.collision), global_episode)
+                tb.log_scalar("episode/goal_settled", int(ep.goal_settled), global_episode)
+
                 if algorithm == "ppo" and len(pending_episodes) >= ppo_update_every:
                     batch_eps = list(pending_episodes)
                     pending_episodes.clear()
@@ -674,6 +744,7 @@ def train(config_path: Path,
         print(f"[rl] no eval best saved; copied latest -> {best_path.name}", flush=True)
 
     print(f"[rl] done. Best checkpoint: {best_path}")
+    tb.close()
     return best_path
 
 
