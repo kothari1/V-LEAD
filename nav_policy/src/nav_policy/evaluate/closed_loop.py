@@ -954,7 +954,15 @@ def evaluate(config_path: Path,
 
              output_dir_override: Optional[Path] = None,
 
-             run_tag_override: Optional[str] = None) -> Dict[str, float]:
+             run_tag_override: Optional[str] = None,
+
+             rollouts_from_dir: Optional[Path] = None,
+
+             rollouts_limit: Optional[int] = None,
+
+             sub_idx: int = 0,
+
+             scene_name: Optional[str] = None) -> Dict[str, float]:
 
     with open(config_path, "r") as f:
 
@@ -973,6 +981,102 @@ def evaluate(config_path: Path,
     if run_tag_override is not None:
 
         cfg["run_tag"] = str(run_tag_override)
+
+
+
+    if rollouts_from_dir is not None:
+
+        # Glob for trajectories_val*.pt in the dir; sort numerically by index.
+
+        traj_dir = Path(rollouts_from_dir)
+
+        if not traj_dir.is_absolute():
+
+            # Resolve relative to config's nav_root (config_path.parent.parent)
+
+            traj_dir = (config_path.resolve().parent.parent / traj_dir).resolve()
+
+        traj_files = sorted(traj_dir.glob("trajectories_val*.pt"))
+
+        if not traj_files:
+
+            raise FileNotFoundError(
+
+                f"No trajectories_val*.pt found in {traj_dir}"
+
+            )
+
+        if rollouts_limit is not None and rollouts_limit > 0:
+
+            traj_files = traj_files[: int(rollouts_limit)]
+
+        # Use the first rollout's scene if user didn't override.
+
+        existing_rollouts = cfg.get("rollouts", []) or []
+
+        default_scene = scene_name or (
+
+            existing_rollouts[0].get("scene") if existing_rollouts else "flightroom_ssv_exp"
+
+        )
+
+        default_rollout = (
+
+            existing_rollouts[0].get("rollout", "baseline")
+
+            if existing_rollouts else "baseline"
+
+        )
+
+        new_rollouts = []
+
+        for tf in traj_files:
+
+            # Extract integer index from filename, e.g. trajectories_val00042.pt -> 42
+
+            idx_str = tf.stem.replace("trajectories_val", "")
+
+            try:
+
+                idx_int = int(idx_str)
+
+            except ValueError:
+
+                idx_int = -1
+
+            qname = (
+
+                f"{default_scene}_q{idx_int:05d}" if idx_int >= 0
+
+                else f"{default_scene}_{tf.stem}"
+
+            )
+
+            new_rollouts.append({
+
+                "name": qname,
+
+                "scene": default_scene,
+
+                "rollout": default_rollout,
+
+                "setup_from": str(tf),
+
+                "sub_idx": int(sub_idx),
+
+            })
+
+        cfg["rollouts"] = new_rollouts
+
+        print(
+
+            f"[eval] override rollouts from dir={traj_dir} "
+
+            f"n={len(new_rollouts)} (limit={rollouts_limit})",
+
+            flush=True,
+
+        )
 
 
 
@@ -1183,6 +1287,52 @@ def main() -> None:
 
     )
 
+    p.add_argument(
+
+        "--rollouts-from-dir", type=Path, default=None,
+
+        help="Override YAML `rollouts`: glob trajectories_val*.pt in this dir "
+
+             "(relative paths resolve against nav_policy/) and turn every file "
+
+             "into one eval query. Use to evaluate against the full 110-traj "
+
+             "pool instead of a hand-picked subset.",
+
+    )
+
+    p.add_argument(
+
+        "--rollouts-limit", type=int, default=None,
+
+        help="Cap the number of trajectories loaded by --rollouts-from-dir "
+
+             "(useful for smoke-tests).",
+
+    )
+
+    p.add_argument(
+
+        "--sub-idx", type=int, default=0,
+
+        help="sub_idx value applied to every auto-generated rollout from "
+
+             "--rollouts-from-dir.",
+
+    )
+
+    p.add_argument(
+
+        "--scene-name", type=str, default=None,
+
+        help="scene name applied to every auto-generated rollout from "
+
+             "--rollouts-from-dir (defaults to first existing rollout's scene "
+
+             "or 'flightroom_ssv_exp').",
+
+    )
+
     args = p.parse_args()
 
     evaluate(args.config,
@@ -1191,7 +1341,15 @@ def main() -> None:
 
              output_dir_override=args.output_dir,
 
-             run_tag_override=args.run_tag)
+             run_tag_override=args.run_tag,
+
+             rollouts_from_dir=args.rollouts_from_dir,
+
+             rollouts_limit=args.rollouts_limit,
+
+             sub_idx=args.sub_idx,
+
+             scene_name=args.scene_name)
 
 
 
