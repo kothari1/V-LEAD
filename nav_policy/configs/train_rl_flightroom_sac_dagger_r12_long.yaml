@@ -1,0 +1,36 @@
+# Long-form SAC run for overnight training: 600 episodes (~6-8 h wall),
+# inherits the dagger_r12 stable config and just scales up the budget +
+# bumps a few SAC + eval cadence knobs.
+#
+# Layout:
+#   episodes_total      = n_iterations * rollouts_per_iteration
+#                       = 150 * 4 = 600
+#   replay capacity     = 50k transitions (FIFO eviction at ~150k samples)
+#   updates per iter    = 8 SAC grad steps per 4 collected episodes
+#   eval cadence        = every 80 episodes (~7-8 events total)
+#
+# Stable knobs from dagger_r12 inherited unchanged:
+#   init_log_std: -2.5  freeze_backbone: true  bc_anchor.kl_coef: 0.02
+#   action_lpf_alpha: 0.25  auto_alpha: false  alpha: 0.1
+#
+# Storage budget for replay only:
+#   50k transitions x ~3 MB each (fp16, T=4, 224^2 RGB no depth) = ~150 GB
+#   Host has 251 GB; comfortable. compress_transitions stays true.
+
+base_config: configs/train_rl_flightroom_sac_dagger_r12.yaml
+
+rl:
+  run_tag: rl_sac_dagger_r12_long
+  n_iterations: 150              # 150 * 4 = 600 episodes
+  # Bump SAC update count per iter so the critic + actor see more
+  # gradient steps as the replay grows.
+  sac:
+    updates_per_iter: 8
+    replay_capacity: 50000       # was 100k; FIFO past 50k recent transitions
+  # Eval cadence: every 80 eps -> ~7 events over 600 eps -> ~70 min of
+  # eval total instead of 6+ hours at the dagger_r12 default of 16.
+  eval_every_episodes: 80
+  # Long runs grow the simulator scene cache; periodically free it.
+  sim_cache_clear_every_episodes: 100
+  # 150 iters / 5 = 30 checkpoints instead of 150.
+  save_every_n_iterations: 5
