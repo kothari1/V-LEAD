@@ -150,6 +150,19 @@ def train(config_path: Path,
     log_path = ckpt_dir / f"{tag}_log.csv"
     episode_log_path = ckpt_dir / f"{tag}_episodes.csv"
 
+    # TensorBoard logging (set rl.tensorboard: false to disable). Logs to
+    # <checkpoint_dir>/tb/<run_tag>/ ; view with: tensorboard --logdir <checkpoint_dir>/tb
+    tb_writer = None
+    if bool(rl_cfg.get("tensorboard", True)):
+        try:
+            from torch.utils.tensorboard import SummaryWriter
+            tb_dir = ckpt_dir / "tb" / tag
+            tb_writer = SummaryWriter(log_dir=str(tb_dir))
+            print(f"[rl] tensorboard logging -> {tb_dir}")
+        except Exception as exc:  # tensorboard not installed / dir not writable
+            print(f"[rl] tensorboard disabled ({exc})", file=sys.stderr)
+            tb_writer = None
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     init_log_std = float(rl_cfg.get("init_log_std", -0.5))
     policy, stats, model_cfg = load_stochastic_from_checkpoint(
@@ -356,6 +369,17 @@ def train(config_path: Path,
                 write_header = False
             w.writerow(row)
 
+        if tb_writer is not None:
+            tb_writer.add_scalar("iter/mean_return", mean_return, it)
+            tb_writer.add_scalar("iter/mean_steps", mean_steps, it)
+            tb_writer.add_scalar("iter/success_rate", success_rate, it)
+            for _k in ("policy_loss", "value_loss", "entropy", "approx_kl",
+                       "q1_loss", "q2_loss", "alpha"):
+                _v = row.get(_k, "")
+                if isinstance(_v, (int, float)):
+                    tb_writer.add_scalar(f"iter/{_k}", float(_v), it)
+            tb_writer.flush()
+
         print(
             f"[rl] iter {it}/{n_iters}  episodes={global_episode}  "
             f"return={mean_return:.2f}  success={success_rate:.0%}",
@@ -446,6 +470,12 @@ def train(config_path: Path,
                         "termination": ep.termination,
                     })
 
+                if tb_writer is not None:
+                    tb_writer.add_scalar("episode/return", float(ep.total_return), global_episode)
+                    tb_writer.add_scalar("episode/success", int(ep.success), global_episode)
+                    tb_writer.add_scalar("episode/final_pos_err_m", float(ep.final_pos_err_m), global_episode)
+                    tb_writer.add_scalar("episode/steps", int(ep.n_steps), global_episode)
+
                 if algorithm == "ppo" and len(pending_episodes) >= ppo_update_every:
                     batch_eps = list(pending_episodes)
                     pending_episodes.clear()
@@ -492,6 +522,9 @@ def train(config_path: Path,
     }
     with open(ckpt_dir / f"{tag}_summary.json", "w") as sf:
         json.dump(summary, sf, indent=2)
+
+    if tb_writer is not None:
+        tb_writer.close()
 
     best_path = ckpt_dir / f"{tag}_best.pt"
     print(f"[rl] done. Best checkpoint: {best_path}")

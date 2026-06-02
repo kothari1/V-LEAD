@@ -6,3 +6,13 @@ base_config: configs/train_rl_flightroom_sac.yaml
 rl:
   sac:
     batch_size: 64
+
+  # Success-metric thresholds lifted from train_rl_local_shared_by_yash.yaml — much
+  # looser than the canonical config so "near the goal" counts as success (was:
+  # settle_steps 20, settle_vel 0.12, settle_body_rate 0.35, success_position_tol 0.5).
+  rewards:
+    success_position_tol: 1.9
+  rollout:
+    settle_vel_mps: 0.3
+    settle_body_rate_radps: 0.85
+    settle_steps: 1
