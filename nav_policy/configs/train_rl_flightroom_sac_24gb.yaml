@@ -1,0 +1,8 @@
+# SAC on a 24 GB GPU (e.g. RTX 4090). Same as train_rl_flightroom_sac.yaml but with a
+# smaller SAC batch so the gradient update fits alongside the resident gsplat renderer +
+# CLIP + DA2 + policy (~20 GB). The canonical config's batch_size=256 OOMs on 24 GB.
+base_config: configs/train_rl_flightroom_sac.yaml
+
+rl:
+  sac:
+    batch_size: 64

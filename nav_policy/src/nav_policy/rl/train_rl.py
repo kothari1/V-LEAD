@@ -20,6 +20,20 @@ import numpy as np
 import torch
 import yaml
 
+# nerfstudio/gsplat checkpoints are full pickles. PyTorch 2.6 changed torch.load's
+# default to weights_only=True, which rejects them (e.g. numpy.core.multiarray.scalar).
+# FiGS loads the gsplat scene via nerfstudio's eval_setup during RL rollouts, so force
+# weights_only=False process-wide. (See nav_policy_no_docker.md / yash_readme.md.)
+_orig_torch_load = torch.load
+
+
+def _torch_load_weights_only_false(*args, **kwargs):
+    kwargs.setdefault("weights_only", False)
+    return _orig_torch_load(*args, **kwargs)
+
+
+torch.load = _torch_load_weights_only_false
+
 from figs.control.velocity_controller import VelocityController
 
 from nav_policy.model.depth_estimator import DepthAnythingV2Small
