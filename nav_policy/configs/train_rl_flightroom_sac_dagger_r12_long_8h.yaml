@@ -1,0 +1,142 @@
+# Overnight 8h SAC run: 1600 episodes, 20-rollout training pool, stable
+# dagger_r12 base, no video dump.
+#
+# Why bigger than the 600-ep _long config:
+#   - More episodes -> more replay diversity if the rollouts are varied
+#   - At 4 train rollouts only, 1600 eps = 400 visits per start.
+#     Bump to 20 train rollouts (10 from 071353 + 10 from 071718,
+#     sub_idx 0 on each val pt) so 80 visits per start instead.
+#
+# Wall-clock budget (rough):
+#   1600 eps x ~13 s avg rollout = ~5.8 h
+#   eval: 8 events x 14 queries x ~30 s     = ~56 min
+#   sim cache rebuilds: 16 x ~20 s          = ~5 min
+#   SAC updates: 400 iters x 8 x 0.18 s     = ~10 min
+#   Total target: ~6.5-8 h
+#
+# Storage:
+#   1600 mp4s at ~30 MB each = ~48 GB — drop --save-videos for this run.
+#   Replay at 50k cap fp16 = ~150 GB RAM peak.
+#   30 checkpoints at ~50 MB = ~1.5 GB.
+
+base_config: configs/train_rl_flightroom_sac_dagger_r12.yaml
+
+rl:
+  run_tag: rl_sac_dagger_r12_long_8h
+  n_iterations: 400              # 400 * 4 = 1600 episodes
+
+  sac:
+    updates_per_iter: 8
+    replay_capacity: 50000       # ~150 GB fp16 in 251 GB host
+
+  eval_every_episodes: 200       # 8 events instead of 100 at 16-step cadence
+  sim_cache_clear_every_episodes: 100
+  save_every_n_iterations: 10    # 40 ckpts (every 40 eps) for eval_queue use later
+
+# Expanded training rollout pool: random.shuffle + slice picks 4 per iter
+# (default rollouts_per_iteration: 4) so each iter samples 4 of 20. Over
+# 400 iters: each rollout seen ~80 times instead of 400 in the canonical
+# 4-rollout pool.
+rollouts:
+  # 10 starts from 071718
+  - name: flightroom_071718_q00
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00000.pt
+    sub_idx: 0
+  - name: flightroom_071718_q01
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00001.pt
+    sub_idx: 0
+  - name: flightroom_071718_q02
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00002.pt
+    sub_idx: 0
+  - name: flightroom_071718_q03
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00003.pt
+    sub_idx: 0
+  - name: flightroom_071718_q10
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00010.pt
+    sub_idx: 0
+  - name: flightroom_071718_q20
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00020.pt
+    sub_idx: 0
+  - name: flightroom_071718_q35
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00035.pt
+    sub_idx: 0
+  - name: flightroom_071718_q50
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00050.pt
+    sub_idx: 0
+  - name: flightroom_071718_q70
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00070.pt
+    sub_idx: 0
+  - name: flightroom_071718_q95
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00095.pt
+    sub_idx: 0
+  # 10 starts from 071353
+  - name: flightroom_071353_q00
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00000.pt
+    sub_idx: 0
+  - name: flightroom_071353_q01
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00001.pt
+    sub_idx: 0
+  - name: flightroom_071353_q02
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00002.pt
+    sub_idx: 0
+  - name: flightroom_071353_q03
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00003.pt
+    sub_idx: 0
+  - name: flightroom_071353_q10
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00010.pt
+    sub_idx: 0
+  - name: flightroom_071353_q20
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00020.pt
+    sub_idx: 0
+  - name: flightroom_071353_q35
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00035.pt
+    sub_idx: 0
+  - name: flightroom_071353_q50
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00050.pt
+    sub_idx: 0
+  - name: flightroom_071353_q70
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00070.pt
+    sub_idx: 0
+  - name: flightroom_071353_q95
+    scene: flightroom_ssv_exp
+    rollout: baseline
+    setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00095.pt
+    sub_idx: 0

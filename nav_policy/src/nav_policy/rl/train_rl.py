@@ -532,6 +532,12 @@ def train(config_path: Path,
         ):
             latest_path = ckpt_dir / f"{tag}_latest.pt"
             save_rl_checkpoint(latest_path, policy, stats, model_cfg, meta)
+            # Keep a numbered snapshot too so eval_queue can sweep history
+            # later. Lives under ckpt_dir/snapshots/{tag}_iter{N}.pt.
+            snap_dir = ckpt_dir / "snapshots"
+            snap_dir.mkdir(parents=True, exist_ok=True)
+            snap_path = snap_dir / f"{tag}_iter{it + 1:04d}_ep{global_episode:05d}.pt"
+            save_rl_checkpoint(snap_path, policy, stats, model_cfg, meta)
             if not select_best_by_eval and mean_return > best_return:
                 best_return = mean_return
                 best_path = ckpt_dir / f"{tag}_best.pt"
