@@ -1,0 +1,50 @@
+{
+  "algorithm": "sac",
+  "device": "cuda",
+  "cuda_available": true,
+  "torch_version": "2.1.2+cu118",
+  "params": {
+    "total_trainable": 778285,
+    "total_frozen": 12486976,
+    "total_params": 13265261,
+    "approx_bytes": 53061044,
+    "approx_mb": 50.60295486450195,
+    "per_module": {
+      "log_std": {
+        "trainable": 4,
+        "frozen": 0
+      },
+      "base": {
+        "trainable": 704040,
+        "frozen": 12486976
+      },
+      "critic": {
+        "trainable": 74241,
+        "frozen": 0
+      }
+    }
+  },
+  "inference_latency_b1": {
+    "batch_size": 1,
+    "n_timed": 20,
+    "mean_ms": 2.012188000662718,
+    "std_ms": 0.012955977708383958,
+    "min_ms": 1.9838640000671148,
+    "max_ms": 2.030394010944292
+  },
+  "replay_buffer": {
+    "per_transition_bytes": 3211312,
+    "total_bytes": 321131200000,
+    "total_gb": 299.07673597335815,
+    "fp16": true,
+    "capacity": 100000
+  },
+  "inference_latency_sac_batch": {
+    "batch_size": 256,
+    "n_timed": 20,
+    "mean_ms": 177.2539379497175,
+    "std_ms": 0.16819460917700896,
+    "min_ms": 176.95071501657367,
+    "max_ms": 177.5761120079551
+  }
+}

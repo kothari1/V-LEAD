@@ -1,0 +1,75 @@
+{
+  "config": "/workspace/nav_policy/configs/eval_closed_loop_flightroom_holdout_14.yaml",
+  "output_root": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_long_8h_v1/eval_110_20260602",
+  "rollouts_from_dir": "data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110",
+  "rollouts_limit": null,
+  "started_iso": "2026-06-02T17:26:50.396269",
+  "finished_iso": "2026-06-02T22:51:06.158394",
+  "queue_elapsed_s": 19455.761949062347,
+  "n_ckpts": 7,
+  "results": [
+    {
+      "ckpt": "/project/kothari1/vlead_data/checkpoints/bc_best_balanced_dagger_r12_new.pt",
+      "run_name": "checkpoints__bc_best_balanced_dagger_r12_new",
+      "output_dir": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_long_8h_v1/eval_110_20260602/checkpoints__bc_best_balanced_dagger_r12_new",
+      "status": "ok",
+      "elapsed_s": 2770.1071197986603,
+      "success_rate": 0.6238532110091743,
+      "n_rollouts": 109
+    },
+    {
+      "ckpt": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_long_8h_v1/snapshots/rl_sac_dagger_r12_long_8h_v1_iter0100_ep00400.pt",
+      "run_name": "snapshots__rl_sac_dagger_r12_long_8h_v1_iter0100_ep00400",
+      "output_dir": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_long_8h_v1/eval_110_20260602/snapshots__rl_sac_dagger_r12_long_8h_v1_iter0100_ep00400",
+      "status": "ok",
+      "elapsed_s": 2811.528506040573,
+      "success_rate": 0.1651376146788991,
+      "n_rollouts": 109
+    },
+    {
+      "ckpt": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_long_8h_v1/snapshots/rl_sac_dagger_r12_long_8h_v1_iter0200_ep00800.pt",
+      "run_name": "snapshots__rl_sac_dagger_r12_long_8h_v1_iter0200_ep00800",
+      "output_dir": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_long_8h_v1/eval_110_20260602/snapshots__rl_sac_dagger_r12_long_8h_v1_iter0200_ep00800",
+      "status": "ok",
+      "elapsed_s": 2730.059760093689,
+      "success_rate": 0.45871559633027525,
+      "n_rollouts": 109
+    },
+    {
+      "ckpt": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_long_8h_v1/snapshots/rl_sac_dagger_r12_long_8h_v1_iter0300_ep01200.pt",
+      "run_name": "snapshots__rl_sac_dagger_r12_long_8h_v1_iter0300_ep01200",
+      "output_dir": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_long_8h_v1/eval_110_20260602/snapshots__rl_sac_dagger_r12_long_8h_v1_iter0300_ep01200",
+      "status": "ok",
+      "elapsed_s": 2799.0235075950623,
+      "success_rate": 0.045871559633027525,
+      "n_rollouts": 109
+    },
+    {
+      "ckpt": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_long_8h_v1/snapshots/rl_sac_dagger_r12_long_8h_v1_iter0400_ep01600.pt",
+      "run_name": "snapshots__rl_sac_dagger_r12_long_8h_v1_iter0400_ep01600",
+      "output_dir": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_long_8h_v1/eval_110_20260602/snapshots__rl_sac_dagger_r12_long_8h_v1_iter0400_ep01600",
+      "status": "ok",
+      "elapsed_s": 2783.056938648224,
+      "success_rate": 0.3211009174311927,
+      "n_rollouts": 109
+    },
+    {
+      "ckpt": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_long_8h_v1/rl_sac_dagger_r12_long_8h_v1_best.pt",
+      "run_name": "rl_sac_dagger_r12_long_8h_v1__rl_sac_dagger_r12_long_8h_v1_best",
+      "output_dir": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_long_8h_v1/eval_110_20260602/rl_sac_dagger_r12_long_8h_v1__rl_sac_dagger_r12_long_8h_v1_best",
+      "status": "ok",
+      "elapsed_s": 2794.8905720710754,
+      "success_rate": 0.5504587155963303,
+      "n_rollouts": 109
+    },
+    {
+      "ckpt": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_long_8h_v1/rl_sac_dagger_r12_long_8h_v1_latest.pt",
+      "run_name": "rl_sac_dagger_r12_long_8h_v1__rl_sac_dagger_r12_long_8h_v1_latest",
+      "output_dir": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_long_8h_v1/eval_110_20260602/rl_sac_dagger_r12_long_8h_v1__rl_sac_dagger_r12_long_8h_v1_latest",
+      "status": "ok",
+      "elapsed_s": 2767.0937242507935,
+      "success_rate": 0.3211009174311927,
+      "n_rollouts": 109
+    }
+  ]
+}

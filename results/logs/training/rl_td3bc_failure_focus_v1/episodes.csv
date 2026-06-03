@@ -1,0 +1,301 @@
+global_episode,iteration,rollout_name,semantic_target,course,return,steps,success,goal_settled,final_pos_err_m,start_idx,collision,termination
+1,0,fr_071353_q00026,green_clock,green clock,-18.991253423841115,670,0,0,0.24338601128965115,0,0,timeout
+2,0,fr_071353_q00215,green_and_pink_leafblower,green and pink leafblower,-18.280502988407886,670,0,0,0.2215725058607208,0,0,timeout
+3,0,fr_071353_q00174,green_and_pink_leafblower,green and pink leafblower,-12.20941539073647,670,0,0,0.16323851702552455,0,0,timeout
+4,0,fr_071353_q00128,green_and_pink_leafblower,green and pink leafblower,-22.16605160907997,670,0,0,0.3004956021953628,0,0,timeout
+5,1,fr_071353_q00161,green_and_pink_leafblower,green and pink leafblower,-603.4346817810773,295,0,0,4.091933332354196,0,1,collision
+6,1,fr_071353_q00187,green_and_pink_leafblower,green and pink leafblower,-3.7557566551998285,670,0,0,0.1441989816211847,0,0,timeout
+7,1,fr_071353_q00021,green_clock,green clock,13.618324622611627,139,1,1,0.3622876656707853,0,0,goal_reached
+8,1,fr_071353_q00128,green_and_pink_leafblower,green and pink leafblower,-21.256116031209586,670,0,0,0.2584160978571878,0,0,timeout
+9,2,fr_071353_q00026,green_clock,green clock,-22.310580422700625,670,0,0,0.7254996504853432,0,0,timeout
+10,2,fr_071353_q00215,green_and_pink_leafblower,green and pink leafblower,-22.226924183834882,670,0,0,0.20459868964967237,0,0,timeout
+11,2,fr_071353_q00133,green_and_pink_leafblower,green and pink leafblower,18.043342301320777,143,1,1,0.15554497191733924,0,0,goal_reached
+12,2,fr_071353_q00199,green_and_pink_leafblower,green and pink leafblower,-16.20730483706771,670,0,0,0.30883992599163984,0,0,timeout
+13,3,fr_071353_q00001,green_clock,green clock,22.57965193127766,359,1,1,0.26672891589549125,0,0,goal_reached
+14,3,fr_071353_q00115,green_and_pink_leafblower,green and pink leafblower,-49.072526285254554,19,0,0,3.59439145431692,0,1,collision
+15,3,fr_071353_q00036,green_clock,green clock,-20.407759357888587,670,0,0,0.7077221884157643,0,0,timeout
+16,3,fr_071353_q00008,green_clock,green clock,8.740502510317304,75,1,1,0.4046405491994014,0,0,goal_reached
+17,4,fr_071353_q00211,green_and_pink_leafblower,green and pink leafblower,-4.423176720262957,670,0,0,0.21173063340154666,0,0,timeout
+18,4,fr_071353_q00196,green_and_pink_leafblower,green and pink leafblower,-2240.298816423475,670,0,0,3.944656365229883,0,0,timeout
+19,4,fr_071353_q00070,green_clock,green clock,14.143128346262513,305,1,1,0.43713523633110274,0,0,goal_reached
+20,4,fr_071353_q00150,green_and_pink_leafblower,green and pink leafblower,-4.210489162402096,670,0,0,0.2312297587791962,0,0,timeout
+21,5,fr_071353_q00021,green_clock,green clock,10.79868866409782,119,1,1,0.4099819906340333,0,0,goal_reached
+22,5,fr_071353_q00036,green_clock,green clock,10.482693446097613,308,1,1,0.494820297495083,0,0,goal_reached
+23,5,fr_071353_q00197,green_and_pink_leafblower,green and pink leafblower,-7.651427040009972,670,0,0,0.14844925968639583,0,0,timeout
+24,5,fr_071353_q00150,green_and_pink_leafblower,green and pink leafblower,27.947258872690583,261,1,1,0.04942349257770095,0,0,goal_reached
+25,6,fr_071353_q00088,green_clock,green clock,15.330616051941043,261,1,1,0.3685173655160033,0,0,goal_reached
+26,6,fr_071353_q00196,green_and_pink_leafblower,green and pink leafblower,-2110.45308738166,645,0,0,3.8040640428566537,0,1,collision
+27,6,fr_071353_q00219,green_and_pink_leafblower,green and pink leafblower,-21.091242504250626,670,0,0,0.22721256945833643,0,0,timeout
+28,6,fr_071353_q00153,green_and_pink_leafblower,green and pink leafblower,-16.547658361776207,670,0,0,0.16422776155764154,0,0,timeout
+29,7,fr_071353_q00187,green_and_pink_leafblower,green and pink leafblower,-4.4000809395058,670,0,0,0.20337034145358404,0,0,timeout
+30,7,fr_071353_q00109,green_clock,green clock,11.173096129275736,159,1,1,0.4210891707379412,0,0,goal_reached
+31,7,fr_071353_q00161,green_and_pink_leafblower,green and pink leafblower,-2387.295374701177,670,0,0,2.418708397968983,0,0,timeout
+32,7,fr_071353_q00215,green_and_pink_leafblower,green and pink leafblower,-21.061287908115926,670,0,0,0.1375001357734272,0,0,timeout
+33,8,fr_071353_q00109,green_clock,green clock,9.409458468086921,88,1,1,0.45886360989642666,0,0,goal_reached
+34,8,fr_071353_q00133,green_and_pink_leafblower,green and pink leafblower,19.55942250648778,184,1,1,0.1442897707273965,0,0,goal_reached
+35,8,fr_071353_q00021,green_clock,green clock,9.91974182949022,95,1,1,0.44776535432529474,0,0,goal_reached
+36,8,fr_071353_q00125,green_and_pink_leafblower,green and pink leafblower,23.240713483902987,190,1,1,0.1991004789488664,0,0,goal_reached
+37,9,fr_071353_q00070,green_clock,green clock,16.459717961385902,146,1,1,0.38144858287859534,0,0,goal_reached
+38,9,fr_071353_q00150,green_and_pink_leafblower,green and pink leafblower,25.70326645776031,209,1,1,0.19752835055447615,0,0,goal_reached
+39,9,fr_071353_q00110,green_and_pink_leafblower,green and pink leafblower,28.621762549994095,252,1,1,0.21750784000295695,0,0,goal_reached
+40,9,fr_071353_q00026,green_clock,green clock,-16.053101664771724,670,0,0,0.19740580388280154,0,0,timeout
+41,10,fr_071353_q00128,green_and_pink_leafblower,green and pink leafblower,-22.42898960351233,670,0,0,0.20977557855277335,0,0,timeout
+42,10,fr_071353_q00150,green_and_pink_leafblower,green and pink leafblower,-3.351490191522281,670,0,0,0.17238974336046978,0,0,timeout
+43,10,fr_071353_q00051,green_clock,green clock,24.933537827490596,189,1,1,0.3173904328430291,0,0,goal_reached
+44,10,fr_071353_q00187,green_and_pink_leafblower,green and pink leafblower,-3.898167888945398,670,0,0,0.14657423363199595,0,0,timeout
+45,11,fr_071353_q00069,green_clock,green clock,-11.741795211830523,670,0,0,0.18587414199456356,0,0,timeout
+46,11,fr_071353_q00133,green_and_pink_leafblower,green and pink leafblower,-11.92306611904791,670,0,0,0.08755600839352079,0,0,timeout
+47,11,fr_071353_q00076,green_clock,green clock,11.270091907674498,91,1,1,0.2312548022661026,0,0,goal_reached
+48,11,fr_071353_q00128,green_and_pink_leafblower,green and pink leafblower,-23.197781865247343,670,0,0,0.2802647304286873,0,0,timeout
+49,12,fr_071353_q00125,green_and_pink_leafblower,green and pink leafblower,24.312097001891395,241,1,1,0.18735764909077568,0,0,goal_reached
+50,12,fr_071353_q00109,green_clock,green clock,9.391742738641534,88,1,1,0.4709565733875593,0,0,goal_reached
+51,12,fr_071353_q00219,green_and_pink_leafblower,green and pink leafblower,-21.026075148500475,670,0,0,0.12823366868204242,0,0,timeout
+52,12,fr_071353_q00148,green_and_pink_leafblower,green and pink leafblower,-1218.5343468561166,670,0,0,2.27140507967155,0,0,timeout
+53,13,fr_071353_q00115,green_and_pink_leafblower,green and pink leafblower,-49.033857507740144,19,0,0,3.588486732954788,0,1,collision
+54,13,fr_071353_q00155,green_and_pink_leafblower,green and pink leafblower,-3.060782197343837,670,0,0,0.19989609216797893,0,0,timeout
+55,13,fr_071353_q00139,green_and_pink_leafblower,green and pink leafblower,13.903870621441563,132,1,1,0.1611246698529006,0,0,goal_reached
+56,13,fr_071353_q00133,green_and_pink_leafblower,green and pink leafblower,-13.910575377604383,670,0,0,0.2426488389989403,0,0,timeout
+57,14,fr_071353_q00155,green_and_pink_leafblower,green and pink leafblower,-3.588824980026981,670,0,0,0.279084153262176,0,0,timeout
+58,14,fr_071353_q00128,green_and_pink_leafblower,green and pink leafblower,-24.39463872828756,670,0,0,0.42110894133429905,0,0,timeout
+59,14,fr_071353_q00008,green_clock,green clock,9.780591254471348,72,1,1,0.30548961722229173,0,0,goal_reached
+60,14,fr_071353_q00115,green_and_pink_leafblower,green and pink leafblower,-49.06098783596075,19,0,0,3.5906931395819477,0,1,collision
+61,15,fr_071353_q00138,green_and_pink_leafblower,green and pink leafblower,-2221.0043083381743,670,0,0,2.558347955675602,0,0,timeout
+62,15,fr_071353_q00196,green_and_pink_leafblower,green and pink leafblower,-2.702843766535839,670,0,0,0.22094391364870147,0,0,timeout
+63,15,fr_071353_q00199,green_and_pink_leafblower,green and pink leafblower,-47.331941862855786,25,0,0,2.1904286832462003,0,1,collision
+64,15,fr_071353_q00115,green_and_pink_leafblower,green and pink leafblower,-49.012121476124605,20,0,0,3.5639272436198555,0,1,collision
+65,16,fr_071353_q00133,green_and_pink_leafblower,green and pink leafblower,-12.702817532762086,670,0,0,0.0645030564034537,0,0,timeout
+66,16,fr_071353_q00218,green_and_pink_leafblower,green and pink leafblower,-8.572745600440708,670,0,0,0.13059531165370813,0,0,timeout
+67,16,fr_071353_q00217,green_and_pink_leafblower,green and pink leafblower,-14.973103710835954,670,0,0,0.2342301021111433,0,0,timeout
+68,16,fr_071353_q00138,green_and_pink_leafblower,green and pink leafblower,-19.823673443665363,670,0,0,0.09925615186886587,0,0,timeout
+69,17,fr_071353_q00043,green_clock,green clock,25.230104988946042,196,1,1,0.3152763202664359,0,0,goal_reached
+70,17,fr_071353_q00110,green_and_pink_leafblower,green and pink leafblower,28.47009738353588,257,1,1,0.24723287918020062,0,0,goal_reached
+71,17,fr_071353_q00198,green_and_pink_leafblower,green and pink leafblower,-9.421917198149432,670,0,0,0.42263263244398175,0,0,timeout
+72,17,fr_071353_q00148,green_and_pink_leafblower,green and pink leafblower,-1376.876536766449,670,0,0,2.5079073523509945,0,0,timeout
+73,18,fr_071353_q00198,green_and_pink_leafblower,green and pink leafblower,-7.401652916630095,670,0,0,0.12796236654409035,0,0,timeout
+74,18,fr_071353_q00139,green_and_pink_leafblower,green and pink leafblower,-17.403024704814733,670,0,0,0.19416631697590475,0,0,timeout
+75,18,fr_071353_q00070,green_clock,green clock,16.63983145514088,147,1,1,0.38972792605042356,0,0,goal_reached
+76,18,fr_071353_q00125,green_and_pink_leafblower,green and pink leafblower,22.40151687804707,213,1,1,0.2908734920337124,0,0,goal_reached
+77,19,fr_071353_q00027,green_clock,green clock,17.216308927085134,147,1,1,0.36102885231154613,0,0,goal_reached
+78,19,fr_071353_q00138,green_and_pink_leafblower,green and pink leafblower,-20.231016385227385,670,0,0,0.2237921745471225,0,0,timeout
+79,19,fr_071353_q00119,green_and_pink_leafblower,green and pink leafblower,-23.1144651883245,670,0,0,0.3372896973165248,0,0,timeout
+80,19,fr_071353_q00218,green_and_pink_leafblower,green and pink leafblower,20.245585413799006,165,1,1,0.44830653848168917,0,0,goal_reached
+81,20,fr_071353_q00153,green_and_pink_leafblower,green and pink leafblower,-17.91508769318521,670,0,0,0.23647017006962076,0,0,timeout
+82,20,fr_071353_q00133,green_and_pink_leafblower,green and pink leafblower,17.09343366356258,162,1,1,0.2748945512866655,0,0,goal_reached
+83,20,fr_071353_q00026,green_clock,green clock,12.497404113954069,245,1,1,0.4604279494781174,0,0,goal_reached
+84,20,fr_071353_q00119,green_and_pink_leafblower,green and pink leafblower,-22.058257848724665,670,0,0,0.13597555373894557,0,0,timeout
+85,21,fr_071353_q00043,green_clock,green clock,24.512221040455906,196,1,1,0.3650538864034992,0,0,goal_reached
+86,21,fr_071353_q00088,green_clock,green clock,11.815453026551072,316,1,1,0.30468056577251085,0,0,goal_reached
+87,21,fr_071353_q00128,green_and_pink_leafblower,green and pink leafblower,-23.2543816303928,670,0,0,0.1793550277877656,0,0,timeout
+88,21,fr_071353_q00027,green_clock,green clock,17.536058365149145,147,1,1,0.34164748328862454,0,0,goal_reached
+89,22,fr_071353_q00109,green_clock,green clock,9.061631520851503,88,1,1,0.49273679633787626,0,0,goal_reached
+90,22,fr_071353_q00076,green_clock,green clock,11.215942993334036,91,1,1,0.24358497270829238,0,0,goal_reached
+91,22,fr_071353_q00026,green_clock,green clock,9.813080260430066,244,1,1,0.4587841969980768,0,0,goal_reached
+92,22,fr_071353_q00088,green_clock,green clock,11.899409487009567,268,1,1,0.3053518076600913,0,0,goal_reached
+93,23,fr_071353_q00196,green_and_pink_leafblower,green and pink leafblower,-626.1553683153961,670,0,0,2.276587319172862,0,0,timeout
+94,23,fr_071353_q00138,green_and_pink_leafblower,green and pink leafblower,-18.243677888867886,670,0,0,0.2241182842982568,0,0,timeout
+95,23,fr_071353_q00027,green_clock,green clock,17.523609163607308,145,1,1,0.3159447505332388,0,0,goal_reached
+96,23,fr_071353_q00215,green_and_pink_leafblower,green and pink leafblower,-20.778068666068386,670,0,0,0.20284722710612416,0,0,timeout
+97,24,fr_071353_q00115,green_and_pink_leafblower,green and pink leafblower,-48.829677308707886,20,0,0,3.536633537137429,0,1,collision
+98,24,fr_071353_q00217,green_and_pink_leafblower,green and pink leafblower,-13.14922765816302,670,0,0,0.24571179616235322,0,0,timeout
+99,24,fr_071353_q00119,green_and_pink_leafblower,green and pink leafblower,-21.509656061570972,670,0,0,0.1739233522735691,0,0,timeout
+100,24,fr_071353_q00199,green_and_pink_leafblower,green and pink leafblower,-47.36490935392469,25,0,0,2.213663454353919,0,1,collision
+101,25,fr_071353_q00008,green_clock,green clock,9.420967543330224,73,1,1,0.27350795483439916,0,0,goal_reached
+102,25,fr_071353_q00027,green_clock,green clock,17.641944340802713,146,1,1,0.30648611713515866,0,0,goal_reached
+103,25,fr_071353_q00174,green_and_pink_leafblower,green and pink leafblower,-12.813069265997363,670,0,0,0.12752645084733613,0,0,timeout
+104,25,fr_071353_q00198,green_and_pink_leafblower,green and pink leafblower,-6.628016011697326,670,0,0,0.17856734906485888,0,0,timeout
+105,26,fr_071353_q00102,green_clock,green clock,27.343851034462954,238,1,1,0.08907705439172008,0,0,goal_reached
+106,26,fr_071353_q00069,green_clock,green clock,15.454267427187329,415,1,1,0.469889258560001,0,0,goal_reached
+107,26,fr_071353_q00218,green_and_pink_leafblower,green and pink leafblower,20.41888400905931,165,1,1,0.40377260242418334,0,0,goal_reached
+108,26,fr_071353_q00161,green_and_pink_leafblower,green and pink leafblower,-1277.6469147810305,670,0,0,2.2376358349234864,0,0,timeout
+109,27,fr_071353_q00128,green_and_pink_leafblower,green and pink leafblower,-21.939713234493766,670,0,0,0.16055827439553366,0,0,timeout
+110,27,fr_071353_q00102,green_clock,green clock,26.255651516487774,224,1,1,0.18982526754480405,0,0,goal_reached
+111,27,fr_071353_q00215,green_and_pink_leafblower,green and pink leafblower,-20.166266142017555,670,0,0,0.0981980521605679,0,0,timeout
+112,27,fr_071353_q00137,green_and_pink_leafblower,green and pink leafblower,-1757.4153817198462,670,0,0,2.2464408863215155,0,0,timeout
+113,28,fr_071353_q00125,green_and_pink_leafblower,green and pink leafblower,22.846100633769545,187,1,1,0.24327959822952938,0,0,goal_reached
+114,28,fr_071353_q00215,green_and_pink_leafblower,green and pink leafblower,-20.52996489089044,670,0,0,0.2005803836345709,0,0,timeout
+115,28,fr_071353_q00076,green_clock,green clock,11.219519962195996,90,1,1,0.22162959139071425,0,0,goal_reached
+116,28,fr_071353_q00197,green_and_pink_leafblower,green and pink leafblower,-6.846815583397023,670,0,0,0.22256827863835427,0,0,timeout
+117,29,fr_071353_q00219,green_and_pink_leafblower,green and pink leafblower,-19.588318912860814,670,0,0,0.1534597044586351,0,0,timeout
+118,29,fr_071353_q00115,green_and_pink_leafblower,green and pink leafblower,-48.79061305064186,20,0,0,3.5256811412684383,0,1,collision
+119,29,fr_071353_q00133,green_and_pink_leafblower,green and pink leafblower,17.630210819206297,143,1,1,0.2321671681287098,0,0,goal_reached
+120,29,fr_071353_q00138,green_and_pink_leafblower,green and pink leafblower,-18.60090964085259,670,0,0,0.23326466927767173,0,0,timeout
+121,30,fr_071353_q00110,green_and_pink_leafblower,green and pink leafblower,28.70413354428564,234,1,1,0.23044307166814398,0,0,goal_reached
+122,30,fr_071353_q00125,green_and_pink_leafblower,green and pink leafblower,22.61667571210313,208,1,1,0.25657986584113673,0,0,goal_reached
+123,30,fr_071353_q00217,green_and_pink_leafblower,green and pink leafblower,-14.079207526475031,670,0,0,0.2546233490982293,0,0,timeout
+124,30,fr_071353_q00219,green_and_pink_leafblower,green and pink leafblower,-21.646627745039005,670,0,0,0.33014923781866456,0,0,timeout
+125,31,fr_071353_q00076,green_clock,green clock,11.341963759015318,91,1,1,0.22892309508877481,0,0,goal_reached
+126,31,fr_071353_q00109,green_clock,green clock,9.790263185617775,88,1,1,0.45502084046989727,0,0,goal_reached
+127,31,fr_071353_q00021,green_clock,green clock,10.666223291555912,94,1,1,0.36831467229263504,0,0,goal_reached
+128,31,fr_071353_q00051,green_clock,green clock,24.041509023788308,186,1,1,0.28680125222560404,0,0,goal_reached
+129,32,fr_071353_q00153,green_and_pink_leafblower,green and pink leafblower,-18.535571722316398,670,0,0,0.4323273183357426,0,0,timeout
+130,32,fr_071353_q00139,green_and_pink_leafblower,green and pink leafblower,13.811221180817004,130,1,1,0.17699608537971767,0,0,goal_reached
+131,32,fr_071353_q00109,green_clock,green clock,9.641194089801242,88,1,1,0.46581225852714114,0,0,goal_reached
+132,32,fr_071353_q00148,green_and_pink_leafblower,green and pink leafblower,-754.2749546742853,670,0,0,2.2039295282440654,0,0,timeout
+133,33,fr_071353_q00155,green_and_pink_leafblower,green and pink leafblower,-3.094278520989519,670,0,0,0.052127428307632194,0,0,timeout
+134,33,fr_071353_q00008,green_clock,green clock,9.890066556666987,73,1,1,0.33192391631622287,0,0,goal_reached
+135,33,fr_071353_q00069,green_clock,green clock,-12.695406400579795,670,0,0,0.2839936698579004,0,0,timeout
+136,33,fr_071353_q00198,green_and_pink_leafblower,green and pink leafblower,-9.106220461314493,670,0,0,0.3566764418024912,0,0,timeout
+137,34,fr_071353_q00139,green_and_pink_leafblower,green and pink leafblower,-17.732207875891085,670,0,0,0.21463677758339003,0,0,timeout
+138,34,fr_071353_q00155,green_and_pink_leafblower,green and pink leafblower,-2.7898674788991755,670,0,0,0.0341264722701914,0,0,timeout
+139,34,fr_071353_q00138,green_and_pink_leafblower,green and pink leafblower,-19.769367128427454,670,0,0,0.15791320556001173,0,0,timeout
+140,34,fr_071353_q00069,green_clock,green clock,16.771614795887466,327,1,1,0.42237053672928176,0,0,goal_reached
+141,35,fr_071353_q00088,green_clock,green clock,-14.687351611844038,670,0,0,0.1822028314270662,0,0,timeout
+142,35,fr_071353_q00218,green_and_pink_leafblower,green and pink leafblower,-2208.051983097007,670,0,0,3.1732788812497823,0,0,timeout
+143,35,fr_071353_q00006,green_clock,green clock,-20.44835801930909,670,0,0,0.20913258195396076,0,0,timeout
+144,35,fr_071353_q00128,green_and_pink_leafblower,green and pink leafblower,-25.562595295558527,670,0,0,0.43354746859637777,0,0,timeout
+145,36,fr_071353_q00027,green_clock,green clock,16.962093803262253,145,1,1,0.36223136940573475,0,0,goal_reached
+146,36,fr_071353_q00197,green_and_pink_leafblower,green and pink leafblower,-7.993966474636785,670,0,0,0.09029431359846243,0,0,timeout
+147,36,fr_071353_q00199,green_and_pink_leafblower,green and pink leafblower,-47.32347917700506,25,0,0,2.1879649313575764,0,1,collision
+148,36,fr_071353_q00119,green_and_pink_leafblower,green and pink leafblower,-23.206126662883623,670,0,0,0.2832693869053127,0,0,timeout
+149,37,fr_071353_q00036,green_clock,green clock,11.825881870420133,633,1,1,0.4214247083828932,0,0,goal_reached
+150,37,fr_071353_q00026,green_clock,green clock,14.410098564119822,286,1,1,0.44110207432042964,0,0,goal_reached
+151,37,fr_071353_q00155,green_and_pink_leafblower,green and pink leafblower,-2.0627256660667435,670,0,0,0.2987646450812417,0,0,timeout
+152,37,fr_071353_q00217,green_and_pink_leafblower,green and pink leafblower,-10.625068848070827,670,0,0,0.1042268243862764,0,0,timeout
+153,38,fr_071353_q00102,green_clock,green clock,27.752833825995666,262,1,1,0.17640295762928979,0,0,goal_reached
+154,38,fr_071353_q00076,green_clock,green clock,11.192432177324974,91,1,1,0.24739766434978458,0,0,goal_reached
+155,38,fr_071353_q00199,green_and_pink_leafblower,green and pink leafblower,-47.353139727694774,25,0,0,2.191573523517135,0,1,collision
+156,38,fr_071353_q00001,green_clock,green clock,-47.996454854853525,372,0,0,1.965300515112925,0,1,collision
+157,39,fr_071353_q00217,green_and_pink_leafblower,green and pink leafblower,-13.331823030370375,670,0,0,0.22590096788374445,0,0,timeout
+158,39,fr_071353_q00115,green_and_pink_leafblower,green and pink leafblower,-49.0002067927374,19,0,0,3.5817041048223217,0,1,collision
+159,39,fr_071353_q00215,green_and_pink_leafblower,green and pink leafblower,-20.996383019039815,670,0,0,0.1782978483980603,0,0,timeout
+160,39,fr_071353_q00161,green_and_pink_leafblower,green and pink leafblower,-2265.307334215565,670,0,0,2.7062317908976454,0,0,timeout
+161,40,fr_071353_q00110,green_and_pink_leafblower,green and pink leafblower,28.326119060596987,255,1,1,0.2635441729568886,0,0,goal_reached
+162,40,fr_071353_q00021,green_clock,green clock,10.2884572730411,94,1,1,0.37648554806242107,0,0,goal_reached
+163,40,fr_071353_q00119,green_and_pink_leafblower,green and pink leafblower,-21.136671746637937,670,0,0,0.13858470415547705,0,0,timeout
+164,40,fr_071353_q00197,green_and_pink_leafblower,green and pink leafblower,-7.277289445805705,670,0,0,0.23884057233798325,0,0,timeout
+165,41,fr_071353_q00199,green_and_pink_leafblower,green and pink leafblower,-47.289193510217,26,0,0,2.165498674405169,0,1,collision
+166,41,fr_071353_q00043,green_clock,green clock,24.977826016113568,196,1,1,0.3381533072254974,0,0,goal_reached
+167,41,fr_071353_q00153,green_and_pink_leafblower,green and pink leafblower,-16.34405488481773,670,0,0,0.2330070556610199,0,0,timeout
+168,41,fr_071353_q00125,green_and_pink_leafblower,green and pink leafblower,23.21174167123837,191,1,1,0.22259942458334445,0,0,goal_reached
+169,42,fr_071353_q00051,green_clock,green clock,25.575593605012216,191,1,1,0.2820758794008722,0,0,goal_reached
+170,42,fr_071353_q00008,green_clock,green clock,9.165762436708022,73,1,1,0.29755538299716644,0,0,goal_reached
+171,42,fr_071353_q00196,green_and_pink_leafblower,green and pink leafblower,-1288.6745667650314,670,0,0,2.3247295989069814,0,0,timeout
+172,42,fr_071353_q00217,green_and_pink_leafblower,green and pink leafblower,-13.421133491982477,670,0,0,0.2501472070520417,0,0,timeout
+173,43,fr_071353_q00138,green_and_pink_leafblower,green and pink leafblower,-18.491794821862683,670,0,0,0.2389976489181946,0,0,timeout
+174,43,fr_071353_q00219,green_and_pink_leafblower,green and pink leafblower,-19.983171992490057,670,0,0,0.11552126745496485,0,0,timeout
+175,43,fr_071353_q00199,green_and_pink_leafblower,green and pink leafblower,-47.357041698687375,25,0,0,2.195283178280153,0,1,collision
+176,43,fr_071353_q00133,green_and_pink_leafblower,green and pink leafblower,-11.655647784843053,670,0,0,0.08154600503721879,0,0,timeout
+177,44,fr_071353_q00069,green_clock,green clock,15.2282874431049,311,1,1,0.30824459831941775,0,0,goal_reached
+178,44,fr_071353_q00218,green_and_pink_leafblower,green and pink leafblower,20.44045237271605,165,1,1,0.3995136438417547,0,0,goal_reached
+179,44,fr_071353_q00119,green_and_pink_leafblower,green and pink leafblower,-21.53408980211539,670,0,0,0.12824466525955652,0,0,timeout
+180,44,fr_071353_q00153,green_and_pink_leafblower,green and pink leafblower,-16.349484576140544,670,0,0,0.1134175171346551,0,0,timeout
+181,45,fr_071353_q00036,green_clock,green clock,15.813199519307814,293,1,1,0.015425966430896632,0,0,goal_reached
+182,45,fr_071353_q00219,green_and_pink_leafblower,green and pink leafblower,-20.655925070515007,670,0,0,0.16095506587289443,0,0,timeout
+183,45,fr_071353_q00027,green_clock,green clock,17.42448916066312,146,1,1,0.3336450143927498,0,0,goal_reached
+184,45,fr_071353_q00076,green_clock,green clock,11.156367858953342,91,1,1,0.24637979097277307,0,0,goal_reached
+185,46,fr_071353_q00217,green_and_pink_leafblower,green and pink leafblower,-13.515489354501344,670,0,0,0.2496444282622999,0,0,timeout
+186,46,fr_071353_q00155,green_and_pink_leafblower,green and pink leafblower,-2.6073497404925767,670,0,0,0.2520703486148981,0,0,timeout
+187,46,fr_071353_q00119,green_and_pink_leafblower,green and pink leafblower,-21.45291794955183,670,0,0,0.1589152822112792,0,0,timeout
+188,46,fr_071353_q00069,green_clock,green clock,-39.3644860385435,670,0,0,2.0849664849921017,0,0,timeout
+189,47,fr_071353_q00150,green_and_pink_leafblower,green and pink leafblower,25.535677919414187,209,1,1,0.2394954817908192,0,0,goal_reached
+190,47,fr_071353_q00027,green_clock,green clock,17.526438436961563,147,1,1,0.3336772100353112,0,0,goal_reached
+191,47,fr_071353_q00008,green_clock,green clock,8.940147590542484,73,1,1,0.3094606627228928,0,0,goal_reached
+192,47,fr_071353_q00026,green_clock,green clock,10.33666119609871,243,1,1,0.4370471798601184,0,0,goal_reached
+193,48,fr_071353_q00155,green_and_pink_leafblower,green and pink leafblower,-2.970931449034534,670,0,0,0.1665232587511094,0,0,timeout
+194,48,fr_071353_q00006,green_clock,green clock,12.761894454531864,300,1,1,0.45742282386704924,0,0,goal_reached
+195,48,fr_071353_q00137,green_and_pink_leafblower,green and pink leafblower,-2466.798193982347,670,0,0,3.951957561729619,0,0,timeout
+196,48,fr_071353_q00218,green_and_pink_leafblower,green and pink leafblower,20.17477414980884,163,1,1,0.40023967197095145,0,0,goal_reached
+197,49,fr_071353_q00137,green_and_pink_leafblower,green and pink leafblower,-1736.370089313575,670,0,0,2.374863361795042,0,0,timeout
+198,49,fr_071353_q00199,green_and_pink_leafblower,green and pink leafblower,-47.34939528136594,25,0,0,2.195687613691911,0,1,collision
+199,49,fr_071353_q00069,green_clock,green clock,17.53339615814385,410,1,1,0.05897228945588851,0,0,goal_reached
+200,49,fr_071353_q00026,green_clock,green clock,13.423144675713866,268,1,1,0.4243758141178084,0,0,goal_reached
+201,50,fr_071353_q00001,green_clock,green clock,19.520698285235095,643,1,1,0.20745681318838335,0,0,goal_reached
+202,50,fr_071353_q00133,green_and_pink_leafblower,green and pink leafblower,17.68125486354381,143,1,1,0.22420462691047474,0,0,goal_reached
+203,50,fr_071353_q00027,green_clock,green clock,17.038659203619858,145,1,1,0.35435721683369253,0,0,goal_reached
+204,50,fr_071353_q00070,green_clock,green clock,15.748733476104075,147,1,1,0.4468719235844982,0,0,goal_reached
+205,51,fr_071353_q00215,green_and_pink_leafblower,green and pink leafblower,-21.163758380632178,670,0,0,0.24587433124886302,0,0,timeout
+206,51,fr_071353_q00006,green_clock,green clock,5.413243942078584,266,1,1,0.4803567811914684,0,0,goal_reached
+207,51,fr_071353_q00198,green_and_pink_leafblower,green and pink leafblower,-7.648708144387717,670,0,0,0.3486972377326179,0,0,timeout
+208,51,fr_071353_q00115,green_and_pink_leafblower,green and pink leafblower,-48.64829210655381,21,0,0,3.5002428995106865,0,1,collision
+209,52,fr_071353_q00187,green_and_pink_leafblower,green and pink leafblower,-4.646394332944752,670,0,0,0.2418413747231317,0,0,timeout
+210,52,fr_071353_q00218,green_and_pink_leafblower,green and pink leafblower,20.397925730681074,162,1,1,0.3917857279277735,0,0,goal_reached
+211,52,fr_071353_q00125,green_and_pink_leafblower,green and pink leafblower,23.13978564079316,188,1,1,0.21545388611613386,0,0,goal_reached
+212,52,fr_071353_q00001,green_clock,green clock,24.884467963412334,344,1,1,0.3542315272426411,0,0,goal_reached
+213,53,fr_071353_q00008,green_clock,green clock,8.760041231694661,73,1,1,0.30391284055803636,0,0,goal_reached
+214,53,fr_071353_q00161,green_and_pink_leafblower,green and pink leafblower,-2050.8034503080225,670,0,0,2.3898546996762375,0,0,timeout
+215,53,fr_071353_q00027,green_clock,green clock,16.13438311403042,144,1,1,0.3764291836525671,0,0,goal_reached
+216,53,fr_071353_q00069,green_clock,green clock,14.384878039095675,568,1,1,0.38904242079078744,0,0,goal_reached
+217,54,fr_071353_q00115,green_and_pink_leafblower,green and pink leafblower,-13.074727375347905,670,0,0,0.16045460492035543,0,0,timeout
+218,54,fr_071353_q00187,green_and_pink_leafblower,green and pink leafblower,-4.030787237191527,670,0,0,0.20774637364145299,0,0,timeout
+219,54,fr_071353_q00139,green_and_pink_leafblower,green and pink leafblower,14.218431162141794,119,1,1,0.20929430555170525,0,0,goal_reached
+220,54,fr_071353_q00021,green_clock,green clock,9.662872098610478,94,1,1,0.4220674865177698,0,0,goal_reached
+221,55,fr_071353_q00211,green_and_pink_leafblower,green and pink leafblower,-3.786421458051141,670,0,0,0.12272651582420892,0,0,timeout
+222,55,fr_071353_q00008,green_clock,green clock,8.838454030334894,73,1,1,0.3020973168420081,0,0,goal_reached
+223,55,fr_071353_q00217,green_and_pink_leafblower,green and pink leafblower,-13.527270120928012,670,0,0,0.14450564615289774,0,0,timeout
+224,55,fr_071353_q00021,green_clock,green clock,9.696190064180886,93,1,1,0.40717599710064784,0,0,goal_reached
+225,56,fr_071353_q00199,green_and_pink_leafblower,green and pink leafblower,-47.35893450948693,25,0,0,2.187604378403419,0,1,collision
+226,56,fr_071353_q00115,green_and_pink_leafblower,green and pink leafblower,-48.451449553439396,23,0,0,3.432833888951737,0,1,collision
+227,56,fr_071353_q00070,green_clock,green clock,18.747933275890926,271,1,1,0.3681475088935389,0,0,goal_reached
+228,56,fr_071353_q00196,green_and_pink_leafblower,green and pink leafblower,-1687.7569100333628,670,0,0,2.3676077291578816,0,0,timeout
+229,57,fr_071353_q00199,green_and_pink_leafblower,green and pink leafblower,-17.61904885108252,670,0,0,0.24663602469676787,0,0,timeout
+230,57,fr_071353_q00138,green_and_pink_leafblower,green and pink leafblower,-19.444748053860305,670,0,0,0.39237680467933245,0,0,timeout
+231,57,fr_071353_q00139,green_and_pink_leafblower,green and pink leafblower,13.986427683134815,118,1,1,0.20033512015308136,0,0,goal_reached
+232,57,fr_071353_q00148,green_and_pink_leafblower,green and pink leafblower,-9.654742016697142,670,0,0,0.25343255827100036,0,0,timeout
+233,58,fr_071353_q00076,green_clock,green clock,11.311613321485066,91,1,1,0.214382210059087,0,0,goal_reached
+234,58,fr_071353_q00125,green_and_pink_leafblower,green and pink leafblower,22.23648622587512,207,1,1,0.2864457070735191,0,0,goal_reached
+235,58,fr_071353_q00036,green_clock,green clock,-16.76225644265791,670,0,0,0.37743068107067507,0,0,timeout
+236,58,fr_071353_q00021,green_clock,green clock,10.268527405875897,93,1,1,0.37020275131367275,0,0,goal_reached
+237,59,fr_071353_q00006,green_clock,green clock,2.2881206977188366,606,1,1,0.37413333738812965,0,0,goal_reached
+238,59,fr_071353_q00211,green_and_pink_leafblower,green and pink leafblower,26.39905181782971,255,1,1,0.16569029956754308,0,0,goal_reached
+239,59,fr_071353_q00021,green_clock,green clock,10.005359940523189,93,1,1,0.38266992220718343,0,0,goal_reached
+240,59,fr_071353_q00199,green_and_pink_leafblower,green and pink leafblower,-47.20298883885626,26,0,0,2.1232667917717145,0,1,collision
+241,60,fr_071353_q00153,green_and_pink_leafblower,green and pink leafblower,-15.411605167847524,670,0,0,0.1258412619166087,0,0,timeout
+242,60,fr_071353_q00076,green_clock,green clock,11.273763461554978,91,1,1,0.21527617371763783,0,0,goal_reached
+243,60,fr_071353_q00219,green_and_pink_leafblower,green and pink leafblower,-19.814191926750965,670,0,0,0.1616215345970737,0,0,timeout
+244,60,fr_071353_q00211,green_and_pink_leafblower,green and pink leafblower,-3.6482985225768374,670,0,0,0.22548292687693913,0,0,timeout
+245,61,fr_071353_q00155,green_and_pink_leafblower,green and pink leafblower,-2.981216190060781,670,0,0,0.18054700765524073,0,0,timeout
+246,61,fr_071353_q00219,green_and_pink_leafblower,green and pink leafblower,-20.982726238041227,670,0,0,0.15719468056604285,0,0,timeout
+247,61,fr_071353_q00043,green_clock,green clock,24.807962501335975,194,1,1,0.3521014969658252,0,0,goal_reached
+248,61,fr_071353_q00021,green_clock,green clock,10.048395930270217,95,1,1,0.4293089485636171,0,0,goal_reached
+249,62,fr_071353_q00001,green_clock,green clock,19.60443403535536,432,1,1,0.2451772844694932,0,0,goal_reached
+250,62,fr_071353_q00211,green_and_pink_leafblower,green and pink leafblower,24.317225225979534,226,1,1,0.26328311104321195,0,0,goal_reached
+251,62,fr_071353_q00051,green_clock,green clock,23.646618665426374,186,1,1,0.2893563587571382,0,0,goal_reached
+252,62,fr_071353_q00128,green_and_pink_leafblower,green and pink leafblower,-24.39399856918064,670,0,0,0.41663902301772493,0,0,timeout
+253,63,fr_071353_q00070,green_clock,green clock,15.793680913358585,147,1,1,0.44775211680985594,0,0,goal_reached
+254,63,fr_071353_q00153,green_and_pink_leafblower,green and pink leafblower,-17.343863278364868,670,0,0,0.2390654899638537,0,0,timeout
+255,63,fr_071353_q00198,green_and_pink_leafblower,green and pink leafblower,-7.988723080381645,670,0,0,0.35414730395790384,0,0,timeout
+256,63,fr_071353_q00115,green_and_pink_leafblower,green and pink leafblower,-48.92882431183181,20,0,0,3.5542476515833794,0,1,collision
+257,64,fr_071353_q00001,green_clock,green clock,-44.52909078758477,375,0,0,1.8903523763483217,0,1,collision
+258,64,fr_071353_q00026,green_clock,green clock,20.07901675359193,524,1,1,0.4529046480119675,0,0,goal_reached
+259,64,fr_071353_q00088,green_clock,green clock,10.261233430068474,370,1,1,0.45014279081817365,0,0,goal_reached
+260,64,fr_071353_q00139,green_and_pink_leafblower,green and pink leafblower,-16.676404244024333,670,0,0,0.36026030226633804,0,0,timeout
+261,65,fr_071353_q00198,green_and_pink_leafblower,green and pink leafblower,-6.735924176893047,670,0,0,0.39315647284808763,0,0,timeout
+262,65,fr_071353_q00155,green_and_pink_leafblower,green and pink leafblower,-1.3827790303305676,670,0,0,0.1331168120883322,0,0,timeout
+263,65,fr_071353_q00051,green_clock,green clock,26.06534552043775,195,1,1,0.240888116019058,0,0,goal_reached
+264,65,fr_071353_q00199,green_and_pink_leafblower,green and pink leafblower,-47.31534200849142,25,0,0,2.190048543289155,0,1,collision
+265,66,fr_071353_q00069,green_clock,green clock,-9.04097051749575,670,0,0,0.41967543138274827,0,0,timeout
+266,66,fr_071353_q00211,green_and_pink_leafblower,green and pink leafblower,25.494743920434416,214,1,1,0.2202439692205818,0,0,goal_reached
+267,66,fr_071353_q00217,green_and_pink_leafblower,green and pink leafblower,15.60407786538991,153,1,1,0.23587050161443293,0,0,goal_reached
+268,66,fr_071353_q00076,green_clock,green clock,11.542952565060293,95,1,1,0.2239811897466322,0,0,goal_reached
+269,67,fr_071353_q00198,green_and_pink_leafblower,green and pink leafblower,23.15608666913917,173,1,1,0.1696911650225468,0,0,goal_reached
+270,67,fr_071353_q00115,green_and_pink_leafblower,green and pink leafblower,-13.430749504793972,670,0,0,0.4086260426264161,0,0,timeout
+271,67,fr_071353_q00219,green_and_pink_leafblower,green and pink leafblower,-20.017748868647477,670,0,0,0.2911999350886941,0,0,timeout
+272,67,fr_071353_q00070,green_clock,green clock,-64.46777770933934,460,0,0,2.0341828298705784,0,1,collision
+273,68,fr_071353_q00138,green_and_pink_leafblower,green and pink leafblower,-18.98521493089384,670,0,0,0.31867378890318643,0,0,timeout
+274,68,fr_071353_q00137,green_and_pink_leafblower,green and pink leafblower,-1845.5155629442522,670,0,0,2.411337731452676,0,0,timeout
+275,68,fr_071353_q00148,green_and_pink_leafblower,green and pink leafblower,-1494.3859911557706,670,0,0,2.4169918249396085,0,0,timeout
+276,68,fr_071353_q00133,green_and_pink_leafblower,green and pink leafblower,17.875048717044614,148,1,1,0.22906762797566232,0,0,goal_reached
+277,69,fr_071353_q00215,green_and_pink_leafblower,green and pink leafblower,-20.977266157950563,670,0,0,0.15122734760836717,0,0,timeout
+278,69,fr_071353_q00088,green_clock,green clock,-13.008999242475662,670,0,0,0.1757939134326322,0,0,timeout
+279,69,fr_071353_q00153,green_and_pink_leafblower,green and pink leafblower,-16.608533160596185,670,0,0,0.2733269329128119,0,0,timeout
+280,69,fr_071353_q00008,green_clock,green clock,10.47056604649627,75,1,1,0.1585200946874819,0,0,goal_reached
+281,70,fr_071353_q00197,green_and_pink_leafblower,green and pink leafblower,20.95466114742624,219,1,1,0.40282675411985264,0,0,goal_reached
+282,70,fr_071353_q00088,green_clock,green clock,-58.84142512512919,670,0,0,1.7919020393085205,0,1,collision
+283,70,fr_071353_q00150,green_and_pink_leafblower,green and pink leafblower,23.921222801459088,238,1,1,0.4428713121484934,0,0,goal_reached
+284,70,fr_071353_q00051,green_clock,green clock,24.20080712432104,195,1,1,0.3649422379683221,0,0,goal_reached
+285,71,fr_071353_q00197,green_and_pink_leafblower,green and pink leafblower,20.57503801038674,218,1,1,0.44133032609695705,0,0,goal_reached
+286,71,fr_071353_q00128,green_and_pink_leafblower,green and pink leafblower,-23.60931844515897,670,0,0,0.393626603396051,0,0,timeout
+287,71,fr_071353_q00219,green_and_pink_leafblower,green and pink leafblower,-20.011982707961987,670,0,0,0.22216822093633135,0,0,timeout
+288,71,fr_071353_q00070,green_clock,green clock,16.862324684479418,591,1,1,0.3806824174979853,0,0,goal_reached
+289,72,fr_071353_q00199,green_and_pink_leafblower,green and pink leafblower,-47.38183471908351,24,0,0,2.221994230725979,0,1,collision
+290,72,fr_071353_q00070,green_clock,green clock,-7.785765465049458,670,0,0,0.28048362347993344,0,0,timeout
+291,72,fr_071353_q00137,green_and_pink_leafblower,green and pink leafblower,-2019.1114010769609,670,0,0,3.3539852143153825,0,0,timeout
+292,72,fr_071353_q00125,green_and_pink_leafblower,green and pink leafblower,21.008326445964027,206,1,1,0.4426204583935836,0,0,goal_reached
+293,73,fr_071353_q00026,green_clock,green clock,13.630748686343765,287,1,1,0.31458756639403546,0,0,goal_reached
+294,73,fr_071353_q00008,green_clock,green clock,8.91712129810642,76,1,1,0.29793578949176447,0,0,goal_reached
+295,73,fr_071353_q00021,green_clock,green clock,11.114909210438103,112,1,1,0.2754100937393442,0,0,goal_reached
+296,73,fr_071353_q00174,green_and_pink_leafblower,green and pink leafblower,13.739110164273884,149,1,1,0.44342036584204275,0,0,goal_reached
+297,74,fr_071353_q00076,green_clock,green clock,12.833731203473217,98,1,1,0.1117780348372949,0,0,goal_reached
+298,74,fr_071353_q00197,green_and_pink_leafblower,green and pink leafblower,20.112721039122906,212,1,1,0.4587073535346602,0,0,goal_reached
+299,74,fr_071353_q00110,green_and_pink_leafblower,green and pink leafblower,-21.083697947453956,670,0,0,1.2914491442425076,0,0,timeout
+300,74,fr_071353_q00219,green_and_pink_leafblower,green and pink leafblower,-19.372581192926905,670,0,0,0.36206312819230513,0,0,timeout

@@ -1,0 +1,587 @@
+global_episode,iteration,rollout_name,semantic_target,course,return,steps,success,goal_settled,final_pos_err_m,start_idx,collision,termination
+1,0,fr_071353_q162,green_and_pink_leafblower,green and pink leafblower,24.938868668761362,192,1,1,0.2785557809782937,0,0,goal_reached
+2,0,fr_071718_q009,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-49.08062015052713,23,0,0,2.1842265858978815,0,1,collision
+3,0,fr_071353_q027,green_clock,green clock,18.37823848653231,231,1,1,0.3961153921428655,0,0,goal_reached
+4,0,fr_071718_q126,human_mannequin,human mannequin,12.761528415478624,110,1,1,0.4609881045635651,0,0,goal_reached
+5,1,fr_071718_q072,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,7.301550631293268,75,1,1,0.4410017314799168,0,0,goal_reached
+6,1,fr_071718_q063,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,25.448871213252602,354,1,1,0.48570389082982207,0,0,goal_reached
+7,1,fr_071718_q018,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,12.412813629606774,129,1,1,0.40787530351838974,0,0,goal_reached
+8,1,fr_071353_q189,green_and_pink_leafblower,green and pink leafblower,-41.380946529350595,79,0,0,2.0299825001992065,0,1,collision
+9,2,fr_071353_q207,green_and_pink_leafblower,green and pink leafblower,23.51601431801648,207,1,1,0.1738377004942176,0,0,goal_reached
+10,2,fr_071718_q108,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,28.427565009229028,264,1,1,0.37050220939633133,0,0,goal_reached
+11,2,fr_071718_q207,human_mannequin,human mannequin,39.90456207867482,312,1,1,0.46462695977430896,0,0,goal_reached
+12,2,fr_071353_q216,green_and_pink_leafblower,green and pink leafblower,-9.040654302263212,670,0,0,0.21759695752656574,0,0,timeout
+13,3,fr_071353_q018,green_clock,green clock,8.746894376329774,85,1,1,0.43946961109225213,0,0,goal_reached
+14,3,fr_071353_q171,green_and_pink_leafblower,green and pink leafblower,14.27117836101653,128,1,1,0.4151561420746078,0,0,goal_reached
+15,3,fr_071718_q162,human_mannequin,human mannequin,30.00367757435057,670,0,0,1.508551986226166,0,0,timeout
+16,3,fr_071718_q090,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,25.116373727455596,219,1,1,0.43252280610589317,0,0,goal_reached
+17,4,fr_071718_q180,human_mannequin,human mannequin,-41.31046334221823,81,0,0,6.559778738592401,0,1,collision
+18,4,fr_071718_q162,human_mannequin,human mannequin,36.64276731849698,290,1,1,0.42400279747115427,0,0,goal_reached
+19,4,fr_071353_q153,green_and_pink_leafblower,green and pink leafblower,-15.791528973288393,670,0,0,0.19901755426420129,0,0,timeout
+20,4,fr_071353_q054,green_clock,green clock,32.56155846429974,276,1,1,0.36433701386623885,0,0,goal_reached
+21,5,fr_071353_q063,green_clock,green clock,20.28389432605313,240,1,1,0.3935240443710335,0,0,goal_reached
+22,5,fr_071718_q027,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,24.393283329755313,218,1,1,0.4744795328506988,0,0,goal_reached
+23,5,fr_071718_q063,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,24.890330065191865,228,1,1,0.3760840054947133,0,0,goal_reached
+24,5,fr_071353_q036,green_clock,green clock,-20.576362972027866,670,0,0,0.47951578506617487,0,0,timeout
+25,6,fr_071353_q171,green_and_pink_leafblower,green and pink leafblower,14.08391466184204,128,1,1,0.42469075507163917,0,0,goal_reached
+26,6,fr_071718_q135,human_mannequin,human mannequin,13.336417179821506,115,1,1,0.3996568813532343,0,0,goal_reached
+27,6,fr_071718_q018,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,14.410331915043567,136,1,1,0.2049763172727633,0,0,goal_reached
+28,6,fr_071718_q117,human_mannequin,human mannequin,31.461735481564578,670,0,0,2.0073403528836793,0,0,timeout
+29,7,fr_071718_q198,human_mannequin,human mannequin,29.42659799978444,670,0,0,0.33924392306405626,0,0,timeout
+30,7,fr_071718_q090,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,24.037544545825963,220,1,1,0.47832410673836284,0,0,goal_reached
+31,7,fr_071353_q189,green_and_pink_leafblower,green and pink leafblower,-41.44012944089587,79,0,0,2.087080067475902,0,1,collision
+32,7,fr_071353_q009,green_clock,green clock,21.27481372290748,350,1,1,0.17099230643323526,0,0,goal_reached
+33,8,fr_071353_q027,green_clock,green clock,15.041985137271698,322,1,1,0.35603946728598,0,0,goal_reached
+34,8,fr_071353_q090,green_clock,green clock,27.015788685050172,217,1,1,0.46322195011059336,0,0,goal_reached
+35,8,fr_071353_q108,green_clock,green clock,22.83442780054066,207,1,1,0.35511466992748725,0,0,goal_reached
+36,8,fr_071718_q072,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,6.648916599192205,75,1,1,0.4864614394099389,0,0,goal_reached
+37,9,fr_071353_q072,green_clock,green clock,24.297309636676818,210,1,1,0.3081382867891412,0,0,goal_reached
+38,9,fr_071718_q198,human_mannequin,human mannequin,31.70863334950895,247,1,1,0.4729194083844537,0,0,goal_reached
+39,9,fr_071718_q027,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,24.2459757490373,218,1,1,0.4990730995622287,0,0,goal_reached
+40,9,fr_071718_q009,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-49.300630649559835,23,0,0,2.2362687522391202,0,1,collision
+41,10,fr_071718_q099,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,18.043774288124048,178,1,1,0.43973397118469226,0,0,goal_reached
+42,10,fr_071353_q153,green_and_pink_leafblower,green and pink leafblower,-16.420251211603016,670,0,0,0.2871305024579493,0,0,timeout
+43,10,fr_071353_q135,green_and_pink_leafblower,green and pink leafblower,5.510433098225114,60,1,1,0.4445258188275783,0,0,goal_reached
+44,10,fr_071718_q180,human_mannequin,human mannequin,-41.25804076741554,80,0,0,6.546000540561117,0,1,collision
+45,11,fr_071353_q090,green_clock,green clock,27.80336878575313,216,1,1,0.39235174770570874,0,0,goal_reached
+46,11,fr_071353_q189,green_and_pink_leafblower,green and pink leafblower,-41.3957206097022,79,0,0,2.0643299406064464,0,1,collision
+47,11,fr_071718_q054,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,9.002466303123773,90,1,1,0.4994677043160572,0,0,goal_reached
+48,11,fr_071353_q126,green_and_pink_leafblower,green and pink leafblower,10.990235717731998,99,1,1,0.42237481476928584,0,0,goal_reached
+49,12,fr_071718_q045,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,7.600135892341912,79,1,1,0.46037822113802424,0,0,goal_reached
+50,12,fr_071353_q144,green_and_pink_leafblower,green and pink leafblower,23.02599125481102,179,1,1,0.2152697164000111,0,0,goal_reached
+51,12,fr_071718_q081,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-40.751364066115,87,0,0,2.2110629902401904,0,1,collision
+52,12,fr_071353_q081,green_clock,green clock,26.392459611135987,206,1,1,0.437291982422137,0,0,goal_reached
+53,13,fr_071353_q126,green_and_pink_leafblower,green and pink leafblower,10.987041654359519,99,1,1,0.43075736664642766,0,0,goal_reached
+54,13,fr_071718_q126,human_mannequin,human mannequin,13.00705752885969,110,1,1,0.41892013694424857,0,0,goal_reached
+55,13,fr_071718_q162,human_mannequin,human mannequin,36.72855903489996,294,1,1,0.46162841302047747,0,0,goal_reached
+56,13,fr_071718_q189,human_mannequin,human mannequin,16.46076300552826,140,1,1,0.4889500417625085,0,0,goal_reached
+57,14,fr_071353_q144,green_and_pink_leafblower,green and pink leafblower,23.005958610272383,179,1,1,0.22764335420737747,0,0,goal_reached
+58,14,fr_071353_q207,green_and_pink_leafblower,green and pink leafblower,23.169049925370977,181,1,1,0.3745772714046996,0,0,goal_reached
+59,14,fr_071718_q153,human_mannequin,human mannequin,7.998369771595212,95,1,1,0.2677242466448913,0,0,goal_reached
+60,14,fr_071718_q198,human_mannequin,human mannequin,32.006776272924355,247,1,1,0.44841934444558124,0,0,goal_reached
+61,15,fr_071718_q081,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,18.09501393599369,172,1,1,0.47606385380532945,0,0,goal_reached
+62,15,fr_071353_q054,green_clock,green clock,-29.44801554307476,188,0,0,2.4430329297756916,0,1,collision
+63,15,fr_071353_q063,green_clock,green clock,20.016739663906062,232,1,1,0.4060633147875129,0,0,goal_reached
+64,15,fr_071353_q000,green_clock,green clock,31.57242683698772,249,1,1,0.47494618832473756,0,0,goal_reached
+65,16,fr_071718_q207,human_mannequin,human mannequin,37.7178787374754,293,1,1,0.47807568746383633,0,0,goal_reached
+66,16,fr_071718_q135,human_mannequin,human mannequin,13.400045898728859,115,1,1,0.39738386631824824,0,0,goal_reached
+67,16,fr_071718_q090,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,25.948945652757608,246,1,1,0.43029457460820814,0,0,goal_reached
+68,16,fr_071353_q072,green_clock,green clock,24.17586650730405,213,1,1,0.2640884482517353,0,0,goal_reached
+69,17,fr_071353_q126,green_and_pink_leafblower,green and pink leafblower,11.280162380816034,99,1,1,0.3889187370265577,0,0,goal_reached
+70,17,fr_071353_q144,green_and_pink_leafblower,green and pink leafblower,23.05316433746176,179,1,1,0.23082708922020584,0,0,goal_reached
+71,17,fr_071718_q018,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,12.885367794164363,130,1,1,0.3878933860938165,0,0,goal_reached
+72,17,fr_071353_q045,green_clock,green clock,19.3560925233727,174,1,1,0.374154395840106,0,0,goal_reached
+73,18,fr_071718_q216,human_mannequin,human mannequin,31.33388137110547,244,1,1,0.4715420961142005,0,0,goal_reached
+74,18,fr_071718_q072,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,6.655184582659047,75,1,1,0.48392786072441485,0,0,goal_reached
+75,18,fr_071718_q144,human_mannequin,human mannequin,11.32868372714482,108,1,1,0.40638785875572775,0,0,goal_reached
+76,19,fr_071353_q162,green_and_pink_leafblower,green and pink leafblower,25.60185374087786,198,1,1,0.22343018139065435,0,0,goal_reached
+77,19,fr_071353_q126,green_and_pink_leafblower,green and pink leafblower,11.288269685246128,100,1,1,0.38874487791357,0,0,goal_reached
+78,19,fr_071718_q063,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,24.675320863963403,259,1,1,0.42929536691029674,0,0,goal_reached
+79,19,fr_071353_q054,green_clock,green clock,33.11912069334162,292,1,1,0.1877470811757181,0,0,goal_reached
+80,20,fr_071353_q027,green_clock,green clock,17.840197823719016,275,1,1,0.4248791018908157,0,0,goal_reached
+81,20,fr_071718_q063,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,24.697893459402295,254,1,1,0.4207790987177089,0,0,goal_reached
+82,20,fr_071718_q207,human_mannequin,human mannequin,37.86169235503547,295,1,1,0.458813265245159,0,0,goal_reached
+83,20,fr_071718_q171,human_mannequin,human mannequin,14.784417630016174,132,1,1,0.43371495270503735,0,0,goal_reached
+84,21,fr_071353_q072,green_clock,green clock,24.13983519197656,211,1,1,0.2821775931283075,0,0,goal_reached
+85,21,fr_071718_q009,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-49.40895446728352,23,0,0,2.2545899939866345,0,1,collision
+86,21,fr_071718_q108,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,28.240736562133833,262,1,1,0.4562071266221384,0,0,goal_reached
+87,21,fr_071353_q171,green_and_pink_leafblower,green and pink leafblower,13.902481501768722,126,1,1,0.41058782218463674,0,0,goal_reached
+88,22,fr_071353_q000,green_clock,green clock,33.24391881132637,271,1,1,0.31578293179127254,0,0,goal_reached
+89,22,fr_071353_q162,green_and_pink_leafblower,green and pink leafblower,25.233713963182606,196,1,1,0.27886977780835887,0,0,goal_reached
+90,22,fr_071353_q144,green_and_pink_leafblower,green and pink leafblower,22.840945781813268,178,1,1,0.27321233485788876,0,0,goal_reached
+91,22,fr_071353_q207,green_and_pink_leafblower,green and pink leafblower,23.61886361270395,180,1,1,0.2828795368485144,0,0,goal_reached
+92,23,fr_071718_q162,human_mannequin,human mannequin,37.0011002582616,294,1,1,0.44859027943644125,0,0,goal_reached
+93,23,fr_071718_q099,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,18.846460326940562,208,1,1,0.4423631294597812,0,0,goal_reached
+94,23,fr_071353_q018,green_clock,green clock,8.749965107867043,82,1,1,0.41672053426229444,0,0,goal_reached
+95,24,fr_071353_q000,green_clock,green clock,33.43147016480749,273,1,1,0.29145304471953115,0,0,goal_reached
+96,24,fr_071353_q045,green_clock,green clock,19.612551594583692,177,1,1,0.3527679259015411,0,0,goal_reached
+97,24,fr_071718_q072,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,6.697883090676727,75,1,1,0.47533288459077255,0,0,goal_reached
+98,24,fr_071353_q090,green_clock,green clock,28.629894607053803,236,1,1,0.28393276971240344,0,0,goal_reached
+99,25,fr_071718_q054,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,13.092983973910634,159,1,1,0.43013290493237005,0,0,goal_reached
+100,25,fr_071353_q135,green_and_pink_leafblower,green and pink leafblower,6.022204239408794,60,1,1,0.4246697494623727,0,0,goal_reached
+101,25,fr_071353_q090,green_clock,green clock,27.086733537574432,216,1,1,0.4406513925349489,0,0,goal_reached
+102,26,fr_071353_q027,green_clock,green clock,17.36824773013472,257,1,1,0.32586489714326045,0,0,goal_reached
+103,26,fr_071353_q198,green_and_pink_leafblower,green and pink leafblower,-7.161732934740396,670,0,0,0.352799575624791,0,0,timeout
+104,26,fr_071353_q009,green_clock,green clock,14.529910240548691,341,1,1,0.20578906121616142,0,0,goal_reached
+105,26,fr_071353_q117,green_and_pink_leafblower,green and pink leafblower,12.094334888026282,117,1,1,0.49020508877193264,0,0,goal_reached
+106,27,fr_071353_q171,green_and_pink_leafblower,green and pink leafblower,13.347624565360206,125,1,1,0.4691877591191546,0,0,goal_reached
+107,27,fr_071353_q090,green_clock,green clock,27.561182608734544,227,1,1,0.4618330442435832,0,0,goal_reached
+108,27,fr_071353_q045,green_clock,green clock,19.41474137103684,154,1,1,0.3535830472738963,0,0,goal_reached
+109,27,fr_071353_q036,green_clock,green clock,9.629080345332273,306,1,1,0.23234996232435573,0,0,goal_reached
+110,28,fr_071353_q171,green_and_pink_leafblower,green and pink leafblower,14.46072562067479,146,1,1,0.3926105511701595,0,0,goal_reached
+111,28,fr_071353_q009,green_clock,green clock,10.584193316608342,405,1,1,0.41301185374811233,0,0,goal_reached
+112,28,fr_071718_q072,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-52.001970503036006,130,0,0,0.7731190185116104,0,1,collision
+113,28,fr_071718_q009,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-49.12571434825579,22,0,0,2.2017405156446497,0,1,collision
+114,29,fr_071718_q027,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-19.44001954429788,670,0,0,2.5970387871309017,0,0,timeout
+115,29,fr_071718_q207,human_mannequin,human mannequin,-4.742158075879788,670,0,0,0.8089697313366441,0,0,timeout
+116,29,fr_071353_q072,green_clock,green clock,24.180075585959784,201,1,1,0.38051763798264704,0,0,goal_reached
+117,29,fr_071353_q171,green_and_pink_leafblower,green and pink leafblower,14.491474084697467,146,1,1,0.39922728527272805,0,0,goal_reached
+118,30,fr_071718_q000,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-2.1678291524477338,670,0,0,2.0524441350940603,0,0,timeout
+119,30,fr_071353_q189,green_and_pink_leafblower,green and pink leafblower,-41.85491170330219,76,0,0,2.2102325498888136,0,1,collision
+120,30,fr_071353_q063,green_clock,green clock,17.161076050362297,272,1,1,0.1464437715692432,0,0,goal_reached
+121,30,fr_071718_q090,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-9.801538653873312,670,0,0,2.0413812785517274,0,0,timeout
+122,31,fr_071353_q018,green_clock,green clock,10.282126044831575,116,1,1,0.3528958111759617,0,0,goal_reached
+123,31,fr_071718_q207,human_mannequin,human mannequin,12.912708034461982,670,0,0,0.55608903209103,0,0,timeout
+124,31,fr_071718_q126,human_mannequin,human mannequin,-17.093998030454124,670,0,0,0.526569929658969,0,0,timeout
+125,31,fr_071353_q198,green_and_pink_leafblower,green and pink leafblower,23.433275327952703,185,1,1,0.3277555813920094,0,0,goal_reached
+126,32,fr_071718_q009,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-48.71002540011105,22,0,0,2.114549449670373,0,1,collision
+127,32,fr_071718_q180,human_mannequin,human mannequin,-42.110667320886684,67,0,0,6.581629224015356,0,1,collision
+128,32,fr_071353_q126,green_and_pink_leafblower,green and pink leafblower,10.36776644534189,207,1,1,0.4647121370464562,0,0,goal_reached
+129,32,fr_071353_q072,green_clock,green clock,25.968685284879157,227,1,1,0.37736909408745023,0,0,goal_reached
+130,33,fr_071718_q126,human_mannequin,human mannequin,-25.440347264838515,670,0,0,0.9873846735078706,0,0,timeout
+131,33,fr_071353_q126,green_and_pink_leafblower,green and pink leafblower,9.285755577358746,232,1,1,0.4414719563932568,0,0,goal_reached
+132,33,fr_071718_q099,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-37.34011438508838,116,0,0,0.8426086344996999,0,1,collision
+133,33,fr_071353_q018,green_clock,green clock,9.978693494161917,96,1,1,0.41211509080772774,0,0,goal_reached
+134,34,fr_071718_q144,human_mannequin,human mannequin,-20.522262461449856,670,0,0,0.7179784463288602,0,0,timeout
+135,34,fr_071718_q207,human_mannequin,human mannequin,5.397350338259734,670,0,0,0.6739022604077416,0,0,timeout
+136,34,fr_071718_q153,human_mannequin,human mannequin,-29.44436687031599,670,0,0,0.7907228750263899,0,0,timeout
+137,34,fr_071718_q126,human_mannequin,human mannequin,-21.996833872883744,670,0,0,0.7315027249301341,0,0,timeout
+138,35,fr_071718_q162,human_mannequin,human mannequin,-36.449172198326394,106,0,0,7.081061322241088,0,1,collision
+139,35,fr_071718_q216,human_mannequin,human mannequin,3.981756315658192,670,0,0,0.8398408733434904,0,0,timeout
+140,35,fr_071718_q072,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-58.59167152083684,134,0,0,1.7998301610963656,0,1,collision
+141,35,fr_071718_q171,human_mannequin,human mannequin,-19.679209164335372,670,0,0,0.8274267898080633,0,0,timeout
+142,36,fr_071718_q009,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,7.947357624692309,472,1,1,0.26793438348231935,0,0,goal_reached
+143,36,fr_071718_q090,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-0.8594566359457154,670,0,0,2.392533261383352,0,0,timeout
+144,36,fr_071353_q117,green_and_pink_leafblower,green and pink leafblower,14.794969157826296,252,1,1,0.3185975952360846,0,0,goal_reached
+145,36,fr_071718_q135,human_mannequin,human mannequin,-20.332782357172754,670,0,0,0.6978537452750704,0,0,timeout
+146,37,fr_071718_q126,human_mannequin,human mannequin,-22.206754483718722,670,0,0,0.6625984858568228,0,0,timeout
+147,37,fr_071718_q045,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-1263.6199595825135,670,0,0,2.125221002679811,0,0,timeout
+148,37,fr_071718_q072,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-1118.159215352645,670,0,0,1.8192532167739526,0,0,timeout
+149,37,fr_071353_q108,green_clock,green clock,-9.269184900777654,670,0,0,2.2996703635896734,0,0,timeout
+150,38,fr_071353_q072,green_clock,green clock,31.940668167645228,292,1,1,0.06825814089921418,0,0,goal_reached
+151,38,fr_071353_q180,green_and_pink_leafblower,green and pink leafblower,20.071109189971654,170,1,1,0.2529544454547721,0,0,goal_reached
+152,38,fr_071718_q135,human_mannequin,human mannequin,-18.56425959022228,670,0,0,0.3871056319052839,0,0,timeout
+153,38,fr_071718_q180,human_mannequin,human mannequin,-43.303289140443695,62,0,0,7.069166362624672,0,1,collision
+154,39,fr_071718_q108,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-1.711494780625781,670,0,0,1.9411267474256921,0,0,timeout
+155,39,fr_071718_q216,human_mannequin,human mannequin,15.112544591254917,670,0,0,0.22597380068939488,0,0,timeout
+156,39,fr_071353_q054,green_clock,green clock,40.56686516957824,413,1,1,0.08510348806830476,0,0,goal_reached
+157,39,fr_071353_q072,green_clock,green clock,31.663539348697682,295,1,1,0.07678306540934265,0,0,goal_reached
+158,40,fr_071353_q144,green_and_pink_leafblower,green and pink leafblower,23.838336491988358,579,1,1,0.2509072718941623,0,0,goal_reached
+159,40,fr_071353_q045,green_clock,green clock,23.11453205506386,200,1,1,0.282919808432703,0,0,goal_reached
+160,40,fr_071718_q009,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-48.487443486017675,24,0,0,2.079109482833326,0,1,collision
+161,40,fr_071353_q162,green_and_pink_leafblower,green and pink leafblower,28.861681165385022,527,1,1,0.24211618316132355,0,0,goal_reached
+162,41,fr_071718_q072,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-207.75831932450177,235,0,0,2.181785401538837,0,1,collision
+163,41,fr_071353_q018,green_clock,green clock,14.281768597775876,152,1,1,0.09323148193624715,0,0,goal_reached
+164,41,fr_071718_q180,human_mannequin,human mannequin,-43.51321106954484,69,0,0,7.225994410641376,0,1,collision
+165,41,fr_071353_q081,green_clock,green clock,35.65376796907746,426,1,1,0.1032021187478648,0,0,goal_reached
+166,42,fr_071353_q063,green_clock,green clock,36.71433231190611,382,1,1,0.045097349314314514,0,0,goal_reached
+167,42,fr_071353_q171,green_and_pink_leafblower,green and pink leafblower,14.930687198685373,399,1,1,0.42155645370947953,0,0,goal_reached
+168,42,fr_071718_q027,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-3.9140935124038734,670,0,0,2.178959216447638,0,0,timeout
+169,42,fr_071353_q162,green_and_pink_leafblower,green and pink leafblower,-1.135264638874233,670,0,0,0.08842490588747737,0,0,timeout
+170,43,fr_071718_q171,human_mannequin,human mannequin,-11.061064418913016,670,0,0,0.1747764355154013,0,0,timeout
+171,43,fr_071353_q018,green_clock,green clock,-70.31985559587841,428,0,0,2.6196091245671793,0,1,collision
+172,43,fr_071718_q045,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-209.24420178001287,272,0,0,2.1885582773540944,0,1,collision
+173,43,fr_071353_q198,green_and_pink_leafblower,green and pink leafblower,23.48826183016277,162,1,1,0.35289189461992626,0,0,goal_reached
+174,44,fr_071718_q153,human_mannequin,human mannequin,-18.15172831233261,670,0,0,0.1645035367821229,0,0,timeout
+175,44,fr_071353_q135,green_and_pink_leafblower,green and pink leafblower,-3.220596859308615,588,1,1,0.4326146202694683,0,0,goal_reached
+176,44,fr_071718_q036,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-39.088409592000666,251,0,0,1.0752457087032008,0,1,collision
+177,44,fr_071718_q126,human_mannequin,human mannequin,-14.326994264938698,670,0,0,0.27077275840595916,0,0,timeout
+178,45,fr_071353_q009,green_clock,green clock,19.268648103339356,209,1,1,0.36868248878568816,0,0,goal_reached
+179,45,fr_071353_q000,green_clock,green clock,-7.344513510240402,670,0,0,2.0686693858850935,0,0,timeout
+180,45,fr_071353_q063,green_clock,green clock,-54.81097985488999,496,0,0,2.5015129641380667,0,1,collision
+181,45,fr_071718_q045,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-135.08905499930964,272,0,0,2.2216540423375415,0,1,collision
+182,46,fr_071353_q135,green_and_pink_leafblower,green and pink leafblower,-33.2315746969869,670,0,0,0.7503434489553121,0,0,timeout
+183,46,fr_071718_q153,human_mannequin,human mannequin,-20.826784539379133,670,0,0,0.20685454570587444,0,0,timeout
+184,46,fr_071353_q045,green_clock,green clock,-69.20743108132113,651,0,0,2.543236158465232,0,1,collision
+185,46,fr_071353_q144,green_and_pink_leafblower,green and pink leafblower,23.01407178515941,184,1,1,0.42184548195736754,0,0,goal_reached
+186,47,fr_071353_q009,green_clock,green clock,20.28041591765783,214,1,1,0.2276825697273518,0,0,goal_reached
+187,47,fr_071353_q081,green_clock,green clock,-7.063527154868737,670,0,0,0.13738025287428535,0,0,timeout
+188,47,fr_071718_q054,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,9.153262566490625,80,1,1,0.4375443439423531,0,0,goal_reached
+189,47,fr_071718_q171,human_mannequin,human mannequin,-10.03150602603425,670,0,0,0.1473000278703102,0,0,timeout
+190,48,fr_071353_q018,green_clock,green clock,-62.67748938220406,282,0,0,2.491848847770565,0,1,collision
+191,48,fr_071718_q171,human_mannequin,human mannequin,-13.689480331620047,670,0,0,0.2863579346868795,0,0,timeout
+192,48,fr_071718_q162,human_mannequin,human mannequin,-19.852119410697668,335,0,0,3.8125862766413925,0,1,collision
+193,48,fr_071718_q054,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,9.03462741422071,80,1,1,0.4538327077916249,0,0,goal_reached
+194,49,fr_071353_q045,green_clock,green clock,26.54619981097911,273,1,1,0.2754708751466413,0,0,goal_reached
+195,49,fr_071353_q216,green_and_pink_leafblower,green and pink leafblower,21.878839360962164,309,1,1,0.2632140432612673,0,0,goal_reached
+196,49,fr_071718_q189,human_mannequin,human mannequin,-9.177832237508982,670,0,0,0.0718773961844009,0,0,timeout
+197,49,fr_071353_q009,green_clock,green clock,20.480481295903015,213,1,1,0.1670784313595134,0,0,goal_reached
+198,50,fr_071353_q108,green_clock,green clock,-43.65875341275383,395,0,0,3.138847390449973,0,1,collision
+199,50,fr_071353_q207,green_and_pink_leafblower,green and pink leafblower,28.485031904718653,381,1,1,0.21469881816850855,0,0,goal_reached
+200,50,fr_071718_q180,human_mannequin,human mannequin,-43.792174535748714,68,0,0,7.262972049911551,0,1,collision
+201,50,fr_071353_q081,green_clock,green clock,-10.890868227039462,670,0,0,0.3614724660077732,0,0,timeout
+202,51,fr_071718_q135,human_mannequin,human mannequin,-10.962084768353446,670,0,0,0.08335902039183217,0,0,timeout
+203,51,fr_071718_q162,human_mannequin,human mannequin,-58.92371472368073,353,0,0,3.7439203039510427,0,1,collision
+204,51,fr_071718_q180,human_mannequin,human mannequin,-43.68183727874019,70,0,0,7.227939086575804,0,1,collision
+205,51,fr_071718_q045,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-163.50315223972495,216,0,0,2.217699159436088,0,1,collision
+206,52,fr_071718_q018,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-47.28671178978376,108,0,0,0.7624176216295121,0,1,collision
+207,52,fr_071353_q045,green_clock,green clock,21.40728967909643,192,1,1,0.422754447141363,0,0,goal_reached
+208,52,fr_071718_q027,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-29.200057761898993,212,0,0,1.2778873631626766,0,1,collision
+209,52,fr_071353_q054,green_clock,green clock,-9.089619957791626,670,0,0,1.4777896531671209,0,0,timeout
+210,53,fr_071718_q162,human_mannequin,human mannequin,-52.91438951196035,393,0,0,3.623387037418701,0,1,collision
+211,53,fr_071718_q009,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-48.85021518705783,25,0,0,2.143187434503733,0,1,collision
+212,53,fr_071718_q153,human_mannequin,human mannequin,-21.24993855488389,670,0,0,0.11993320153696306,0,0,timeout
+213,53,fr_071353_q054,green_clock,green clock,-18.984433447772854,670,0,0,3.177294101702194,0,0,timeout
+214,54,fr_071353_q090,green_clock,green clock,-1.6228152110148386,670,0,0,1.7750802083890906,0,0,timeout
+215,54,fr_071718_q207,human_mannequin,human mannequin,-113.27825429011764,296,0,0,5.421323758583149,0,1,collision
+216,54,fr_071353_q144,green_and_pink_leafblower,green and pink leafblower,-12.65399897416264,670,0,0,0.613578081316717,0,0,timeout
+217,54,fr_071353_q207,green_and_pink_leafblower,green and pink leafblower,-9.858690128799255,670,0,0,1.1638265681533082,0,0,timeout
+218,55,fr_071718_q180,human_mannequin,human mannequin,-42.827456309151096,76,0,0,7.155770818795596,0,1,collision
+219,55,fr_071353_q198,green_and_pink_leafblower,green and pink leafblower,22.656546537545765,151,1,1,0.3013498625627702,0,0,goal_reached
+220,55,fr_071718_q045,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-135.4481637470919,280,0,0,2.2135492248681317,0,1,collision
+221,55,fr_071718_q216,human_mannequin,human mannequin,-27.534939512498077,318,0,0,3.7205466157346367,0,1,collision
+222,56,fr_071718_q063,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,20.16560817966885,156,1,1,0.4665268951104385,0,0,goal_reached
+223,56,fr_071353_q072,green_clock,green clock,-52.65278953789396,393,0,0,2.6665940841947764,0,1,collision
+224,56,fr_071353_q018,green_clock,green clock,-67.64256952478806,356,0,0,2.763957292824047,0,1,collision
+225,56,fr_071718_q216,human_mannequin,human mannequin,-27.483826438955504,329,0,0,3.792310676967217,0,1,collision
+226,57,fr_071353_q018,green_clock,green clock,-37.760743437629856,670,0,0,2.441974948520606,0,0,timeout
+227,57,fr_071718_q027,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-24.11512074211089,403,0,0,0.6993460289703244,0,1,collision
+228,57,fr_071718_q171,human_mannequin,human mannequin,-12.568738192208782,670,0,0,0.16763134689099576,0,0,timeout
+229,58,fr_071718_q072,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-134.93734216754135,300,0,0,2.189189953026041,0,1,collision
+230,58,fr_071718_q108,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-34.69559107602154,339,0,0,0.9318194491387914,0,1,collision
+231,58,fr_071353_q144,green_and_pink_leafblower,green and pink leafblower,20.372364415270546,169,1,1,0.2602224797646847,0,0,goal_reached
+232,59,fr_071353_q000,green_clock,green clock,-360.9299666363282,548,0,0,2.784185395082707,0,1,collision
+233,59,fr_071718_q000,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-21.487854419044005,308,0,0,0.5200413397478637,0,1,collision
+234,59,fr_071718_q171,human_mannequin,human mannequin,-136.35146719189413,659,0,0,0.10018530121550022,0,1,collision
+235,60,fr_071718_q027,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-30.589077689268933,279,0,0,0.7555113918663441,0,1,collision
+236,60,fr_071353_q126,green_and_pink_leafblower,green and pink leafblower,-24.05192525956118,670,0,0,0.26950586751255423,0,0,timeout
+237,60,fr_071718_q108,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-36.013216587480336,347,0,0,0.8360001590148247,0,1,collision
+238,60,fr_071353_q108,green_clock,green clock,-29.684071883308928,670,0,0,2.215532769758629,0,0,timeout
+239,61,fr_071718_q063,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,20.42577378641264,151,1,1,0.3319357255283321,0,0,goal_reached
+240,61,fr_071718_q153,human_mannequin,human mannequin,-122.13249132106296,406,0,0,0.0410318669616256,0,1,collision
+241,61,fr_071353_q153,green_and_pink_leafblower,green and pink leafblower,13.496817982241872,203,1,1,0.3291668359777471,0,0,goal_reached
+242,61,fr_071353_q108,green_clock,green clock,27.115893942774907,440,1,1,0.17496927561103373,0,0,goal_reached
+243,62,fr_071353_q054,green_clock,green clock,-4.171091124283237,670,0,0,1.2319904979691978,0,0,timeout
+244,62,fr_071353_q072,green_clock,green clock,-17.210758438328842,670,0,0,1.3104644016080635,0,0,timeout
+245,62,fr_071353_q180,green_and_pink_leafblower,green and pink leafblower,-24.01923029358013,670,0,0,0.2341102207750086,0,0,timeout
+246,62,fr_071353_q135,green_and_pink_leafblower,green and pink leafblower,-26.218427902453268,670,0,0,0.20339353308584224,0,0,timeout
+247,63,fr_071718_q018,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,14.395899218568637,87,1,1,0.0787671811020863,0,0,goal_reached
+248,63,fr_071353_q054,green_clock,green clock,-352.7528805306124,670,0,0,2.884770383372216,0,0,timeout
+249,63,fr_071718_q171,human_mannequin,human mannequin,-138.0438753021881,592,0,0,0.04373892588030731,0,1,collision
+250,63,fr_071353_q045,green_clock,green clock,-1523.2679043025155,670,0,0,1.474635737729354,0,0,timeout
+251,64,fr_071718_q198,human_mannequin,human mannequin,-36.40206981647288,206,0,0,5.613897931327429,0,1,collision
+252,64,fr_071353_q189,green_and_pink_leafblower,green and pink leafblower,29.506449622024768,429,1,1,0.10781034044359172,0,0,goal_reached
+253,64,fr_071718_q063,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,20.144514136094156,149,1,1,0.3458017575792731,0,0,goal_reached
+254,64,fr_071353_q000,green_clock,green clock,-1203.947485222416,670,0,0,3.4431582272171517,0,0,timeout
+255,65,fr_071718_q108,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-27.991615190542788,257,0,0,0.4086390305129007,0,1,collision
+256,65,fr_071718_q018,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,14.541581236735581,89,1,1,0.13298017021921396,0,0,goal_reached
+257,65,fr_071353_q063,green_clock,green clock,-22.008627119224485,670,0,0,2.3041950847865147,0,0,timeout
+258,66,fr_071353_q180,green_and_pink_leafblower,green and pink leafblower,14.99885506287254,213,1,1,0.22271289473122938,0,0,goal_reached
+259,66,fr_071353_q036,green_clock,green clock,-131.00379724176463,472,0,0,3.0125797309118214,0,1,collision
+260,66,fr_071353_q216,green_and_pink_leafblower,green and pink leafblower,18.788613404136406,206,1,1,0.16376432327476775,0,0,goal_reached
+261,66,fr_071353_q000,green_clock,green clock,-39.60341565303493,449,0,0,1.1850143853325377,0,1,collision
+262,67,fr_071353_q189,green_and_pink_leafblower,green and pink leafblower,23.930137512374802,544,1,1,0.24437979346674793,0,0,goal_reached
+263,67,fr_071353_q018,green_clock,green clock,-52.54579268399228,529,0,0,1.5023292787107676,0,1,collision
+264,67,fr_071718_q153,human_mannequin,human mannequin,-114.517495409568,481,0,0,0.09214531551794962,0,1,collision
+265,67,fr_071718_q108,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,23.409902538235542,169,1,1,0.31785865394151797,0,0,goal_reached
+266,68,fr_071718_q207,human_mannequin,human mannequin,-377.89098784151594,312,0,0,5.175781268378466,0,1,collision
+267,68,fr_071718_q162,human_mannequin,human mannequin,-574.2078663999432,346,0,0,5.373952176055733,0,1,collision
+268,68,fr_071718_q045,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,8.965351844129035,71,1,1,0.2956652083627727,0,0,goal_reached
+269,68,fr_071353_q117,green_and_pink_leafblower,green and pink leafblower,13.658563874935815,130,1,1,0.34783527739719744,0,0,goal_reached
+270,69,fr_071353_q171,green_and_pink_leafblower,green and pink leafblower,-14.452630693926501,670,0,0,0.21612094746401725,0,0,timeout
+271,69,fr_071718_q198,human_mannequin,human mannequin,-33.94537997700121,299,0,0,5.168817939242238,0,1,collision
+272,69,fr_071353_q216,green_and_pink_leafblower,green and pink leafblower,15.857527151872883,165,1,1,0.42695635536047605,0,0,goal_reached
+273,69,fr_071353_q009,green_clock,green clock,-156.72662930159683,572,0,0,2.9666752065940805,0,1,collision
+274,70,fr_071353_q027,green_clock,green clock,-32.63191954557297,670,0,0,3.325907121383703,0,0,timeout
+275,70,fr_071353_q000,green_clock,green clock,-1264.4600677651702,670,0,0,5.049427552998836,0,0,timeout
+276,70,fr_071353_q036,green_clock,green clock,-171.55560707151028,670,0,0,5.542280717721545,0,0,timeout
+277,70,fr_071353_q207,green_and_pink_leafblower,green and pink leafblower,-1346.1640105244232,589,0,0,1.895857692108686,0,1,collision
+278,71,fr_071718_q162,human_mannequin,human mannequin,-770.6058701229024,610,0,0,5.178985833390227,0,1,collision
+279,71,fr_071353_q072,green_clock,green clock,-1201.2647396707023,670,0,0,1.5957133778248735,0,0,timeout
+280,71,fr_071353_q216,green_and_pink_leafblower,green and pink leafblower,16.21097485941755,286,1,1,0.436043193464014,0,0,goal_reached
+281,71,fr_071353_q018,green_clock,green clock,-42.01117248560108,670,0,0,2.8007197532367476,0,0,timeout
+282,72,fr_071718_q045,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,9.548385865429456,90,1,1,0.34208528836677377,0,0,goal_reached
+283,72,fr_071353_q135,green_and_pink_leafblower,green and pink leafblower,6.675088479887511,123,1,1,0.21708268196371064,0,0,goal_reached
+284,72,fr_071718_q216,human_mannequin,human mannequin,-8.99201483880948,670,0,0,4.226874153076297,0,0,timeout
+285,72,fr_071353_q216,green_and_pink_leafblower,green and pink leafblower,16.659495056501967,264,1,1,0.39555003646941295,0,0,goal_reached
+286,73,fr_071718_q009,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-47.06494501267901,35,0,0,1.638989658773715,0,1,collision
+287,73,fr_071718_q171,human_mannequin,human mannequin,-11.666127348314445,670,0,0,0.21554292651673124,0,0,timeout
+288,73,fr_071718_q099,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,17.232676758569124,163,1,1,0.29279037516941026,0,0,goal_reached
+289,73,fr_071718_q027,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,26.62031226106869,217,1,1,0.3043025504270501,0,0,goal_reached
+290,74,fr_071353_q216,green_and_pink_leafblower,green and pink leafblower,-51.3129411041419,270,0,0,1.2986887908158653,0,1,collision
+291,74,fr_071353_q063,green_clock,green clock,-322.7929531980973,670,0,0,6.491706714989558,0,0,timeout
+292,74,fr_071718_q090,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,24.49929496796486,213,1,1,0.2711587537597258,0,0,goal_reached
+293,74,fr_071718_q135,human_mannequin,human mannequin,-12.30044960927939,670,0,0,0.19695821137966268,0,0,timeout
+294,75,fr_071718_q063,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,22.183414462840588,207,1,1,0.2938219201447367,0,0,goal_reached
+295,75,fr_071353_q135,green_and_pink_leafblower,green and pink leafblower,6.3450984644323976,162,1,1,0.13480268203220705,0,0,goal_reached
+296,75,fr_071353_q162,green_and_pink_leafblower,green and pink leafblower,23.483680414111042,168,1,1,0.19189461655632573,0,0,goal_reached
+297,75,fr_071718_q054,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,10.515478145880138,130,1,1,0.26254574879080084,0,0,goal_reached
+298,76,fr_071353_q171,green_and_pink_leafblower,green and pink leafblower,-14.580453619759535,670,0,0,0.2415612469493073,0,0,timeout
+299,76,fr_071718_q216,human_mannequin,human mannequin,-34.02454508333664,352,0,0,5.049076280367815,0,1,collision
+300,76,fr_071353_q180,green_and_pink_leafblower,green and pink leafblower,-55.04358965751773,286,0,0,1.298262653080073,0,1,collision
+301,76,fr_071718_q009,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-49.17632769983529,25,0,0,2.228428853119614,0,1,collision
+302,77,fr_071718_q135,human_mannequin,human mannequin,-13.332200009892457,670,0,0,0.20611484896506316,0,0,timeout
+303,77,fr_071353_q135,green_and_pink_leafblower,green and pink leafblower,6.556220221560065,132,1,1,0.17591160532168962,0,0,goal_reached
+304,77,fr_071718_q081,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-39.00500563509368,105,0,0,2.422615655565121,0,1,collision
+305,78,fr_071353_q063,green_clock,green clock,-82.52805531413716,663,0,0,6.534092885979386,0,1,collision
+306,78,fr_071718_q135,human_mannequin,human mannequin,17.290876226747862,142,1,1,0.2595175561170517,0,0,goal_reached
+307,78,fr_071353_q135,green_and_pink_leafblower,green and pink leafblower,6.849036704283084,130,1,1,0.1462316136206655,0,0,goal_reached
+308,78,fr_071353_q117,green_and_pink_leafblower,green and pink leafblower,16.44576492492238,132,1,1,0.21541144171038587,0,0,goal_reached
+309,79,fr_071353_q207,green_and_pink_leafblower,green and pink leafblower,-30.890442751615492,162,0,0,1.8322464513275851,0,1,collision
+310,79,fr_071718_q009,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-49.22648055604802,28,0,0,2.1968469838723848,0,1,collision
+311,79,fr_071353_q090,green_clock,green clock,-1941.8096081936596,670,0,0,5.619662473099903,0,0,timeout
+312,79,fr_071718_q117,human_mannequin,human mannequin,-190.17392551283467,628,0,0,10.722831210171828,0,1,collision
+313,80,fr_071718_q027,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-29.623824236953453,670,0,0,2.5580148721184455,0,0,timeout
+314,80,fr_071718_q090,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,28.407455758979403,316,1,1,0.3765295436190229,0,0,goal_reached
+315,80,fr_071718_q054,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,11.522063071068885,157,1,1,0.3394413897820331,0,0,goal_reached
+316,80,fr_071353_q144,green_and_pink_leafblower,green and pink leafblower,21.199972231284654,220,1,1,0.16549098460761352,0,0,goal_reached
+317,81,fr_071718_q135,human_mannequin,human mannequin,-13.14471879002764,670,0,0,0.23623910568758355,0,0,timeout
+318,81,fr_071353_q000,green_clock,green clock,-1716.4921320464782,637,0,0,4.057446319429443,0,1,collision
+319,81,fr_071353_q207,green_and_pink_leafblower,green and pink leafblower,28.331271331955996,267,1,1,0.1273802207550556,0,0,goal_reached
+320,82,fr_071718_q090,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-108.48344307114263,670,0,0,2.1546203390190937,0,0,timeout
+321,82,fr_071353_q054,green_clock,green clock,-41.05558361609167,75,0,0,6.123246508543329,0,1,collision
+322,82,fr_071353_q072,green_clock,green clock,-771.0252109228912,392,0,0,2.6791261024670137,0,1,collision
+323,82,fr_071718_q144,human_mannequin,human mannequin,-14.711573619577456,670,0,0,0.14644013967762676,0,0,timeout
+324,83,fr_071718_q018,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-160.60425345232855,435,0,0,1.9641556693809283,0,1,collision
+325,83,fr_071353_q207,green_and_pink_leafblower,green and pink leafblower,28.28503229238586,269,1,1,0.15741145175248714,0,0,goal_reached
+326,83,fr_071718_q171,human_mannequin,human mannequin,-13.27813060310361,670,0,0,0.22453578328014367,0,0,timeout
+327,83,fr_071353_q018,green_clock,green clock,-1312.5131759536305,463,0,0,6.0050952727275595,0,1,collision
+328,84,fr_071353_q198,green_and_pink_leafblower,green and pink leafblower,-982.4514591898977,508,0,0,3.4443386046644147,0,1,collision
+329,84,fr_071718_q135,human_mannequin,human mannequin,-14.2355270701655,670,0,0,0.26389416205714655,0,0,timeout
+330,84,fr_071718_q153,human_mannequin,human mannequin,-20.861734201387893,670,0,0,0.20751139483324701,0,0,timeout
+331,84,fr_071353_q081,green_clock,green clock,-27.862222654075957,512,0,0,0.2720659844913638,0,1,collision
+332,85,fr_071353_q081,green_clock,green clock,-30.37340068874097,370,0,0,0.15878120372455543,0,1,collision
+333,85,fr_071353_q108,green_clock,green clock,-36.9320733327456,376,0,0,0.3552002097246883,0,1,collision
+334,85,fr_071718_q099,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-984.221392234658,496,0,0,2.440106105251931,0,1,collision
+335,85,fr_071353_q198,green_and_pink_leafblower,green and pink leafblower,-1087.5094784618339,482,0,0,3.993371963022485,0,1,collision
+336,86,fr_071718_q126,human_mannequin,human mannequin,-16.6659383514395,670,0,0,0.19926376606284676,0,0,timeout
+337,86,fr_071718_q153,human_mannequin,human mannequin,-21.566367201344313,670,0,0,0.2708307568683937,0,0,timeout
+338,86,fr_071353_q018,green_clock,green clock,-50.418024470585245,354,0,0,0.267656637088549,0,1,collision
+339,86,fr_071353_q117,green_and_pink_leafblower,green and pink leafblower,17.72085531374418,189,1,1,0.177687779340101,0,0,goal_reached
+340,87,fr_071353_q018,green_clock,green clock,-48.04945603067942,332,0,0,0.04562325666897072,0,1,collision
+341,87,fr_071718_q099,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-529.4415848117993,670,0,0,0.17358934463102005,0,0,timeout
+342,87,fr_071718_q144,human_mannequin,human mannequin,-18.651368339933295,670,0,0,0.24994238476194908,0,0,timeout
+343,87,fr_071353_q144,green_and_pink_leafblower,green and pink leafblower,-1316.4702939434815,570,0,0,3.9847904572407113,0,1,collision
+344,88,fr_071353_q063,green_clock,green clock,-33.62234204220798,376,0,0,0.10582679163814668,0,1,collision
+345,88,fr_071353_q018,green_clock,green clock,-46.96162430279209,308,0,0,0.0768900630011162,0,1,collision
+346,88,fr_071353_q000,green_clock,green clock,-22.94479553661675,573,0,0,0.1774727669698855,0,1,collision
+347,88,fr_071718_q000,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-809.346777410065,670,0,0,0.30140487076122763,0,0,timeout
+348,89,fr_071718_q207,human_mannequin,human mannequin,-37.31845870831362,106,0,0,9.087618204829523,0,1,collision
+349,89,fr_071353_q081,green_clock,green clock,23.970440200716673,224,1,1,0.42535135880928576,0,0,goal_reached
+350,89,fr_071353_q126,green_and_pink_leafblower,green and pink leafblower,-1069.7900099029237,539,0,0,5.214764132798239,0,1,collision
+351,89,fr_071718_q009,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-49.1207869902106,27,0,0,2.216462419558434,0,1,collision
+352,90,fr_071353_q144,green_and_pink_leafblower,green and pink leafblower,-1987.1665200372363,670,0,0,4.814850269715105,0,0,timeout
+353,90,fr_071718_q072,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,8.957569848750257,83,1,1,0.33182761737243893,0,0,goal_reached
+354,90,fr_071718_q126,human_mannequin,human mannequin,-18.209664646425455,670,0,0,0.28465802649269634,0,0,timeout
+355,90,fr_071718_q198,human_mannequin,human mannequin,6.236844075167831,670,0,0,3.854250607579948,0,0,timeout
+356,91,fr_071353_q180,green_and_pink_leafblower,green and pink leafblower,-2312.8413470677638,670,0,0,3.7138092276974763,0,0,timeout
+357,91,fr_071718_q054,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-1568.7771245206018,670,0,0,1.8646731249586024,0,0,timeout
+358,91,fr_071353_q198,green_and_pink_leafblower,green and pink leafblower,-1156.282822942726,499,0,0,3.6205972417437136,0,1,collision
+359,91,fr_071353_q036,green_clock,green clock,-42.37721553552178,483,0,0,0.2453236748259477,0,1,collision
+360,92,fr_071718_q072,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,8.872116519792412,82,1,1,0.3446899034403744,0,0,goal_reached
+361,92,fr_071718_q135,human_mannequin,human mannequin,-14.285860352707676,670,0,0,0.268746860259338,0,0,timeout
+362,92,fr_071353_q153,green_and_pink_leafblower,green and pink leafblower,-1743.3505457062154,517,0,0,4.970029012849711,0,1,collision
+363,93,fr_071718_q216,human_mannequin,human mannequin,-0.26918786838123765,670,0,0,3.7691723412245297,0,0,timeout
+364,93,fr_071718_q198,human_mannequin,human mannequin,-65.00828721516386,441,0,0,5.623335962128184,0,1,collision
+365,93,fr_071353_q207,green_and_pink_leafblower,green and pink leafblower,-30.91306663384528,162,0,0,1.8239541869725282,0,1,collision
+366,93,fr_071353_q162,green_and_pink_leafblower,green and pink leafblower,22.980605200916063,293,1,1,0.23811568034487532,0,0,goal_reached
+367,94,fr_071718_q126,human_mannequin,human mannequin,14.74907118298254,136,1,1,0.4421736283377228,0,0,goal_reached
+368,94,fr_071353_q198,green_and_pink_leafblower,green and pink leafblower,-1469.726398627677,531,0,0,5.715617897589229,0,1,collision
+369,94,fr_071718_q081,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-38.38985664055253,105,0,0,2.1497204047430625,0,1,collision
+370,94,fr_071353_q216,green_and_pink_leafblower,green and pink leafblower,-1591.8506783387943,516,0,0,5.670042601578129,0,1,collision
+371,95,fr_071718_q207,human_mannequin,human mannequin,4.5300854418803596,670,0,0,4.778491547141266,0,0,timeout
+372,95,fr_071353_q153,green_and_pink_leafblower,green and pink leafblower,-1548.2435378172745,479,0,0,5.43775917374904,0,1,collision
+373,95,fr_071353_q027,green_clock,green clock,-40.137167859397294,355,0,0,0.23949658098486826,0,1,collision
+374,95,fr_071718_q135,human_mannequin,human mannequin,-14.224284467777702,670,0,0,0.3317515277171785,0,0,timeout
+375,96,fr_071353_q198,green_and_pink_leafblower,green and pink leafblower,-2075.9304116668086,670,0,0,4.116126200500585,0,0,timeout
+376,96,fr_071353_q036,green_clock,green clock,-86.20847826531829,555,0,0,1.2602538695440841,0,1,collision
+377,96,fr_071718_q000,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-852.5911117290414,538,0,0,3.3071958711682297,0,1,collision
+378,96,fr_071353_q027,green_clock,green clock,-39.882310809304,381,0,0,0.29206437503555943,0,1,collision
+379,97,fr_071353_q027,green_clock,green clock,-38.86568860375824,351,0,0,0.2913044714410944,0,1,collision
+380,97,fr_071353_q189,green_and_pink_leafblower,green and pink leafblower,21.68278699886787,243,1,1,0.2586263910229227,0,0,goal_reached
+381,97,fr_071353_q198,green_and_pink_leafblower,green and pink leafblower,-1917.5733675866354,620,0,0,4.886605976059037,0,1,collision
+382,97,fr_071353_q072,green_clock,green clock,-36.537748817550415,301,0,0,0.45337885097976083,0,1,collision
+383,98,fr_071353_q162,green_and_pink_leafblower,green and pink leafblower,-1672.6066029245244,670,0,0,4.285259156262975,0,0,timeout
+384,98,fr_071718_q216,human_mannequin,human mannequin,-0.6998984724130004,670,0,0,3.7568487185148416,0,0,timeout
+385,98,fr_071353_q126,green_and_pink_leafblower,green and pink leafblower,-1856.175914335047,670,0,0,4.558813020759233,0,0,timeout
+386,98,fr_071718_q117,human_mannequin,human mannequin,17.46943853284326,670,0,0,0.2935875950969576,0,0,timeout
+387,99,fr_071718_q126,human_mannequin,human mannequin,14.780902383627392,132,1,1,0.39113235174504263,0,0,goal_reached
+388,99,fr_071353_q009,green_clock,green clock,-87.05383452342079,421,0,0,0.4536456776797384,0,1,collision
+389,99,fr_071718_q099,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-83.16024849390664,478,0,0,1.4509822224747075,0,1,collision
+390,99,fr_071353_q207,green_and_pink_leafblower,green and pink leafblower,29.826339335803347,277,1,1,0.17337158260260538,0,0,goal_reached
+391,100,fr_071353_q045,green_clock,green clock,-361.4403535765474,358,0,0,1.218304727122994,0,1,collision
+392,100,fr_071718_q198,human_mannequin,human mannequin,-90.59417416248452,352,0,0,7.755179605948942,0,1,collision
+393,100,fr_071353_q000,green_clock,green clock,-159.2286558520735,413,0,0,0.5558909651923156,0,1,collision
+394,100,fr_071718_q108,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-633.9656144744066,458,0,0,4.042874002285461,0,1,collision
+395,101,fr_071718_q198,human_mannequin,human mannequin,-66.5960620226808,467,0,0,5.651913612167586,0,1,collision
+396,101,fr_071353_q054,green_clock,green clock,-41.44956097150809,72,0,0,6.167075152043733,0,1,collision
+397,101,fr_071353_q045,green_clock,green clock,-186.7223588564574,356,0,0,0.13082849739734598,0,1,collision
+398,101,fr_071353_q009,green_clock,green clock,-122.96293505732058,404,0,0,0.3681328678967509,0,1,collision
+399,102,fr_071353_q126,green_and_pink_leafblower,green and pink leafblower,-3.8411473046387954,670,0,0,0.4825227271309892,0,0,timeout
+400,102,fr_071353_q027,green_clock,green clock,-111.63444626100036,412,0,0,0.5646454542662948,0,1,collision
+401,102,fr_071718_q099,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-415.34206348110115,594,0,0,0.712952517235213,0,1,collision
+402,102,fr_071353_q117,green_and_pink_leafblower,green and pink leafblower,17.536732531554065,202,1,1,0.11275463105111092,0,0,goal_reached
+403,103,fr_071353_q216,green_and_pink_leafblower,green and pink leafblower,-460.11804655653964,670,0,0,3.0680051557850945,0,0,timeout
+404,103,fr_071718_q108,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-542.8456086201214,670,0,0,1.2773706630875648,0,0,timeout
+405,103,fr_071718_q090,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-447.81010981536116,670,0,0,1.7903042055470213,0,0,timeout
+406,103,fr_071353_q054,green_clock,green clock,-41.4077942774025,73,0,0,6.187755655306089,0,1,collision
+407,104,fr_071353_q027,green_clock,green clock,-42.94422489361087,364,0,0,0.28309920975068437,0,1,collision
+408,104,fr_071353_q081,green_clock,green clock,-32.55333511472447,296,0,0,0.29101082100064624,0,1,collision
+409,104,fr_071353_q135,green_and_pink_leafblower,green and pink leafblower,5.998555673440112,152,1,1,0.22953157887440395,0,0,goal_reached
+410,104,fr_071353_q180,green_and_pink_leafblower,green and pink leafblower,-617.440312850049,670,0,0,2.5628834400919,0,0,timeout
+411,105,fr_071353_q063,green_clock,green clock,-38.6889760889175,406,0,0,0.11281632714412168,0,1,collision
+412,105,fr_071353_q198,green_and_pink_leafblower,green and pink leafblower,-43.32802218166627,670,0,0,2.052683898479858,0,0,timeout
+413,105,fr_071353_q162,green_and_pink_leafblower,green and pink leafblower,23.7987822955122,204,1,1,0.15936785675894355,0,0,goal_reached
+414,105,fr_071718_q063,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-806.3065271465053,554,0,0,1.0085331618626752,0,1,collision
+415,106,fr_071353_q198,green_and_pink_leafblower,green and pink leafblower,-7.687013832029301,670,0,0,0.6466489666981182,0,0,timeout
+416,106,fr_071718_q000,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-50.253502877408216,608,0,0,2.8134279425389033,0,1,collision
+417,106,fr_071718_q135,human_mannequin,human mannequin,-14.382311767502191,670,0,0,0.15596940936165332,0,0,timeout
+418,106,fr_071353_q072,green_clock,green clock,-34.480931709673335,297,0,0,0.013546719809121616,0,1,collision
+419,107,fr_071718_q045,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-105.30948070647277,527,0,0,1.038624967995847,0,1,collision
+420,107,fr_071353_q126,green_and_pink_leafblower,green and pink leafblower,-352.22698506884757,670,0,0,3.355821124409154,0,0,timeout
+421,107,fr_071718_q126,human_mannequin,human mannequin,-12.953031366779127,670,0,0,0.09886493850603517,0,0,timeout
+422,107,fr_071353_q162,green_and_pink_leafblower,green and pink leafblower,-464.32524741704253,538,0,0,3.0845244542500545,0,1,collision
+423,108,fr_071353_q009,green_clock,green clock,-1022.1323246100372,670,0,0,0.1440699130547478,0,0,timeout
+424,108,fr_071353_q108,green_clock,green clock,-36.843985059021854,334,0,0,0.05362232283767512,0,1,collision
+425,108,fr_071718_q162,human_mannequin,human mannequin,-70.04122044922757,528,0,0,5.5989914557406495,0,1,collision
+426,108,fr_071718_q027,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-74.9518659776969,634,0,0,1.121916784391963,0,1,collision
+427,109,fr_071353_q207,green_and_pink_leafblower,green and pink leafblower,28.716698809169877,259,1,1,0.16408573368495633,0,0,goal_reached
+428,109,fr_071718_q153,human_mannequin,human mannequin,8.934144662300376,112,1,1,0.26113096256462087,0,0,goal_reached
+429,109,fr_071353_q171,green_and_pink_leafblower,green and pink leafblower,16.980220911455426,158,1,1,0.17068347364507142,0,0,goal_reached
+430,109,fr_071353_q144,green_and_pink_leafblower,green and pink leafblower,-243.30481230569484,493,0,0,2.90925288018857,0,1,collision
+431,110,fr_071353_q027,green_clock,green clock,-39.86380277380059,290,0,0,0.1885023291796957,0,1,collision
+432,110,fr_071353_q216,green_and_pink_leafblower,green and pink leafblower,-255.6145948821072,342,0,0,2.926762901687705,0,1,collision
+433,110,fr_071718_q090,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-22.50814751954168,670,0,0,1.7515557338310122,0,0,timeout
+434,110,fr_071353_q189,green_and_pink_leafblower,green and pink leafblower,22.71891971937695,205,1,1,0.15049185194819428,0,0,goal_reached
+435,111,fr_071718_q153,human_mannequin,human mannequin,9.31984990235628,113,1,1,0.19455576029084695,0,0,goal_reached
+436,111,fr_071718_q171,human_mannequin,human mannequin,-12.96659206905067,670,0,0,0.21366291635014892,0,0,timeout
+437,111,fr_071353_q162,green_and_pink_leafblower,green and pink leafblower,-1402.7458785219803,670,0,0,3.4111445983182667,0,0,timeout
+438,111,fr_071718_q180,human_mannequin,human mannequin,-89.48426093144829,253,0,0,8.222039017511715,0,1,collision
+439,112,fr_071353_q081,green_clock,green clock,-31.649770843664516,275,0,0,0.2973002176037365,0,1,collision
+440,112,fr_071353_q216,green_and_pink_leafblower,green and pink leafblower,-2150.8190419623493,670,0,0,3.439764561944895,0,0,timeout
+441,112,fr_071718_q072,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-36.91516252196605,670,0,0,2.14593635184723,0,0,timeout
+442,112,fr_071353_q063,green_clock,green clock,-42.03017740468374,68,0,0,3.366410469924812,0,1,collision
+443,113,fr_071718_q036,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-44.933056238732206,102,0,0,1.3655645291990686,0,1,collision
+444,113,fr_071718_q009,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-48.84343334920529,89,0,0,2.159631427023292,0,1,collision
+445,113,fr_071718_q018,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-47.23886083131904,82,0,0,1.3993066337266167,0,1,collision
+446,113,fr_071718_q027,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-5.875672625909118,670,0,0,1.6757550435344428,0,0,timeout
+447,114,fr_071718_q126,human_mannequin,human mannequin,16.283415880864123,147,1,1,0.32624677370262833,0,0,goal_reached
+448,114,fr_071353_q054,green_clock,green clock,-32.98823636791934,145,0,0,2.8177751485077622,0,1,collision
+449,114,fr_071718_q180,human_mannequin,human mannequin,-173.62216998641225,190,0,0,7.368378122403966,0,1,collision
+450,114,fr_071718_q108,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-29.264411369798534,304,0,0,0.9797711743311448,0,1,collision
+451,115,fr_071718_q009,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-48.499678046352365,100,0,0,2.1574289976383096,0,1,collision
+452,115,fr_071353_q180,green_and_pink_leafblower,green and pink leafblower,-2237.9496990843218,670,0,0,3.5747425839483844,0,0,timeout
+453,115,fr_071718_q000,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-7.960745497672782,670,0,0,1.800127949118307,0,0,timeout
+454,115,fr_071353_q027,green_clock,green clock,-47.877043955214134,402,0,0,0.980607330892754,0,1,collision
+455,116,fr_071353_q108,green_clock,green clock,-38.57670997503403,348,0,0,1.0450114591735833,0,1,collision
+456,116,fr_071718_q018,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-47.84958657298224,81,0,0,1.6156798600324787,0,1,collision
+457,116,fr_071353_q090,green_clock,green clock,-36.07698142595753,364,0,0,0.4781874728750678,0,1,collision
+458,116,fr_071718_q081,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-37.111528362866686,165,0,0,2.217217885387742,0,1,collision
+459,117,fr_071353_q108,green_clock,green clock,-36.609619754824436,368,0,0,0.3597948606114035,0,1,collision
+460,117,fr_071718_q117,human_mannequin,human mannequin,3.4566432983563153,670,0,0,4.851404472151511,0,0,timeout
+461,117,fr_071718_q099,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-24.39416041983081,670,0,0,1.8216953586001545,0,0,timeout
+462,117,fr_071353_q180,green_and_pink_leafblower,green and pink leafblower,-2051.4351421178494,670,0,0,3.614871378716619,0,0,timeout
+463,118,fr_071353_q063,green_clock,green clock,-41.96198408555168,68,0,0,3.342991347616905,0,1,collision
+464,118,fr_071718_q081,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-36.258065308207875,156,0,0,2.079095036683572,0,1,collision
+465,118,fr_071718_q144,human_mannequin,human mannequin,11.49084866945112,141,1,1,0.42265708708633865,0,0,goal_reached
+466,118,fr_071353_q036,green_clock,green clock,-53.72095758672088,493,0,0,1.0821427988981562,0,1,collision
+467,119,fr_071718_q045,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-30.254813402202792,670,0,0,1.457901774285457,0,0,timeout
+468,119,fr_071353_q180,green_and_pink_leafblower,green and pink leafblower,-1034.8744280218884,670,0,0,2.9355604902878283,0,0,timeout
+469,119,fr_071353_q216,green_and_pink_leafblower,green and pink leafblower,-715.2817498367417,670,0,0,2.6792664566929836,0,0,timeout
+470,119,fr_071718_q108,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-15.002157533393508,670,0,0,1.34550742535912,0,0,timeout
+471,120,fr_071718_q027,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,23.820888491615037,373,1,1,0.39255973569049796,0,0,goal_reached
+472,120,fr_071718_q117,human_mannequin,human mannequin,8.70809360688326,670,0,0,4.173576090013738,0,0,timeout
+473,120,fr_071718_q216,human_mannequin,human mannequin,-0.2795254537712104,670,0,0,4.273539104234232,0,0,timeout
+474,120,fr_071353_q126,green_and_pink_leafblower,green and pink leafblower,-798.0105975172376,670,0,0,3.1502796637678934,0,0,timeout
+475,121,fr_071353_q009,green_clock,green clock,-4.931481992760672,670,0,0,0.12320508768782762,0,0,timeout
+476,121,fr_071718_q162,human_mannequin,human mannequin,4.731936873165839,670,0,0,4.432886940539735,0,0,timeout
+477,121,fr_071718_q207,human_mannequin,human mannequin,33.446408034787886,669,1,1,0.028769482228431904,0,0,goal_reached
+478,121,fr_071718_q027,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,19.628593055426464,591,1,1,0.42020655781461247,0,0,goal_reached
+479,122,fr_071718_q027,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-1289.589268294317,670,0,0,3.802628965768949,0,0,timeout
+480,122,fr_071718_q081,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-36.6245128681715,150,0,0,2.0839813134313516,0,1,collision
+481,122,fr_071718_q090,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,14.33158096284684,639,1,1,0.44610867674005517,0,0,goal_reached
+482,122,fr_071718_q099,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-21.49136109572949,670,0,0,0.5766552206953445,0,0,timeout
+483,123,fr_071718_q153,human_mannequin,human mannequin,8.798431514293304,111,1,1,0.28254045702332026,0,0,goal_reached
+484,123,fr_071718_q216,human_mannequin,human mannequin,0.5795438756864044,670,0,0,4.316688124727846,0,0,timeout
+485,123,fr_071353_q189,green_and_pink_leafblower,green and pink leafblower,21.85786378451865,234,1,1,0.13942553692778278,0,0,goal_reached
+486,123,fr_071718_q108,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-108.98921877212106,670,0,0,0.898802146394821,0,0,timeout
+487,124,fr_071353_q171,green_and_pink_leafblower,green and pink leafblower,17.765522512240935,199,1,1,0.08965302521139237,0,0,goal_reached
+488,124,fr_071718_q081,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-36.160930357290084,156,0,0,2.0354999033885672,0,1,collision
+489,124,fr_071353_q189,green_and_pink_leafblower,green and pink leafblower,21.96051581110376,237,1,1,0.1555942341792043,0,0,goal_reached
+490,124,fr_071353_q207,green_and_pink_leafblower,green and pink leafblower,28.207758600118066,261,1,1,0.10101002822980236,0,0,goal_reached
+491,125,fr_071718_q153,human_mannequin,human mannequin,9.620008395045318,115,1,1,0.21557072806886082,0,0,goal_reached
+492,125,fr_071353_q027,green_clock,green clock,-43.53461316750463,191,0,0,1.5862961608883037,0,1,collision
+493,125,fr_071718_q189,human_mannequin,human mannequin,18.895270661871265,158,1,1,0.34055095696954835,0,0,goal_reached
+494,125,fr_071718_q162,human_mannequin,human mannequin,9.104331291250435,670,0,0,4.411773493562429,0,0,timeout
+495,126,fr_071353_q108,green_clock,green clock,-454.3436281424016,670,0,0,1.3028150232192892,0,0,timeout
+496,126,fr_071353_q090,green_clock,green clock,-417.59291320358517,670,0,0,1.3257433802989282,0,0,timeout
+497,126,fr_071718_q108,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-540.8695671885699,670,0,0,0.9914071578116814,0,0,timeout
+498,126,fr_071718_q171,human_mannequin,human mannequin,15.810741697249192,161,1,1,0.4201820306749158,0,0,goal_reached
+499,127,fr_071353_q009,green_clock,green clock,-13.438668582472898,670,0,0,1.3267094552332408,0,0,timeout
+500,127,fr_071353_q117,green_and_pink_leafblower,green and pink leafblower,15.58802273850332,172,1,1,0.20683986960958634,0,0,goal_reached
+501,127,fr_071353_q000,green_clock,green clock,-3.5565986968639614,670,0,0,1.3388726831983784,0,0,timeout
+502,127,fr_071353_q045,green_clock,green clock,-14.147782134453092,670,0,0,1.184125534239685,0,0,timeout
+503,128,fr_071718_q108,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-839.2858920237757,670,0,0,1.4452334733203387,0,0,timeout
+504,128,fr_071353_q198,green_and_pink_leafblower,green and pink leafblower,-1327.483627327424,556,0,0,2.4984241313239997,0,1,collision
+505,128,fr_071353_q135,green_and_pink_leafblower,green and pink leafblower,7.383674658550831,127,1,1,0.06571741091591064,0,0,goal_reached
+506,128,fr_071718_q036,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-723.4256567484988,505,1,1,0.3888629154643387,0,0,goal_reached
+507,129,fr_071718_q162,human_mannequin,human mannequin,1.0254612547096613,670,0,0,5.0661527378208895,0,0,timeout
+508,129,fr_071353_q171,green_and_pink_leafblower,green and pink leafblower,18.329655530109278,159,1,1,0.08879568121015778,0,0,goal_reached
+509,129,fr_071718_q099,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-1580.4026380000066,670,0,0,2.5896765362529703,0,0,timeout
+510,129,fr_071353_q054,green_clock,green clock,-347.512319681227,464,0,0,0.8376824900685121,0,1,collision
+511,130,fr_071718_q144,human_mannequin,human mannequin,11.47868813386809,138,1,1,0.44066044596986154,0,0,goal_reached
+512,130,fr_071718_q045,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-1044.2629631927498,670,0,0,2.4154527165508077,0,0,timeout
+513,130,fr_071353_q018,green_clock,green clock,-55.54073097317201,156,0,0,1.615671773052907,0,1,collision
+514,130,fr_071718_q171,human_mannequin,human mannequin,15.95088630356734,188,1,1,0.4260716473866172,0,0,goal_reached
+515,131,fr_071718_q180,human_mannequin,human mannequin,-45.244010919587375,184,0,0,7.238214245984588,0,1,collision
+516,131,fr_071718_q072,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,7.885119422852838,72,1,1,0.44051534636828255,0,0,goal_reached
+517,131,fr_071353_q090,green_clock,green clock,-6.098090204743434,670,0,0,0.19246833199927366,0,0,timeout
+518,131,fr_071718_q153,human_mannequin,human mannequin,9.287960920638717,115,1,1,0.25755034380518593,0,0,goal_reached
+519,132,fr_071353_q081,green_clock,green clock,-31.258962354806275,670,0,0,0.19208147748528467,0,1,collision
+520,132,fr_071718_q009,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-49.201119055046675,94,0,0,2.150465313521546,0,1,collision
+521,132,fr_071353_q126,green_and_pink_leafblower,green and pink leafblower,-392.0570067169321,670,0,0,2.8401497892708565,0,0,timeout
+522,133,fr_071353_q171,green_and_pink_leafblower,green and pink leafblower,-14.861974497195915,670,0,0,0.10792127669304247,0,0,timeout
+523,133,fr_071353_q054,green_clock,green clock,-26.632067923064902,503,0,0,0.8477477609785502,0,1,collision
+524,133,fr_071718_q054,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-22.38696657894596,670,0,0,0.6513057547797986,0,0,timeout
+525,134,fr_071353_q153,green_and_pink_leafblower,green and pink leafblower,-25.256710597009196,670,0,0,0.5772167051704066,0,0,timeout
+526,134,fr_071718_q171,human_mannequin,human mannequin,15.358577676486764,220,1,1,0.26269520302696553,0,0,goal_reached
+527,134,fr_071718_q198,human_mannequin,human mannequin,-841.6388826433462,670,0,0,6.934311654459006,0,0,timeout
+528,134,fr_071718_q000,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,5.65574242905911,670,0,0,0.5652059017715563,0,0,timeout
+529,135,fr_071718_q189,human_mannequin,human mannequin,16.720162982372546,150,1,1,0.49149634831201766,0,0,goal_reached
+530,135,fr_071718_q081,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-39.17588160600458,109,0,0,2.2943570660644776,0,1,collision
+531,135,fr_071353_q063,green_clock,green clock,-42.549701527239854,262,0,0,1.6471298988925656,0,1,collision
+532,135,fr_071353_q090,green_clock,green clock,-0.7462365283367483,670,0,0,0.16395576958932603,0,0,timeout
+533,136,fr_071718_q171,human_mannequin,human mannequin,18.078936636398335,631,1,1,0.2121144302341004,0,0,goal_reached
+534,136,fr_071718_q027,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,24.811932645310495,277,1,1,0.35645167084804086,0,0,goal_reached
+535,136,fr_071718_q216,human_mannequin,human mannequin,11.035151028689782,670,0,0,0.3554674117426456,0,0,timeout
+536,136,fr_071353_q117,green_and_pink_leafblower,green and pink leafblower,15.095116650642106,134,1,1,0.27072745120089076,0,0,goal_reached
+537,137,fr_071718_q153,human_mannequin,human mannequin,8.09994805600639,109,1,1,0.31840704641263134,0,0,goal_reached
+538,137,fr_071718_q054,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-36.92986258100785,670,0,0,0.4853846688750514,0,0,timeout
+539,137,fr_071353_q027,green_clock,green clock,-42.281636121166486,612,0,0,0.11711003007050845,0,1,collision
+540,137,fr_071718_q108,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-270.74703885233026,670,0,0,3.4020107833922504,0,0,timeout
+541,138,fr_071718_q099,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-23.02118922351898,670,0,0,0.0988098499300864,0,0,timeout
+542,138,fr_071718_q171,human_mannequin,human mannequin,10.221559349027094,608,1,1,0.2562302033061513,0,0,goal_reached
+543,138,fr_071718_q036,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-20.619459499312388,670,0,0,0.6390915596215796,0,0,timeout
+544,138,fr_071353_q090,green_clock,green clock,-11.807428559523514,670,0,0,1.2520776834346328,0,0,timeout
+545,139,fr_071718_q009,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,11.30204829125648,158,1,1,0.3475275961064133,0,0,goal_reached
+546,139,fr_071353_q018,green_clock,green clock,7.193808018179817,186,1,1,0.210048499432065,0,0,goal_reached
+547,139,fr_071718_q126,human_mannequin,human mannequin,14.761329194808393,580,1,1,0.22801551092399452,0,0,goal_reached
+548,139,fr_071718_q198,human_mannequin,human mannequin,33.14105416942512,341,1,1,0.33723270561507185,0,0,goal_reached
+549,140,fr_071718_q207,human_mannequin,human mannequin,17.225758616234245,670,0,0,0.08804662865851015,0,0,timeout
+550,140,fr_071353_q072,green_clock,green clock,-17.891913824125567,670,0,0,1.2582189850103553,0,0,timeout
+551,140,fr_071353_q126,green_and_pink_leafblower,green and pink leafblower,-9.05752075231278,670,0,0,0.20993346190031914,0,0,timeout
+552,140,fr_071353_q009,green_clock,green clock,-42.69846289604976,340,0,0,1.6627467994915974,0,1,collision
+553,141,fr_071718_q216,human_mannequin,human mannequin,33.601083393873495,339,1,1,0.10505986792218146,0,0,goal_reached
+554,141,fr_071718_q171,human_mannequin,human mannequin,13.859536219295668,222,1,1,0.2489877697480886,0,0,goal_reached
+555,141,fr_071718_q189,human_mannequin,human mannequin,16.542193114625768,219,1,1,0.22324819487729528,0,0,goal_reached
+556,142,fr_071718_q117,human_mannequin,human mannequin,40.58061150882048,389,1,1,0.10744335732167777,0,0,goal_reached
+557,142,fr_071353_q171,green_and_pink_leafblower,green and pink leafblower,15.82602703485131,187,1,1,0.16413955023526502,0,0,goal_reached
+558,142,fr_071353_q162,green_and_pink_leafblower,green and pink leafblower,-1.3757962184163084,670,0,0,0.35631393552636037,0,0,timeout
+559,142,fr_071718_q045,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-264.6543325953872,670,0,0,1.6478033700065278,0,0,timeout
+560,143,fr_071718_q054,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-179.76339874488394,399,1,1,0.4348850283936337,0,0,goal_reached
+561,143,fr_071718_q090,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-703.8042168293658,670,0,0,4.090079516199489,0,0,timeout
+562,143,fr_071718_q135,human_mannequin,human mannequin,15.154256309752432,151,1,1,0.3959122044966005,0,0,goal_reached
+563,143,fr_071718_q081,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-39.36736191244663,107,0,0,2.435880491983165,0,1,collision
+564,144,fr_071353_q198,green_and_pink_leafblower,green and pink leafblower,-62.489634659586244,670,0,0,2.315860077921823,0,0,timeout
+565,144,fr_071718_q189,human_mannequin,human mannequin,17.17358028418817,217,1,1,0.05247122727989929,0,0,goal_reached
+566,144,fr_071353_q171,green_and_pink_leafblower,green and pink leafblower,15.35746662409619,188,1,1,0.22896777409850883,0,0,goal_reached
+567,144,fr_071353_q144,green_and_pink_leafblower,green and pink leafblower,-33.61362916142444,670,0,0,1.812797654340509,0,0,timeout
+568,145,fr_071353_q189,green_and_pink_leafblower,green and pink leafblower,20.703874816589472,229,1,1,0.18693653032514312,0,0,goal_reached
+569,145,fr_071718_q072,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-793.1583838666293,670,0,0,4.026107459709677,0,0,timeout
+570,145,fr_071718_q045,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-1252.7461767843688,615,1,1,0.3890650095313702,0,0,goal_reached
+571,145,fr_071353_q126,green_and_pink_leafblower,green and pink leafblower,-155.78340703604934,670,0,0,3.3099960439619998,0,0,timeout
+572,146,fr_071718_q180,human_mannequin,human mannequin,-31.919946230969387,670,0,0,7.471473177408819,0,0,timeout
+573,146,fr_071718_q153,human_mannequin,human mannequin,8.374023037659953,108,1,1,0.32690597140809563,0,0,goal_reached
+574,146,fr_071353_q198,green_and_pink_leafblower,green and pink leafblower,-700.3562218361475,670,0,0,3.0770352525674687,0,0,timeout
+575,146,fr_071353_q108,green_clock,green clock,-33.23821022043562,544,0,0,0.25918243544323344,0,1,collision
+576,147,fr_071353_q009,green_clock,green clock,-3.640852426117487,670,0,0,0.36979530291492435,0,0,timeout
+577,147,fr_071718_q207,human_mannequin,human mannequin,10.817766879250573,670,0,0,4.336313946064567,0,0,timeout
+578,147,fr_071353_q153,green_and_pink_leafblower,green and pink leafblower,-1046.9596807114187,670,0,0,0.7666774317024756,0,0,timeout
+579,148,fr_071353_q207,green_and_pink_leafblower,green and pink leafblower,27.807330435091384,267,1,1,0.14594814510416754,0,0,goal_reached
+580,148,fr_071718_q000,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-1013.0522667865902,670,0,0,3.114455659207794,0,0,timeout
+581,148,fr_071718_q072,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,9.612841673335296,73,1,1,0.1248313561851344,0,0,goal_reached
+582,148,fr_071718_q009,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-49.62944197700769,86,0,0,2.1368467058734786,0,1,collision
+583,149,fr_071353_q036,green_clock,green clock,-15.729471125145604,670,0,0,0.3189294998694404,0,0,timeout
+584,149,fr_071353_q000,green_clock,green clock,-2.7966566771364505,670,0,0,0.3739009512001297,0,0,timeout
+585,149,fr_071718_q171,human_mannequin,human mannequin,-28.111517360439453,670,0,0,0.8370117974183191,0,0,timeout
+586,149,fr_071718_q189,human_mannequin,human mannequin,-29.985360804382637,670,0,0,1.0113344302904623,0,0,timeout

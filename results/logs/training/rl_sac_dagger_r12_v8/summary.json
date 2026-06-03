@@ -1,0 +1,10 @@
+{
+  "run_tag": "rl_sac_dagger_r12_v8",
+  "algorithm": "sac",
+  "total_episodes": 80,
+  "best_mean_return": -Infinity,
+  "best_eval_goal_success_rate": 0.5714285714285714,
+  "init_checkpoint": "/project/kothari1/vlead_data/checkpoints/bc_best_balanced_dagger_r12_new.pt",
+  "episode_log": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_v8/rl_sac_dagger_r12_v8_episodes.csv",
+  "iteration_log": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_v8/rl_sac_dagger_r12_v8_log.csv"
+}

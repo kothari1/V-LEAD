@@ -1,0 +1,6 @@
+run_name,ckpt,status,success_rate,n_rollouts,elapsed_s
+checkpoints__bc_best,/project/kothari1/vlead_data/checkpoints/bc_best.pt,ok,0.027522935779816515,109,2679.5085542201996
+checkpoints__bc_best_balanced_dagger_r12_new,/project/kothari1/vlead_data/checkpoints/bc_best_balanced_dagger_r12_new.pt,ok,0.6238532110091743,109,2912.767269849777
+rl_sac_dagger_r12_v7__rl_sac_dagger_r12_v7_best,/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_v7/rl_sac_dagger_r12_v7_best.pt,ok,0.6330275229357798,109,2879.089826107025
+rl_sac_dagger_r12_v8__rl_sac_dagger_r12_v8_best,/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_v8/rl_sac_dagger_r12_v8_best.pt,ok,0.6330275229357798,109,2868.257750272751
+rl_ppo_dagger_r12_v6__rl_ppo_dagger_r12_v6_best,/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_ppo_dagger_r12_v6/rl_ppo_dagger_r12_v6_best.pt,ok,0.4036697247706422,109,2900.180429458618

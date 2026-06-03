@@ -1,0 +1,57 @@
+{
+  "config": "/workspace/nav_policy/configs/eval_closed_loop_flightroom_holdout_14.yaml",
+  "output_root": "/project/kothari1/vlead_data/rl_runs/dagger_r12/_eval_batch_20260602",
+  "rollouts_from_dir": "data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110",
+  "rollouts_limit": null,
+  "started_iso": "2026-06-02T07:39:00.680846",
+  "finished_iso": "2026-06-02T11:36:20.486146",
+  "queue_elapsed_s": 14239.805140256882,
+  "n_ckpts": 5,
+  "results": [
+    {
+      "ckpt": "/project/kothari1/vlead_data/checkpoints/bc_best.pt",
+      "run_name": "checkpoints__bc_best",
+      "output_dir": "/project/kothari1/vlead_data/rl_runs/dagger_r12/_eval_batch_20260602/checkpoints__bc_best",
+      "status": "ok",
+      "elapsed_s": 2679.5085542201996,
+      "success_rate": 0.027522935779816515,
+      "n_rollouts": 109
+    },
+    {
+      "ckpt": "/project/kothari1/vlead_data/checkpoints/bc_best_balanced_dagger_r12_new.pt",
+      "run_name": "checkpoints__bc_best_balanced_dagger_r12_new",
+      "output_dir": "/project/kothari1/vlead_data/rl_runs/dagger_r12/_eval_batch_20260602/checkpoints__bc_best_balanced_dagger_r12_new",
+      "status": "ok",
+      "elapsed_s": 2912.767269849777,
+      "success_rate": 0.6238532110091743,
+      "n_rollouts": 109
+    },
+    {
+      "ckpt": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_v7/rl_sac_dagger_r12_v7_best.pt",
+      "run_name": "rl_sac_dagger_r12_v7__rl_sac_dagger_r12_v7_best",
+      "output_dir": "/project/kothari1/vlead_data/rl_runs/dagger_r12/_eval_batch_20260602/rl_sac_dagger_r12_v7__rl_sac_dagger_r12_v7_best",
+      "status": "ok",
+      "elapsed_s": 2879.089826107025,
+      "success_rate": 0.6330275229357798,
+      "n_rollouts": 109
+    },
+    {
+      "ckpt": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_v8/rl_sac_dagger_r12_v8_best.pt",
+      "run_name": "rl_sac_dagger_r12_v8__rl_sac_dagger_r12_v8_best",
+      "output_dir": "/project/kothari1/vlead_data/rl_runs/dagger_r12/_eval_batch_20260602/rl_sac_dagger_r12_v8__rl_sac_dagger_r12_v8_best",
+      "status": "ok",
+      "elapsed_s": 2868.257750272751,
+      "success_rate": 0.6330275229357798,
+      "n_rollouts": 109
+    },
+    {
+      "ckpt": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_ppo_dagger_r12_v6/rl_ppo_dagger_r12_v6_best.pt",
+      "run_name": "rl_ppo_dagger_r12_v6__rl_ppo_dagger_r12_v6_best",
+      "output_dir": "/project/kothari1/vlead_data/rl_runs/dagger_r12/_eval_batch_20260602/rl_ppo_dagger_r12_v6__rl_ppo_dagger_r12_v6_best",
+      "status": "ok",
+      "elapsed_s": 2900.180429458618,
+      "success_rate": 0.4036697247706422,
+      "n_rollouts": 109
+    }
+  ]
+}

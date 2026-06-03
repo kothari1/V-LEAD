@@ -1,0 +1,2 @@
+run_name,ckpt,status,success_rate,n_rollouts,elapsed_s
+checkpoints__bc_best_balanced_dagger_r12_new,/project/kothari1/vlead_data/checkpoints/bc_best_balanced_dagger_r12_new.pt,ok,0.7309941520467836,171,4344.624688625336

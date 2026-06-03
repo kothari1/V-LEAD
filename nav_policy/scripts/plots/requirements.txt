@@ -1,0 +1,7 @@
+# Minimum deps to regenerate every figure in V-LEAD/results/ from the
+# self-contained snapshot in V-LEAD/results/logs/.
+#
+# Install:  pip install -r requirements.txt
+matplotlib>=3.5
+numpy>=1.20
+tensorboard>=2.10

@@ -1,0 +1,21 @@
+{
+  "config": "/workspace/nav_policy/configs/eval_closed_loop_flightroom_holdout_30.yaml",
+  "output_root": "/project/kothari1/vlead_data/rl_runs/bc_train_eval/071353",
+  "rollouts_from_dir": "data/raw/flightroom_ssv_exp_2026-05-22_071353",
+  "rollouts_limit": null,
+  "started_iso": "2026-06-03T02:34:41.194953",
+  "finished_iso": "2026-06-03T03:47:05.819974",
+  "queue_elapsed_s": 4344.624858617783,
+  "n_ckpts": 1,
+  "results": [
+    {
+      "ckpt": "/project/kothari1/vlead_data/checkpoints/bc_best_balanced_dagger_r12_new.pt",
+      "run_name": "checkpoints__bc_best_balanced_dagger_r12_new",
+      "output_dir": "/project/kothari1/vlead_data/rl_runs/bc_train_eval/071353/checkpoints__bc_best_balanced_dagger_r12_new",
+      "status": "ok",
+      "elapsed_s": 4344.624688625336,
+      "success_rate": 0.7309941520467836,
+      "n_rollouts": 171
+    }
+  ]
+}

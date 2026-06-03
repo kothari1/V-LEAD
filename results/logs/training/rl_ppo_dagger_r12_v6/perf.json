@@ -1,0 +1,43 @@
+{
+  "algorithm": "ppo",
+  "device": "cuda",
+  "cuda_available": true,
+  "torch_version": "2.1.2+cu118",
+  "params": {
+    "total_trainable": 778285,
+    "total_frozen": 12486976,
+    "total_params": 13265261,
+    "approx_bytes": 53061044,
+    "approx_mb": 50.60295486450195,
+    "per_module": {
+      "log_std": {
+        "trainable": 4,
+        "frozen": 0
+      },
+      "base": {
+        "trainable": 704040,
+        "frozen": 12486976
+      },
+      "critic": {
+        "trainable": 74241,
+        "frozen": 0
+      }
+    }
+  },
+  "inference_latency_b1": {
+    "batch_size": 1,
+    "n_timed": 20,
+    "mean_ms": 2.002327545778826,
+    "std_ms": 0.01628664192968796,
+    "min_ms": 1.9796649867203087,
+    "max_ms": 2.0464569970499724
+  },
+  "inference_latency_ppo_batch": {
+    "batch_size": 256,
+    "n_timed": 20,
+    "mean_ms": 177.23986789933406,
+    "std_ms": 0.19742751276648313,
+    "min_ms": 176.8035819986835,
+    "max_ms": 177.68566598533653
+  }
+}

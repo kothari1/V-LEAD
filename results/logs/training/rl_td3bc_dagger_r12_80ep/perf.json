@@ -1,0 +1,54 @@
+{
+  "algorithm": "sac",
+  "device": "cuda",
+  "cuda_available": true,
+  "torch_version": "2.1.2+cu118",
+  "params": {
+    "total_trainable": 149257,
+    "total_frozen": 13191016,
+    "total_params": 13340273,
+    "approx_bytes": 53361092,
+    "approx_mb": 50.889102935791016,
+    "per_module": {
+      "log_std": {
+        "trainable": 4,
+        "frozen": 0
+      },
+      "base": {
+        "trainable": 0,
+        "frozen": 13191016
+      },
+      "critic": {
+        "trainable": 74241,
+        "frozen": 0
+      },
+      "actor_head": {
+        "trainable": 75012,
+        "frozen": 0
+      }
+    }
+  },
+  "inference_latency_b1": {
+    "batch_size": 1,
+    "n_timed": 20,
+    "mean_ms": 2.065636694896966,
+    "std_ms": 0.016290651462582264,
+    "min_ms": 2.038492006249726,
+    "max_ms": 2.0945569849573076
+  },
+  "replay_buffer": {
+    "per_transition_bytes": 3211312,
+    "total_bytes": 48169680000,
+    "total_gb": 44.86151039600372,
+    "fp16": true,
+    "capacity": 15000
+  },
+  "inference_latency_sac_batch": {
+    "batch_size": 256,
+    "n_timed": 20,
+    "mean_ms": 177.4575007002568,
+    "std_ms": 0.17950026762528953,
+    "min_ms": 177.08743398543447,
+    "max_ms": 177.79233900364488
+  }
+}

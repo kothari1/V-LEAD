@@ -1,0 +1,85 @@
+global_episode,iteration,rollout_name,semantic_target,course,return,steps,success,goal_settled,final_pos_err_m,start_idx,collision,termination
+1,0,flightroom_071353_q00,green_clock,green clock,33.00118376543925,269,1,1,0.2713166739419669,0,0,goal_reached
+2,0,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,32.732481213518085,299,1,1,0.4286073786765132,0,0,goal_reached
+3,0,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-36.07573735191919,216,0,0,0.3808162803608878,0,1,collision
+4,0,flightroom_071353_q01,green_clock,green clock,25.219294001007043,369,1,1,0.30401749349370544,0,0,goal_reached
+1,0,flightroom_071353_q00,green_clock,green clock,33.00118376543925,269,1,1,0.2713166739419669,0,0,goal_reached
+2,0,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,32.732481213518085,299,1,1,0.4286073786765132,0,0,goal_reached
+3,0,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-36.07573735191919,216,0,0,0.3808162803608878,0,1,collision
+4,0,flightroom_071353_q01,green_clock,green clock,25.219294001007043,369,1,1,0.30401749349370544,0,0,goal_reached
+5,1,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,30.70752183368969,271,1,1,0.45387529824372097,0,0,goal_reached
+6,1,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,17.456134848882456,222,1,1,0.2855270450219388,0,0,goal_reached
+7,1,flightroom_071353_q01,green_clock,green clock,-9.896158961179063,670,0,0,0.905078576087351,0,0,timeout
+8,1,flightroom_071353_q00,green_clock,green clock,30.949224590489152,250,1,1,0.4792812101661103,0,0,goal_reached
+9,2,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,30.91802206458839,272,1,1,0.43351753347418087,0,0,goal_reached
+10,2,flightroom_071353_q00,green_clock,green clock,31.558999120689926,251,1,1,0.43426513704217196,0,0,goal_reached
+11,2,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,17.948704926236477,219,1,1,0.22520457050846035,0,0,goal_reached
+12,2,flightroom_071353_q01,green_clock,green clock,16.24648041580494,419,1,1,0.16787589238871845,0,0,goal_reached
+13,3,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,17.702787428173284,223,1,1,0.2109468413967057,0,0,goal_reached
+14,3,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,30.502530419295482,268,1,1,0.4354072265547271,0,0,goal_reached
+15,3,flightroom_071353_q01,green_clock,green clock,-1.9663417091952198,670,0,0,0.24445707967340813,0,0,timeout
+16,3,flightroom_071353_q00,green_clock,green clock,31.263813699804597,242,1,1,0.37577745373786264,0,0,goal_reached
+17,4,flightroom_071353_q00,green_clock,green clock,32.20602513834168,251,1,1,0.3865184880165885,0,0,goal_reached
+18,4,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,31.616547644356107,273,1,1,0.42059098914249354,0,0,goal_reached
+19,4,flightroom_071353_q01,green_clock,green clock,27.545182585902303,421,1,1,0.3164974455833313,0,0,goal_reached
+20,4,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,18.436860724531833,218,1,1,0.1715888483837752,0,0,goal_reached
+21,5,flightroom_071353_q01,green_clock,green clock,32.85421016890124,433,1,1,0.39954657731710713,0,0,goal_reached
+22,5,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,18.519031240286154,228,1,1,0.16877622725848926,0,0,goal_reached
+23,5,flightroom_071353_q00,green_clock,green clock,32.14324571097759,248,1,1,0.4049601502836758,0,0,goal_reached
+24,5,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,30.905295107127046,272,1,1,0.4589732156155441,0,0,goal_reached
+25,6,flightroom_071353_q00,green_clock,green clock,31.8913958878129,252,1,1,0.45937437444481805,0,0,goal_reached
+26,6,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,33.27718250291822,307,1,1,0.43211454872365057,0,0,goal_reached
+27,6,flightroom_071353_q01,green_clock,green clock,21.648242143786028,256,1,1,0.3800422653457855,0,0,goal_reached
+28,6,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-36.174580699356454,212,0,0,0.3293468474490383,0,1,collision
+29,7,flightroom_071353_q01,green_clock,green clock,-2.5338373988377185,670,0,0,0.18667094920813207,0,0,timeout
+30,7,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-36.25790459579402,210,0,0,0.3345199295045553,0,1,collision
+31,7,flightroom_071353_q00,green_clock,green clock,32.013151665515664,251,1,1,0.4304073763426522,0,0,goal_reached
+32,7,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,33.28170821317069,322,1,1,0.45013920060446067,0,0,goal_reached
+33,8,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-35.9581351676507,216,0,0,0.3500367496081817,0,1,collision
+34,8,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,37.30907560024873,384,1,1,0.46973363985640004,0,0,goal_reached
+35,8,flightroom_071353_q00,green_clock,green clock,33.12715969545192,267,1,1,0.2194517600149179,0,0,goal_reached
+36,8,flightroom_071353_q01,green_clock,green clock,27.584383424975506,331,1,1,0.3356887564405363,0,0,goal_reached
+37,9,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,32.29501556818244,305,1,1,0.4807729578473982,0,0,goal_reached
+38,9,flightroom_071353_q01,green_clock,green clock,27.476568613097577,326,1,1,0.34664578706622257,0,0,goal_reached
+39,9,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,17.987505163503933,233,1,1,0.2750386622535299,0,0,goal_reached
+40,9,flightroom_071353_q00,green_clock,green clock,33.27439838422703,272,1,1,0.20808612909505758,0,0,goal_reached
+41,10,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,30.832387765905867,273,1,1,0.47072176196734444,0,0,goal_reached
+42,10,flightroom_071353_q01,green_clock,green clock,22.662570285178884,510,1,1,0.24108269826495485,0,0,goal_reached
+43,10,flightroom_071353_q00,green_clock,green clock,32.28020215303646,253,1,1,0.4249416438709058,0,0,goal_reached
+44,10,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,18.730158903281726,227,1,1,0.20472199476139294,0,0,goal_reached
+45,11,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,30.85299432375181,273,1,1,0.4664541857280186,0,0,goal_reached
+46,11,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,18.872942716814393,224,1,1,0.17949540414001658,0,0,goal_reached
+47,11,flightroom_071353_q00,green_clock,green clock,32.93717238302317,266,1,1,0.3282601648718964,0,0,goal_reached
+48,11,flightroom_071353_q01,green_clock,green clock,27.418297209054277,358,1,1,0.2965521002474529,0,0,goal_reached
+49,12,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,17.726286232874997,225,1,1,0.2606630799469956,0,0,goal_reached
+50,12,flightroom_071353_q01,green_clock,green clock,-38.98437542238264,91,0,0,3.314255130662749,0,1,collision
+51,12,flightroom_071353_q00,green_clock,green clock,30.978708465399,251,1,1,0.4823788062635483,0,0,goal_reached
+52,12,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,34.72662820780638,324,1,1,0.48083236278771485,0,0,goal_reached
+53,13,flightroom_071353_q01,green_clock,green clock,-39.79430249162212,90,0,0,3.555180641326639,0,1,collision
+54,13,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,18.37964828771156,226,1,1,0.2317835326994189,0,0,goal_reached
+55,13,flightroom_071353_q00,green_clock,green clock,30.6850285673718,248,1,1,0.4884190453665315,0,0,goal_reached
+56,13,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,34.85287149076179,336,1,1,0.4675192895779849,0,0,goal_reached
+57,14,flightroom_071353_q01,green_clock,green clock,25.7751222029406,594,1,1,0.36848345017643236,0,0,goal_reached
+58,14,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-36.453976564607764,151,0,0,0.460178547368873,0,1,collision
+59,14,flightroom_071353_q00,green_clock,green clock,31.085798486879547,249,1,1,0.47420138606604273,0,0,goal_reached
+60,14,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,30.972269108764607,270,1,1,0.46472826118085536,0,0,goal_reached
+61,15,flightroom_071353_q01,green_clock,green clock,-5.573699124391718,670,0,0,0.3888389394913079,0,0,timeout
+62,15,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-36.17340187519161,219,0,0,0.39871820042319983,0,1,collision
+63,15,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,33.72055638590523,299,1,1,0.45798555975293725,0,0,goal_reached
+64,15,flightroom_071353_q00,green_clock,green clock,31.722673378324096,248,1,1,0.4472790808009831,0,0,goal_reached
+65,16,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,18.672944692010105,228,1,1,0.24760114098359845,0,0,goal_reached
+66,16,flightroom_071353_q00,green_clock,green clock,32.01480672115525,251,1,1,0.44874792119682516,0,0,goal_reached
+67,16,flightroom_071353_q01,green_clock,green clock,26.456596034002974,309,1,1,0.32178461727447794,0,0,goal_reached
+68,16,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,30.785219671915897,272,1,1,0.47534602740661036,0,0,goal_reached
+69,17,flightroom_071353_q00,green_clock,green clock,31.78049316179913,249,1,1,0.4159358328855095,0,0,goal_reached
+70,17,flightroom_071353_q01,green_clock,green clock,24.12189995790287,608,1,1,0.3592199232893991,0,0,goal_reached
+71,17,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,30.4663195120866,267,1,1,0.49323574190216546,0,0,goal_reached
+72,17,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,-35.777794558458226,163,0,0,0.44066378153760594,0,1,collision
+73,18,flightroom_071353_q00,green_clock,green clock,31.905049855815708,251,1,1,0.4434938857501667,0,0,goal_reached
+74,18,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,19.131896165754807,229,1,1,0.18848891590966668,0,0,goal_reached
+75,18,flightroom_071353_q01,green_clock,green clock,24.437923746519687,543,1,1,0.38515547456186866,0,0,goal_reached
+76,18,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,33.90129729667177,321,1,1,0.4895362137173694,0,0,goal_reached
+77,19,flightroom_071353_q00,green_clock,green clock,31.63123742882525,252,1,1,0.4707370539616867,0,0,goal_reached
+78,19,flightroom_071718_q01,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,19.708302435240956,203,1,1,0.20317126081566064,0,0,goal_reached
+79,19,flightroom_071718_q00,yellow_handheld_cordless_drill_on_two_boxes,yellow handheld cordless drill on two boxes,30.37297570050473,268,1,1,0.4727649644600586,0,0,goal_reached
+80,19,flightroom_071353_q01,green_clock,green clock,27.18534116561985,347,1,1,0.3872728890150614,0,0,goal_reached
