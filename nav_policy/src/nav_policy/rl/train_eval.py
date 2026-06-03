@@ -66,16 +66,21 @@ def eval_train_rollouts_goal_success(
         setup_from = Path(rcfg["setup_from"]).resolve()
         sub_idx = int(rcfg.get("sub_idx", 0))
 
-        expert = load_expert_setup(setup_from, sub_idx)
-        goal_pos_xy = expert.Xro[0:2, -1].astype(np.float64)
-        goal_xyz = expert.Xro[0:3, -1].astype(np.float64)
-        goal_yaw = float(
-            Rotation.from_quat(expert.Xro[6:10, -1]).as_euler("xyz", degrees=False)[2]
-        )
-        controller.reset(goal_pos_xy=goal_pos_xy)
-
-        sim = Simulator(scene, rollout, frame)
+        # A single bad spawn (e.g. warmup P-controller collides immediately ->
+        # simulate_with_early_exit raises "too few control steps") must NOT kill
+        # the whole eval / run. Mirror collect_episode's tolerance: any failure
+        # counts as a failed query and we move on. Matches training semantics.
+        sim = None
         try:
+            expert = load_expert_setup(setup_from, sub_idx)
+            goal_pos_xy = expert.Xro[0:2, -1].astype(np.float64)
+            goal_xyz = expert.Xro[0:3, -1].astype(np.float64)
+            goal_yaw = float(
+                Rotation.from_quat(expert.Xro[6:10, -1]).as_euler("xyz", degrees=False)[2]
+            )
+            controller.reset(goal_pos_xy=goal_pos_xy)
+
+            sim = Simulator(scene, rollout, frame)
             result = simulate_with_early_exit(
                 sim,
                 controller,
@@ -91,8 +96,13 @@ def eval_train_rollouts_goal_success(
                 Ka=Ka,
             )
             ok = bool(result.goal_reached and not result.collision)
+        except Exception as exc:
+            print(f"[eval] {name} FAILED ({exc}); counting as goal failure",
+                  flush=True)
+            ok = False
         finally:
-            del sim
+            if sim is not None:
+                del sim
             gc.collect()
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
