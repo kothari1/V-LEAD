@@ -33,6 +33,7 @@ def ppo_update(policy: StochasticVelocityPolicy,
                max_grad_norm: float = 1.0,
                n_epochs: int = 4,
                batch_size: int = 256,
+               target_kl: float = 0.05,
                device: torch.device) -> PPOStats:
     policy.train()
     n = len(buffer)
@@ -41,7 +42,7 @@ def ppo_update(policy: StochasticVelocityPolicy,
     total_pl = total_vl = total_ent = total_kl = total_ref_kl = 0.0
     n_updates = 0
 
-    for _ in range(n_epochs):
+    for epoch in range(n_epochs):
         perm = idx[torch.randperm(n)]
         for start in range(0, n, batch_size):
             batch_idx = perm[start : start + batch_size]
@@ -57,7 +58,7 @@ def ppo_update(policy: StochasticVelocityPolicy,
             advantages = buffer.advantages[batch_idx].to(device, non_blocking=True)
             returns = buffer.returns[batch_idx].to(device, non_blocking=True)
 
-            with torch.cuda.amp.autocast(enabled=device.type == "cuda"):
+            with torch.amp.autocast("cuda", enabled=device.type == "cuda"):
                 new_log_probs, values, entropy = policy.evaluate(rgb, goal, actions, depth)
                 ratio = torch.exp(new_log_probs - old_log_probs)
                 surr1 = ratio * advantages
@@ -87,6 +88,11 @@ def ppo_update(policy: StochasticVelocityPolicy,
             total_ref_kl += ref_kl_val
             n_updates += 1
 
+        if target_kl > 0 and n_updates > 0 and (total_kl / n_updates) > target_kl:
+            print(f"  [ppo] early stop at epoch {epoch+1}/{n_epochs}: "
+                  f"kl={total_kl/n_updates:.4f} > target={target_kl}", flush=True)
+            break
+
     n_updates = max(n_updates, 1)
     return PPOStats(
         policy_loss=total_pl / n_updates,
@@ -108,6 +114,7 @@ def ppo_config_from_dict(cfg: Dict) -> Dict:
         "ref_kl_coef": float(ref_kl_coef),
         "max_grad_norm": float(p.get("max_grad_norm", 1.0)),
         "n_epochs": int(p.get("n_epochs", 4)),
+        "target_kl": float(p.get("target_kl", 0.05)),
         "batch_size": int(p.get("batch_size", 256)),
         "gamma": float(p.get("gamma", 0.99)),
         "gae_lambda": float(p.get("gae_lambda", 0.95)),

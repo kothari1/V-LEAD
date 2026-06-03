@@ -101,12 +101,17 @@ class RGBDA2VelocityPolicy(nn.Module):
                  freeze_stem_and_layer1: bool = True,
                  fusion: FusionMode = "crossattn",
                  depth_feat_dim: int = 256,
-                 cross_attn_heads: int = 4) -> None:
+                 cross_attn_heads: int = 4,
+                 goal_conditioning: str = "concat") -> None:
         super().__init__()
         if goal_input_dim not in (2, 3):
             raise ValueError(f"goal_input_dim must be 2 or 3; got {goal_input_dim}")
         if fusion not in ("crossattn", "concat"):
             raise ValueError(f"fusion must be crossattn or concat; got {fusion!r}")
+        if goal_conditioning not in ("concat", "film"):
+            raise ValueError(
+                f"goal_conditioning must be concat or film; got {goal_conditioning!r}"
+            )
 
         self.T = T
         self.H = H
@@ -115,6 +120,9 @@ class RGBDA2VelocityPolicy(nn.Module):
         self.goal_emb_dim = goal_emb_dim
         self.goal_input_dim = int(goal_input_dim)
         self.fusion_mode = fusion
+        # "concat" (default) = exactly the current architecture; "film" = strong
+        # goal conditioning (goal modulates GRU features + fed into GRU each step).
+        self.goal_conditioning = goal_conditioning
         self.use_depth = True
 
         self.visual = _PerFrameResNet18(freeze_stem_and_layer1=freeze_stem_and_layer1)
@@ -132,8 +140,11 @@ class RGBDA2VelocityPolicy(nn.Module):
             )
             fused_dim = self.visual.out_dim
 
+        # In FiLM mode the goal embedding is also fed into the GRU at every step,
+        # so the GRU input is widened by goal_emb_dim.
+        gru_input = fused_dim + (goal_emb_dim if goal_conditioning == "film" else 0)
         self.gru = nn.GRU(
-            input_size=fused_dim,
+            input_size=gru_input,
             hidden_size=gru_hidden,
             num_layers=gru_layers,
             batch_first=True,
@@ -143,8 +154,21 @@ class RGBDA2VelocityPolicy(nn.Module):
             nn.Linear(self.goal_input_dim, goal_emb_dim),
             nn.ReLU(inplace=True),
         )
+
+        if goal_conditioning == "film":
+            # Goal -> per-channel (gamma, beta) that modulate the GRU context:
+            #   h' = (1 + gamma) * h + beta
+            # Final layer zero-init so it starts as identity (stable warm-start).
+            self.film = nn.Linear(goal_emb_dim, 2 * gru_hidden)
+            nn.init.zeros_(self.film.weight)
+            nn.init.zeros_(self.film.bias)
+            self.latent_dim = gru_hidden
+        else:
+            self.film = None
+            self.latent_dim = gru_hidden + goal_emb_dim
+
         self.head = _MLPHead(
-            in_dim=gru_hidden + goal_emb_dim,
+            in_dim=self.latent_dim,
             hidden=tuple(mlp_hidden),
             out_dim=H * cmd_dim,
             dropout=mlp_dropout,
@@ -153,10 +177,11 @@ class RGBDA2VelocityPolicy(nn.Module):
     def _fuse_frame(self, f_rgb: torch.Tensor, f_dep: torch.Tensor) -> torch.Tensor:
         return self.fusion(f_rgb, f_dep)
 
-    def forward(self,
-                rgb_seq: torch.Tensor,
-                goal: torch.Tensor,
-                depth_seq: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def _encode_latent(self,
+                       rgb_seq: torch.Tensor,
+                       goal: torch.Tensor,
+                       depth_seq: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """Encode (rgb, depth, goal) into the latent fed to the MLP head [B, latent_dim]."""
         if rgb_seq.ndim != 5:
             raise ValueError(f"expected rgb_seq [B,T,3,S,S], got {tuple(rgb_seq.shape)}")
         B, T, C, S1, S2 = rgb_seq.shape
@@ -179,43 +204,37 @@ class RGBDA2VelocityPolicy(nn.Module):
         f_dep = self.depth_enc(flat_dep)
         fused = self._fuse_frame(f_rgb, f_dep)
         seq = fused.view(B, T, -1)
+        g = self.goal_embed(goal)
 
+        if self.goal_conditioning == "film":
+            # Feed goal into the GRU at every timestep ...
+            g_seq = g.unsqueeze(1).expand(B, T, -1)
+            seq = torch.cat([seq, g_seq], dim=-1)
+            _, h_n = self.gru(seq)
+            h = self.gru_norm(h_n[-1])
+            # ... and FiLM-modulate the final context: h' = (1+gamma)*h + beta.
+            gamma, beta = self.film(g).chunk(2, dim=-1)
+            return (1.0 + gamma) * h + beta
+
+        # concat (default, original behaviour)
         _, h_n = self.gru(seq)
         h = self.gru_norm(h_n[-1])
-        g = self.goal_embed(goal)
-        out = self.head(torch.cat([h, g], dim=-1))
-        return out.view(B, self.H, self.cmd_dim)
+        return torch.cat([h, g], dim=-1)
+
+    def forward(self,
+                rgb_seq: torch.Tensor,
+                goal: torch.Tensor,
+                depth_seq: Optional[torch.Tensor] = None) -> torch.Tensor:
+        latent = self._encode_latent(rgb_seq, goal, depth_seq)
+        out = self.head(latent)
+        return out.view(rgb_seq.shape[0], self.H, self.cmd_dim)
 
     def forward_latent(self,
                        rgb_seq: torch.Tensor,
                        goal: torch.Tensor,
                        depth_seq: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """Return fused GRU+goal features [B, gru_hidden + goal_emb_dim] before the MLP head."""
-        if rgb_seq.ndim != 5:
-            raise ValueError(f"expected rgb_seq [B,T,3,S,S], got {tuple(rgb_seq.shape)}")
-        B, T, C, S1, S2 = rgb_seq.shape
-        if T != self.T:
-            raise ValueError(f"T mismatch: config={self.T}, input={T}")
-        if goal.shape != (B, self.goal_input_dim):
-            raise ValueError(
-                f"goal must be [B,{self.goal_input_dim}], got {tuple(goal.shape)}"
-            )
-        if depth_seq is None:
-            raise ValueError("depth_seq is required for RGBDA2VelocityPolicy")
-        if depth_seq.shape != (B, T, 1, S1, S2):
-            raise ValueError(
-                f"depth_seq must be [B,T,1,{S1},{S2}], got {tuple(depth_seq.shape)}"
-            )
-        flat_rgb = rgb_seq.reshape(B * T, C, S1, S2)
-        flat_dep = depth_seq.reshape(B * T, 1, S1, S2)
-        f_rgb = self.visual(flat_rgb)
-        f_dep = self.depth_enc(flat_dep)
-        fused = self._fuse_frame(f_rgb, f_dep)
-        seq = fused.view(B, T, -1)
-        _, h_n = self.gru(seq)
-        h = self.gru_norm(h_n[-1])
-        g = self.goal_embed(goal)
-        return torch.cat([h, g], dim=-1)
+        """Return the latent features [B, latent_dim] fed to the MLP head."""
+        return self._encode_latent(rgb_seq, goal, depth_seq)
 
     def predict_mean_first(self,
                            rgb_seq: torch.Tensor,

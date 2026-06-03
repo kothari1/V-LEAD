@@ -68,6 +68,15 @@ import torch
 
 import yaml
 
+# PyTorch 2.6 changed torch.load default to weights_only=True, which breaks
+# nerfstudio/gsplat checkpoints containing arbitrary numpy objects.
+_orig_torch_load = torch.load
+def _patched_torch_load(f, map_location=None, pickle_module=None, *,
+                        weights_only=False, mmap=None, **kw):
+    return _orig_torch_load(f, map_location=map_location,
+                            weights_only=weights_only, mmap=mmap, **kw)
+torch.load = _patched_torch_load
+
 from scipy.spatial.transform import Rotation
 
 
@@ -576,7 +585,8 @@ def _save_video(frames: np.ndarray, path: Path, fps: int = 20) -> None:
 
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    iio.imwrite(str(path), frames.astype(np.uint8), plugin="FFMPEG", fps=fps)
+    iio.imwrite(str(path), frames.astype(np.uint8), plugin="FFMPEG", fps=fps,
+                macro_block_size=1)
 
 
 
@@ -596,7 +606,9 @@ def run_one(rollout_cfg: dict,
 
             Kv: float = 2.0,
 
-            Ka: float = 5.0) -> Dict[str, float]:
+            Ka: float = 5.0,
+
+            sim_cache: Optional[Dict] = None) -> Dict[str, float]:
 
     """Run a single closed-loop FiGS rollout and write artifacts."""
 
@@ -640,7 +652,13 @@ def run_one(rollout_cfg: dict,
 
 
 
-    sim = Simulator(scene, rollout, frame)
+    _sim_key = (scene, rollout, frame)
+    if sim_cache is not None:
+        if _sim_key not in sim_cache:
+            sim_cache[_sim_key] = Simulator(scene, rollout, frame)
+        sim = sim_cache[_sim_key]
+    else:
+        sim = Simulator(scene, rollout, frame)
 
     t_start = time.time()
 
@@ -682,13 +700,11 @@ def run_one(rollout_cfg: dict,
 
     finally:
 
-        del sim
-
-        gc.collect()
-
-        if torch.cuda.is_available():
-
-            torch.cuda.empty_cache()
+        if sim_cache is None:
+            del sim
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
     wall_time = time.time() - t_start
 
@@ -1048,7 +1064,12 @@ def evaluate(config_path: Path,
 
 
 
+    reuse_simulator = bool(cfg.get("reuse_simulator", False))
+    sim_cache: Dict = {} if reuse_simulator else None
+
     per_rollout: List[Dict[str, float]] = []
+
+    n_total = len(cfg["rollouts"])
 
     for rcfg in cfg["rollouts"]:
 
@@ -1058,7 +1079,7 @@ def evaluate(config_path: Path,
 
                 rcfg, controller, output_dir, rollout_sim_cfg, metrics_cfg,
 
-                Kv=Kv, Ka=Ka,
+                Kv=Kv, Ka=Ka, sim_cache=sim_cache,
 
             )
 
@@ -1087,6 +1108,14 @@ def evaluate(config_path: Path,
                 "error": str(exc),
 
             })
+
+        n_done = len(per_rollout)
+        n_success = sum(1 for r in per_rollout if r.get("goal_success"))
+        print(
+            f"  [cumulative] success {n_success}/{n_done} "
+            f"({n_success / max(n_done, 1):.1%})  of {n_total} total",
+            flush=True,
+        )
 
 
 

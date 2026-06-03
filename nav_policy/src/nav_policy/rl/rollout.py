@@ -98,6 +98,16 @@ class EpisodeBatch:
 
     final_pos_err_m: float = float("inf")
 
+    final_pos_err_3d_m: float = float("inf")
+
+    final_yaw_err_rad: float = float("inf")
+
+    final_speed_mps: float = float("inf")
+
+    final_cmd_body_rate: float = float("inf")
+
+    final_cmd_yaw_rate: float = float("inf")
+
     goal_settled: bool = False
 
     start_index: int = 0
@@ -478,20 +488,26 @@ class RLTrainingController:
         total = float(sum(rewards))
 
         final_pos_err = float(
-
             np.linalg.norm(self._states[-1][0:2] - expert.Xro[0:2, -1])
+        ) if self._states else float("inf")
 
+        final_pos_err_3d = float(
+            np.linalg.norm(self._states[-1][0:3] - expert.Xro[0:3, -1])
         ) if self._states else float("inf")
 
         final_yaw_err = float("inf")
-
+        final_speed = float("inf")
         if self._states:
-
             yaw = Rotation.from_quat(self._states[-1][6:10]).as_euler("xyz", degrees=False)[2]
-
             final_yaw_err = float(abs((yaw - goal_yaw + np.pi) % (2 * np.pi) - np.pi))
+            final_speed = float(np.linalg.norm(self._states[-1][3:6]))
 
-
+        final_cmd_body_rate = float("inf")
+        final_cmd_yaw_rate = float("inf")
+        if self._actions:
+            last_u = np.asarray(self._actions[-1], dtype=np.float64).ravel()[:4]
+            final_cmd_body_rate = float(np.linalg.norm(last_u[1:4]))
+            final_cmd_yaw_rate = float(abs(last_u[3]))
 
         success = goal_settled and not collision
 
@@ -503,6 +519,11 @@ class RLTrainingController:
             collision=collision,
             termination=termination,
             final_pos_err_m=final_pos_err,
+            final_pos_err_3d_m=final_pos_err_3d,
+            final_yaw_err_rad=final_yaw_err,
+            final_speed_mps=final_speed,
+            final_cmd_body_rate=final_cmd_body_rate,
+            final_cmd_yaw_rate=final_cmd_yaw_rate,
             goal_settled=goal_settled,
         )
 

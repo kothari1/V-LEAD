@@ -29,12 +29,15 @@ def build_model(cfg: dict) -> nn.Module:
     if arch == "rgb_resnet18":
         return RGBVelocityPolicy(**common)
 
+    goal_conditioning = str(mcfg.get("goal_conditioning", "concat"))
+
     if arch == "rgb_da2_crossattn_v1":
         return RGBDA2VelocityPolicy(
             **common,
             fusion="crossattn",
             depth_feat_dim=int(mcfg.get("depth_feat_dim", 256)),
             cross_attn_heads=int(mcfg.get("cross_attn_heads", 4)),
+            goal_conditioning=goal_conditioning,
         )
 
     if arch == "rgb_da2_concat_v1":
@@ -42,6 +45,7 @@ def build_model(cfg: dict) -> nn.Module:
             **common,
             fusion="concat",
             depth_feat_dim=int(mcfg.get("depth_feat_dim", 256)),
+            goal_conditioning=goal_conditioning,
         )
 
     raise ValueError(

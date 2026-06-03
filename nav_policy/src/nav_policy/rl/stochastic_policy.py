@@ -30,7 +30,10 @@ class StochasticVelocityPolicy(nn.Module):
         super().__init__()
         self.base = base
         self.cmd_dim = int(base.cmd_dim)
-        latent_dim = int(base.gru_hidden) + int(base.goal_emb_dim)
+        # FiLM conditioning changes the latent size; fall back to the original
+        # concat dim for models that predate the latent_dim attribute.
+        latent_dim = int(getattr(base, "latent_dim",
+                                 int(base.gru_hidden) + int(base.goal_emb_dim)))
         self.log_std = nn.Parameter(
             torch.full((self.cmd_dim,), float(init_log_std))
         )
