@@ -1,0 +1,17 @@
+# 80-episode TD3+BC validation run (cheap, ~1 h). Goal: prove non-regression
+# (eval-floor holds >= seed) + actor moves without collapse. NOT a full run.
+#
+# 80 ep = 20 iters x 4 rollouts. critic_warmup must be short or the actor never
+# moves in 20 iters: warmup=40 updates (~5 iters at 8/iter) leaves ~15 iters of
+# actor learning. eval at ep 0 (seed floor), 40, 80.
+
+base_config: configs/train_rl_flightroom_td3bc_dagger_r12.yaml
+
+rl:
+  run_tag: rl_td3bc_dagger_r12_80ep
+  n_iterations: 20               # 20 * 4 = 80 episodes
+  eval_every_episodes: 40        # evals at ep 40, 80 (+ seed floor at 0)
+  save_every_n_iterations: 5
+
+  sac:
+    critic_warmup_updates: 40    # ~5 iters warmup, ~15 iters actor learning

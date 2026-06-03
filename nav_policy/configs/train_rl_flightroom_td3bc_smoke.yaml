@@ -1,0 +1,22 @@
+# Fast smoke for the TD3+BC fine-tuner: exercises the critic + actor update
+# path (warmup off so the actor moves immediately), eval off, tiny replay.
+# Not a real run — just verifies plumbing (residual head, frozen base, twin-Q
+# LayerNorm, BC-MSE, target-actor smoothing, checkpoint save) doesn't crash.
+
+base_config: configs/train_rl_flightroom_td3bc_dagger_r12.yaml
+
+rl:
+  run_tag: rl_td3bc_smoke
+  checkpoint_dir: /project/kothari1/vlead_data/rl_runs/td3bc_smoke
+  n_iterations: 2
+  rollouts_per_iteration: 2
+  eval_every_episodes: 0          # eval off for speed
+  eval_floor_from_seed: false
+  sim_cache_clear_every_episodes: 0
+  save_every_n_iterations: 1
+
+  sac:
+    critic_warmup_updates: 0      # actor updates from step 1 to exercise that path
+    updates_per_iter: 2
+    batch_size: 64                # small so updates fire after ~1 episode
+    replay_capacity: 2000
