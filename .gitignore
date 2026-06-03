@@ -6,5 +6,30 @@ vlead/**/__pycache__/
 # stray rollout videos
 *.mp4
 
+# heavy binary artifacts (model weights, checkpoints, captures, point clouds)
+*.pt
+*.pth
+*.ckpt
+*.zip
+*.mov
+*.MOV
+*.ply
+*.npz
+
+# bulk data / weight drives
+vlead_drive/
+nav_policy/data/checkpoints*/
+nav_policy/data/processed*/
+nav_policy/data/weights/
+
+# virtual environments
+.venv/
+venv/
+env/
+
+# python caches
+__pycache__/
+*.egg-info/
+
 # editor
 .vscode/
