@@ -26,7 +26,10 @@ class StochasticVelocityPolicy(nn.Module):
     def __init__(self,
                  base: nn.Module,
                  init_log_std: float = -0.5,
-                 critic_hidden: int = 256) -> None:
+                 critic_hidden: int = 256,
+                 residual_actor: bool = False,
+                 residual_scale: float = 1.0,
+                 residual_hidden: int = 256) -> None:
         super().__init__()
         self.base = base
         self.cmd_dim = int(base.cmd_dim)
@@ -41,6 +44,28 @@ class StochasticVelocityPolicy(nn.Module):
         )
         self.use_depth = bool(getattr(base, "use_depth", False))
 
+        # Residual actor head (for stable offline->online fine-tuning).
+        # When enabled, the policy mean is the FROZEN BC mean plus a bounded
+        # learnable correction:  mean = bc_mean + residual_scale * tanh(head(z)).
+        # The head's final layer is zero-initialized so at step 0 the residual
+        # is exactly 0 -> policy == BC seed (cannot regress below it), and the
+        # tanh bounds the per-dim deviation to +/- residual_scale (in z-score
+        # action units). See TD3+BC / residual-RL.
+        self.residual_actor = bool(residual_actor)
+        self.residual_scale = float(residual_scale)
+        if self.residual_actor:
+            self.actor_head = nn.Sequential(
+                nn.Linear(latent_dim, residual_hidden),
+                nn.ReLU(inplace=True),
+                nn.Linear(residual_hidden, self.cmd_dim),
+            )
+            # Zero-init the last layer -> residual starts at 0 (BC behavior).
+            last = self.actor_head[-1]
+            nn.init.zeros_(last.weight)
+            nn.init.zeros_(last.bias)
+        else:
+            self.actor_head = None
+
     def _encode(self,
                 rgb_seq: torch.Tensor,
                 goal: torch.Tensor,
@@ -54,8 +79,30 @@ class StochasticVelocityPolicy(nn.Module):
         else:
             latent = self.base.forward_latent(rgb_seq, goal)
         out = self.base.head(latent)
-        mean = out.view(-1, self.base.H, self.cmd_dim)[:, 0, :]
+        bc_mean = out.view(-1, self.base.H, self.cmd_dim)[:, 0, :]
+        if self.residual_actor:
+            delta = self.residual_scale * torch.tanh(self.actor_head(latent))
+            mean = bc_mean + delta
+        else:
+            mean = bc_mean
         return latent, mean
+
+    def bc_mean(self,
+                rgb_seq: torch.Tensor,
+                goal: torch.Tensor,
+                depth_seq: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """The un-residualized BC mean (frozen base head, first horizon step).
+        Used as the regression target for the TD3+BC action-space anchor.
+        """
+        return self._mean(rgb_seq, goal, depth_seq)
+
+    def deterministic_mean(self,
+                           rgb_seq: torch.Tensor,
+                           goal: torch.Tensor,
+                           depth_seq: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, torch.Tensor]:
+        """(latent, policy mean) with the residual applied. Deterministic
+        actor output for TD3-style updates and eval."""
+        return self._encode(rgb_seq, goal, depth_seq)
 
     # Backwards-compatible thin wrappers.
     def _latent(self,
@@ -168,20 +215,29 @@ class StochasticVelocityPolicy(nn.Module):
 
 
 class TwinQCritic(nn.Module):
-    """Twin Q-networks for SAC on (latent, action_z)."""
+    """Twin Q-networks for SAC/TD3 on (latent, action_z).
 
-    def __init__(self, latent_dim: int, action_dim: int, hidden: int = 256) -> None:
+    `layernorm=True` adds LayerNorm after each hidden layer (RLPD, Ball et al.
+    2023): it bounds Q-value extrapolation on OOD actions and is the single
+    most effective stabilizer for off-policy fine-tuning with high update ratios.
+    """
+
+    def __init__(self, latent_dim: int, action_dim: int, hidden: int = 256,
+                 layernorm: bool = False) -> None:
         super().__init__()
         in_dim = latent_dim + action_dim
 
         def _q() -> nn.Sequential:
-            return nn.Sequential(
-                nn.Linear(in_dim, hidden),
-                nn.ReLU(inplace=True),
-                nn.Linear(hidden, hidden),
-                nn.ReLU(inplace=True),
-                nn.Linear(hidden, 1),
-            )
+            layers: list = [nn.Linear(in_dim, hidden)]
+            if layernorm:
+                layers.append(nn.LayerNorm(hidden))
+            layers.append(nn.ReLU(inplace=True))
+            layers.append(nn.Linear(hidden, hidden))
+            if layernorm:
+                layers.append(nn.LayerNorm(hidden))
+            layers.append(nn.ReLU(inplace=True))
+            layers.append(nn.Linear(hidden, 1))
+            return nn.Sequential(*layers)
 
         self.q1 = _q()
         self.q2 = _q()
@@ -196,16 +252,24 @@ def load_stochastic_from_checkpoint(
     *,
     init_log_std: float = -0.5,
     device: Optional[torch.device] = None,
+    residual_actor: bool = False,
+    residual_scale: float = 1.0,
 ) -> Tuple[StochasticVelocityPolicy, CommandStats, dict]:
     device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
     ckpt = torch.load(ckpt_path, weights_only=False, map_location="cpu")
     cfg = ckpt["config"]
     base = build_model(cfg)
     base.load_state_dict(ckpt["model"])
-    policy = StochasticVelocityPolicy(base, init_log_std=init_log_std)
+    policy = StochasticVelocityPolicy(
+        base, init_log_std=init_log_std,
+        residual_actor=residual_actor, residual_scale=residual_scale,
+    )
     if "rl_head" in ckpt:
         policy.log_std.data.copy_(ckpt["rl_head"]["log_std"])
         policy.critic.load_state_dict(ckpt["rl_head"]["critic"])
+        # Resume a residual head if both the ckpt and this policy use one.
+        if policy.actor_head is not None and ckpt["rl_head"].get("actor_head") is not None:
+            policy.actor_head.load_state_dict(ckpt["rl_head"]["actor_head"])
     stats = CommandStats.from_dict(ckpt["stats"])
     return policy.to(device), stats, cfg
 
@@ -216,13 +280,17 @@ def save_rl_checkpoint(path: Path,
                        cfg: dict,
                        meta: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    rl_head = {
+        "log_std": policy.log_std.detach().cpu(),
+        "critic": policy.critic.state_dict(),
+    }
+    if policy.actor_head is not None:
+        rl_head["actor_head"] = policy.actor_head.state_dict()
+        rl_head["residual_scale"] = float(policy.residual_scale)
     torch.save(
         {
             "model": policy.base.state_dict(),
-            "rl_head": {
-                "log_std": policy.log_std.detach().cpu(),
-                "critic": policy.critic.state_dict(),
-            },
+            "rl_head": rl_head,
             "stats": stats.to_dict(),
             "config": cfg,
             "rl_meta": meta,

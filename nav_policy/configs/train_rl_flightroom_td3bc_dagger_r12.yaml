@@ -1,0 +1,67 @@
+# TD3+BC stable fine-tuning from the dagger_r12 BC seed (62.4% on the 110 test).
+#
+# Fixes the long-8h SAC collapse (62%->4-55%): cold critic drove a warm BC actor
+# off-distribution. This run:
+#   - residual_actor: policy mean = FROZEN bc_mean + bounded tanh residual
+#     (zero-init -> starts EXACTLY at the seed; cannot regress at step 0).
+#   - freeze_base_full: entire BC base frozen; only residual head + critic train.
+#   - critic_warmup: Q learns with the actor frozen before it can move the actor.
+#   - TD3+BC actor loss: -lambda*Q + bc_weight*||residual||^2, lambda=2.5/|Q|.
+#   - LayerNorm twin-Q critics (RLPD), delayed + smoothed target-actor updates.
+#   - eval_floor_from_seed: measures the seed's held-out rate once and never
+#     ships a *_best.pt below it.
+#
+# Inherits rollouts (20 tasks), rewards, frame from the dagger_r12 SAC config.
+# RLPD expert-replay is intentionally NOT enabled here: expert .pt files store
+# body-rate controls (Uro), not the policy's velocity commands, so labeling
+# expert transitions needs the BC dataset's action provenance — deferred.
+
+base_config: configs/train_rl_flightroom_sac_dagger_r12_long_8h.yaml
+
+checkpoint: data/checkpoints/bc_best_balanced_dagger_r12_new.pt
+
+rl:
+  run_tag: rl_td3bc_dagger_r12
+  checkpoint_dir: /project/kothari1/vlead_data/rl_runs/dagger_r12
+  algorithm: sac
+
+  # Exploration noise around the (residual) mean during rollout. Tight, since
+  # the residual is already a deliberate learnable deviation from BC.
+  init_log_std: -2.0
+  freeze_base_full: true
+
+  # Held-out, deterministic, non-regression-gated checkpoint selection.
+  eval_every_episodes: 40
+  eval_config: configs/eval_closed_loop_flightroom_holdout_30.yaml
+  eval_floor_from_seed: true
+
+  n_iterations: 200             # override via --n-iterations for smoke/short
+  rollouts_per_iteration: 4
+  sim_cache_clear_every_episodes: 100
+  save_every_n_iterations: 10
+
+  rollout:
+    action_lpf_alpha: 0.5       # lighter than 0.25: residual already bounded
+
+  sac:
+    td3bc: true
+    residual_actor: true
+    residual_scale: 1.0         # max |residual| per action dim, z-score units
+    bc_weight: 1.0              # weight on ||residual||^2 anchor
+    td3bc_alpha: 2.5            # Q-side scale; lambda = td3bc_alpha / |Q|.mean()
+    td3bc_normalize: true
+    policy_delay: 2
+    target_policy_noise: 0.2
+    noise_clip: 0.5
+    action_clip: 4.0
+    critic_warmup_updates: 500  # ~63 iters at updates_per_iter=8
+    critic_layernorm: true
+    auto_alpha: false
+    lr: 1.0e-4
+    batch_size: 256
+    updates_per_iter: 8
+    replay_capacity: 15000      # ~45 GB fp16 (was 50k/150 GB)
+    ref_kl_coef: 0.0            # BC-MSE replaces the (decorative) KL anchor
+
+  bc_anchor:
+    kl_coef: 0.0

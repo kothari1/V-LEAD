@@ -176,10 +176,26 @@ def train(config_path: Path,
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     init_log_std = float(rl_cfg.get("init_log_std", -0.5))
+    # Residual actor (TD3+BC): mean = bc_mean + bounded learnable correction.
+    _sac_block = rl_cfg.get("sac", {}) or {}
+    use_residual = algorithm == "sac" and bool(_sac_block.get("residual_actor", False))
+    residual_scale = float(_sac_block.get("residual_scale", 1.0))
     policy, stats, model_cfg = load_stochastic_from_checkpoint(
         init_ckpt, init_log_std=init_log_std, device=device,
+        residual_actor=use_residual, residual_scale=residual_scale,
     )
-    _maybe_freeze_backbone(policy, bool(rl_cfg.get("freeze_backbone", False)))
+    if bool(rl_cfg.get("freeze_base_full", False)):
+        # Freeze the ENTIRE BC base (CNN + GRU + goal-embed + head). Only the
+        # residual actor head, log_std, and critic train. Guarantees the BC
+        # prior cannot drift; combined with the zero-init residual the policy
+        # starts exactly at the seed.
+        for p in policy.base.parameters():
+            p.requires_grad = False
+        n_train = sum(p.numel() for p in policy.parameters() if p.requires_grad)
+        print(f"[rl] froze ENTIRE BC base; trainable params (head+log_std) = {n_train:,}",
+              flush=True)
+    else:
+        _maybe_freeze_backbone(policy, bool(rl_cfg.get("freeze_backbone", False)))
 
     zero_goal_heading = bool(model_cfg.get("train", {}).get("zero_goal_heading", False))
 
@@ -303,9 +319,23 @@ def train(config_path: Path,
             reference_policy=reference_policy,
             **{
                 k: sac_kw[k]
-                for k in ("lr", "gamma", "tau", "alpha", "auto_alpha")
+                for k in (
+                    "lr", "gamma", "tau", "alpha", "auto_alpha",
+                    "td3bc", "td3bc_alpha", "bc_weight", "td3bc_normalize",
+                    "policy_delay", "target_policy_noise", "noise_clip",
+                    "action_clip", "critic_warmup_updates", "critic_layernorm",
+                )
             },
         )
+        if sac_kw.get("td3bc"):
+            print(
+                f"[rl] TD3+BC mode: residual_scale={residual_scale} "
+                f"bc_weight={sac_kw['bc_weight']} td3bc_alpha={sac_kw['td3bc_alpha']} "
+                f"critic_warmup={sac_kw['critic_warmup_updates']} "
+                f"policy_delay={sac_kw['policy_delay']} "
+                f"critic_layernorm={sac_kw['critic_layernorm']}",
+                flush=True,
+            )
 
     # TensorBoard writer (one per run).
     tb_cfg = rl_cfg.get("tb", {}) or {}
@@ -339,7 +369,7 @@ def train(config_path: Path,
     log_fields = [
         "iteration", "algorithm", "mean_return", "mean_steps", "success_rate",
         "policy_loss", "value_loss", "entropy", "approx_kl", "ref_kl",
-        "q1_loss", "q2_loss", "alpha",
+        "q1_loss", "q2_loss", "alpha", "bc_mse",
     ]
     write_header = not log_path.exists()
     write_episode_header = not episode_log_path.exists()
@@ -371,6 +401,36 @@ def train(config_path: Path,
             f"({len(eval_rollouts)} {eval_suite_name} queries, deterministic)",
             flush=True,
         )
+
+    # Non-regression floor: measure the SEED's held-out eval ONCE and seed
+    # best_eval_success with it (+ save the seed as the initial *_best.pt). With
+    # the zero-init residual the policy == BC seed here, so this is the seed's
+    # true deterministic rate. Guarantees we never ship a checkpoint below seed.
+    eval_floor_from_seed = bool(
+        rl_cfg.get("eval_floor_from_seed", select_best_by_eval and use_residual)
+    )
+    if select_best_by_eval and eval_floor_from_seed:
+        print("[rl] measuring seed held-out eval for non-regression floor...", flush=True)
+        seed_eval = eval_train_rollouts_goal_success(
+            policy, stats, eval_rollouts, eval_sim_cfg,
+            image_size=image_size, frame_name=frame_name,
+            Kv=float(cfg.get("Kv", 2.0)), Ka=float(cfg.get("Ka", 5.0)),
+            device=device, depth_inference_stride=eval_depth_stride,
+            depth_model=depth_model, zero_goal_heading=zero_goal_heading,
+            goal_distance_scale=goal_distance_scale,
+        )
+        best_eval_success = float(seed_eval["goal_success_rate"])
+        save_rl_checkpoint(
+            ckpt_dir / f"{tag}_best.pt", policy, stats, model_cfg,
+            {"seed_floor": best_eval_success, "run_tag": tag, "is_seed_floor": True},
+        )
+        print(
+            f"[rl] seed floor = {best_eval_success:.1%} "
+            f"({seed_eval['n_success']}/{seed_eval['n_rollouts']}); "
+            f"saved as initial {tag}_best.pt",
+            flush=True,
+        )
+        tb.log_scalar("eval/seed_floor", best_eval_success, 0)
 
     global_episode = 0
     sim_cache: Dict[tuple, Any] = {}
@@ -471,6 +531,7 @@ def train(config_path: Path,
             "q1_loss": "",
             "q2_loss": "",
             "alpha": "",
+            "bc_mse": "",
         }
 
         if algorithm == "ppo":
@@ -516,6 +577,7 @@ def train(config_path: Path,
                     "q2_loss": sac_stats.q2_loss,
                     "alpha": sac_stats.alpha,
                     "ref_kl": sac_stats.ref_kl,
+                    "bc_mse": sac_stats.bc_mse,
                 })
 
         meta = {
@@ -555,7 +617,7 @@ def train(config_path: Path,
         for key in ("mean_return", "mean_steps", "success_rate"):
             tb.log_scalar(f"rollout/{key}", float(row[key]), global_episode)
         for key in ("policy_loss", "value_loss", "entropy", "approx_kl",
-                    "ref_kl", "q1_loss", "q2_loss", "alpha"):
+                    "ref_kl", "q1_loss", "q2_loss", "alpha", "bc_mse"):
             val = row.get(key, "")
             if val == "" or val is None:
                 continue
