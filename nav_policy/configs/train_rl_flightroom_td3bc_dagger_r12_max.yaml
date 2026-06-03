@@ -6,7 +6,11 @@
 #   - 50 tasks: 25 spawns x 2 dirs, spread across the full 0..219 index range
 #     so all goals + a wide spawn variety are covered (generalization).
 #   - residual_scale 1.5, bc_weight 0.5: more room to improve; floor protects us.
-#   - eval every 150 ep on the 30-query held-out; best ckpt always >= seed.
+#   - SELECT on held-out spawns of the TRAINED goals (clock+drill), NOT the 110
+#     ladder suite. Ladder is a different object never seen in RL training
+#     (cross-object); measuring/selecting there can't show improvement. The
+#     ladder-110 is run separately afterward as a generalization check.
+#   - best ckpt always >= seed (eval_floor_from_seed).
 
 base_config: configs/train_rl_flightroom_td3bc_dagger_r12.yaml
 
@@ -16,6 +20,7 @@ rl:
   run_tag: rl_td3bc_dagger_r12_max
   n_iterations: 150              # 150 * 4 = 600 episodes
   rollouts_per_iteration: 4
+  eval_config: configs/eval_closed_loop_clockdrill_heldout_40.yaml
   eval_every_episodes: 150       # evals at ep 150/300/450/600 (+ seed floor)
   save_every_n_iterations: 10
   sim_cache_clear_every_episodes: 100

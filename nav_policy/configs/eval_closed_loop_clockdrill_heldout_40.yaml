@@ -1,0 +1,111 @@
+# Held-out eval on the TRAINED goals (green clock + yellow drill), spawns
+# DISJOINT from the 50 training tasks. This is where RL CAN improve and where
+# best.pt selection should happen -- the 110 ladder suite is a different object
+# never seen in RL training (cross-object generalization check, run separately).
+#
+# 20 clock (071353) + 20 drill (071718) = 40 held-out spawns, none overlapping
+# the training indices {0,9,...,216}.
+
+frame: carl
+Kv: 2.0
+Ka: 5.0
+
+metrics:
+  time_buffer_s: 5.0
+  collision_depth_threshold_m: 0.25
+  goal_position_tol_m: 0.5
+  goal_yaw_tol_rad: 0.5
+  success_tracking_tol_m: 1.0
+  bbox_margin: 2.0
+  depth_inference_stride: 3
+  check_collision: true
+  check_goal: true
+  warmup_steps: 30
+  warmup_kp_pos: 2.0
+  warmup_kd_vel: 1.0
+  warmup_kp_yaw: 2.0
+  warmup_max_vel: 0.8
+  warmup_max_yaw_rate: 1.0
+  warmup_prime_policy_buffer: true
+
+rollouts:
+  - {name: ev_071353_q001, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00001.pt, sub_idx: 0}
+  - {name: ev_071353_q012, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00012.pt, sub_idx: 0}
+  - {name: ev_071353_q023, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00023.pt, sub_idx: 0}
+  - {name: ev_071353_q035, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00035.pt, sub_idx: 0}
+  - {name: ev_071353_q047, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00047.pt, sub_idx: 0}
+  - {name: ev_071353_q058, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00058.pt, sub_idx: 0}
+  - {name: ev_071353_q069, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00069.pt, sub_idx: 0}
+  - {name: ev_071353_q080, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00080.pt, sub_idx: 0}
+  - {name: ev_071353_q093, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00093.pt, sub_idx: 0}
+  - {name: ev_071353_q104, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00104.pt, sub_idx: 0}
+  - {name: ev_071353_q115, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00115.pt, sub_idx: 0}
+  - {name: ev_071353_q127, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00127.pt, sub_idx: 0}
+  - {name: ev_071353_q139, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00139.pt, sub_idx: 0}
+  - {name: ev_071353_q150, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00150.pt, sub_idx: 0}
+  - {name: ev_071353_q161, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00161.pt, sub_idx: 0}
+  - {name: ev_071353_q173, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00173.pt, sub_idx: 0}
+  - {name: ev_071353_q184, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00184.pt, sub_idx: 0}
+  - {name: ev_071353_q196, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00196.pt, sub_idx: 0}
+  - {name: ev_071353_q208, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00208.pt, sub_idx: 0}
+  - {name: ev_071353_q219, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071353/trajectories_val00219.pt, sub_idx: 0}
+  - {name: ev_071718_q001, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00001.pt, sub_idx: 0}
+  - {name: ev_071718_q012, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00012.pt, sub_idx: 0}
+  - {name: ev_071718_q023, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00023.pt, sub_idx: 0}
+  - {name: ev_071718_q035, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00035.pt, sub_idx: 0}
+  - {name: ev_071718_q047, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00047.pt, sub_idx: 0}
+  - {name: ev_071718_q058, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00058.pt, sub_idx: 0}
+  - {name: ev_071718_q069, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00069.pt, sub_idx: 0}
+  - {name: ev_071718_q080, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00080.pt, sub_idx: 0}
+  - {name: ev_071718_q093, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00093.pt, sub_idx: 0}
+  - {name: ev_071718_q104, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00104.pt, sub_idx: 0}
+  - {name: ev_071718_q115, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00115.pt, sub_idx: 0}
+  - {name: ev_071718_q127, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00127.pt, sub_idx: 0}
+  - {name: ev_071718_q139, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00139.pt, sub_idx: 0}
+  - {name: ev_071718_q150, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00150.pt, sub_idx: 0}
+  - {name: ev_071718_q161, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00161.pt, sub_idx: 0}
+  - {name: ev_071718_q173, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00173.pt, sub_idx: 0}
+  - {name: ev_071718_q184, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00184.pt, sub_idx: 0}
+  - {name: ev_071718_q196, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00196.pt, sub_idx: 0}
+  - {name: ev_071718_q208, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00208.pt, sub_idx: 0}
+  - {name: ev_071718_q219, scene: flightroom_ssv_exp, rollout: baseline,
+     setup_from: data/raw/flightroom_ssv_exp_2026-05-22_071718/trajectories_val00219.pt, sub_idx: 0}
