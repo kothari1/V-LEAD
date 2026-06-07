@@ -90,22 +90,27 @@ Each evaluated checkpoint produced **two** files in its suite folder:
 
 | tag | n | success | source ckpt | local path |
 |---|---|---|---|---|
-| `bc_seed` | 109 | 62.4% | `bc_best_balanced_dagger_r12_new.pt` | `eval/full-110/bc_seed.per_rollout.csv` |
-| `bc_legacy` | 109 | 2.8% | `bc_best.pt` (older, cross-env) | `eval/full-110/bc_legacy.per_rollout.csv` |
+| 🏆 `td3bc_max_best` | 109 | **65.1%** | `rl_td3bc_dagger_r12_max_best.pt` | `eval/full-110/td3bc_max_best.per_rollout.csv` |
 | `sac_v7_best` | 109 | 63.3% | `rl_sac_dagger_r12_v7_best.pt` | `eval/full-110/sac_v7_best.per_rollout.csv` |
 | `sac_v8_best` | 109 | 63.3% | `rl_sac_dagger_r12_v8_best.pt` | `eval/full-110/sac_v8_best.per_rollout.csv` |
-| `ppo_v6_best` | 109 | 40.4% | `rl_ppo_dagger_r12_v6_best.pt` | `eval/full-110/ppo_v6_best.per_rollout.csv` |
-| `sac_long8h_seed_baseline` | 109 | 62.4% | bc_seed, re-run in long_8h batch (sanity) | `eval/full-110/sac_long8h_seed_baseline.per_rollout.csv` |
-| `sac_long8h_iter0100_ep00400` | 109 | 16.5% | long_8h snapshot @ ep 400 | `eval/full-110/sac_long8h_iter0100_ep00400.per_rollout.csv` |
-| `sac_long8h_iter0200_ep00800` | 109 | 45.9% | long_8h snapshot @ ep 800 | `eval/full-110/sac_long8h_iter0200_ep00800.per_rollout.csv` |
-| `sac_long8h_iter0300_ep01200` | 109 | 4.6% | long_8h snapshot @ ep 1200 | `eval/full-110/sac_long8h_iter0300_ep01200.per_rollout.csv` |
-| `sac_long8h_iter0400_ep01600` | 109 | 32.1% | long_8h snapshot @ ep 1600 | `eval/full-110/sac_long8h_iter0400_ep01600.per_rollout.csv` |
+| `bc_seed` | 109 | 62.4% | `bc_best_balanced_dagger_r12_new.pt` | `eval/full-110/bc_seed.per_rollout.csv` |
+| `td3bc_max_latest` | 109 | 56.9% | `rl_td3bc_dagger_r12_max_latest.pt` | `eval/full-110/td3bc_max_latest.per_rollout.csv` |
 | `sac_long8h_best` | 109 | 55.0% | `rl_sac_dagger_r12_long_8h_v1_best.pt` | `eval/full-110/sac_long8h_best.per_rollout.csv` |
+| `td3bc_failure_focus_v1_latest` | 109 | 45.9% | `rl_td3bc_failure_focus_v1_latest.pt` | `eval/full-110/td3bc_failure_focus_v1_latest.per_rollout.csv` |
+| `sac_long8h_iter0200_ep00800` | 109 | 45.9% | long_8h snapshot @ ep 800 | `eval/full-110/sac_long8h_iter0200_ep00800.per_rollout.csv` |
+| `ppo_v6_best` | 109 | 40.4% | `rl_ppo_dagger_r12_v6_best.pt` | `eval/full-110/ppo_v6_best.per_rollout.csv` |
+| `sac_long8h_iter0400_ep01600` | 109 | 32.1% | long_8h snapshot @ ep 1600 | `eval/full-110/sac_long8h_iter0400_ep01600.per_rollout.csv` |
 | `sac_long8h_latest` | 109 | 32.1% | `rl_sac_dagger_r12_long_8h_v1_latest.pt` | `eval/full-110/sac_long8h_latest.per_rollout.csv` |
+| `sac_long8h_iter0100_ep00400` | 109 | 16.5% | long_8h snapshot @ ep 400 | `eval/full-110/sac_long8h_iter0100_ep00400.per_rollout.csv` |
+| `sac_long8h_iter0300_ep01200` | 109 | 4.6% | long_8h snapshot @ ep 1200 | `eval/full-110/sac_long8h_iter0300_ep01200.per_rollout.csv` |
+| `bc_legacy` | 109 | 2.8% | `bc_best.pt` (older, cross-env) | `eval/full-110/bc_legacy.per_rollout.csv` |
+| `sac_long8h_seed_baseline` | 109 | 62.4% | bc_seed, re-run in long_8h batch (sanity) | `eval/full-110/sac_long8h_seed_baseline.per_rollout.csv` |
 
 Plus orchestration roll-ups (same dir):
 - `_queue_log.batch1.json` + `_queue_table.batch1.csv` — covers the first 5 ckpts (bc_seed, bc_legacy, sac_v7, sac_v8, ppo_v6)
 - `_queue_log.long8h.json` — covers the long_8h batch (7 ckpts)
+- `_queue_log.td3bc_max.json` + `_queue_table.td3bc_max.csv` — TD3+BC `_max` (_best + _latest)
+- `_queue_log.failure_focus_v1.json` + `_queue_table.failure_focus_v1.csv` — TD3+BC `failure_focus_v1` (_latest only)
 
 ### holdout-14/
 

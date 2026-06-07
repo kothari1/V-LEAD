@@ -1,0 +1,21 @@
+{
+  "config": "/workspace/nav_policy/configs/eval_closed_loop_flightroom_holdout_14.yaml",
+  "output_root": "/project/kothari1/vlead_data/rl_runs/dagger_r12/_eval_failure_focus_v1",
+  "rollouts_from_dir": "data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110",
+  "rollouts_limit": null,
+  "started_iso": "2026-06-03T17:05:21.013851",
+  "finished_iso": "2026-06-03T17:51:18.406133",
+  "queue_elapsed_s": 2757.3921189308167,
+  "n_ckpts": 1,
+  "results": [
+    {
+      "ckpt": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_td3bc_failure_focus_v1/rl_td3bc_failure_focus_v1_latest.pt",
+      "run_name": "rl_td3bc_failure_focus_v1__rl_td3bc_failure_focus_v1_latest",
+      "output_dir": "/project/kothari1/vlead_data/rl_runs/dagger_r12/_eval_failure_focus_v1/rl_td3bc_failure_focus_v1__rl_td3bc_failure_focus_v1_latest",
+      "status": "ok",
+      "elapsed_s": 2757.3919274806976,
+      "success_rate": 0.45871559633027525,
+      "n_rollouts": 109
+    }
+  ]
+}

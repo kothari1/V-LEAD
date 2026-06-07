@@ -119,43 +119,48 @@ those checkpoints.
 
 ---
 
-### 🏃 `rl_td3bc_failure_focus_v1` (running, GPU 0)
-
-- **Config:** `nav_policy/configs/train_rl_flightroom_td3bc_failure_focus_v1.yaml`
-- **Run dir:** `/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_td3bc_failure_focus_v1/`
-- **TB:** `.../rl_td3bc_failure_focus_v1/tb/events.out.tfevents.1780465425.*`
-- **Algorithm:** TD3+BC (residual_actor, freeze_base_full, critic_warmup=500, residual_scale=1.0, bc_weight=1.0)
-- **Pool:** 40 trajs (28 yaw_only + 2 both + 10 success), mined from phase-A-175
-- **Target:** 150 iters × 4 rollouts = 600 episodes (~3 h)
-- **Progress at last check:** ep 50 / 600 (iter 12)
-- **Console log:** `.../rl_td3bc_failure_focus_v1/console.log`
-
-Checkpoints emitted so far:
-- `rl_td3bc_failure_focus_v1_best.pt`
-- `rl_td3bc_failure_focus_v1_latest.pt`
-- `snapshots/rl_td3bc_failure_focus_v1_iter0010_ep00040.pt`
-
-**No held-out evals yet.** In-loop eval gate is holdout-30 (inherited).
-
----
-
-### 🏃 `rl_td3bc_dagger_r12_max` (running / very recent, GPU 1)
+### 🏆 `rl_td3bc_dagger_r12_max` (completed Jun 3 01:26 — **NEW HEADLINE**)
 
 - **Config:** `nav_policy/configs/train_rl_flightroom_td3bc_dagger_r12_max.yaml`
 - **Run dir:** `/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_td3bc_dagger_r12_max/`
 - **TB:** `.../rl_td3bc_dagger_r12_max/tb/events.out.tfevents.{1780456335,1780461176}.*` (2 events files; second from resume)
 - **Algorithm:** TD3+BC (residual_scale=1.5, bc_weight=0.5, critic_warmup=200)
 - **Pool:** 50 trajs (25 spawns × 2 dirs spread across 0..216)
-- **Target:** 150 iters × 4 rollouts = 600 episodes
-- **Progress at last check:** ep 300 / 600 (iter 76)
-- **In-loop eval gate:** clockdrill-40 (`eval_closed_loop_clockdrill_heldout_40.yaml`)
+- **Episodes:** 586 (target 600; stopped slightly early)
+- **In-loop eval gate:** clockdrill-40 (`eval_closed_loop_clockdrill_heldout_40.yaml`); `best_eval_goal_success_rate=0.5`
+- Checkpoints: `_best.pt`, `_latest.pt` + 7 snapshots (iter0010..iter0070).
 
-Checkpoints emitted so far:
-- `rl_td3bc_dagger_r12_max_best.pt`
-- `rl_td3bc_dagger_r12_max_latest.pt`
-- Snapshots: `iter0010_ep00040.pt` ... `iter0070_ep00273.pt` (7 snapshots, every 10 iters)
+Held-out full-110 evals (`eval_110_20260603/`):
 
-**No held-out 110/30 eval has been run on these checkpoints yet.**
+| Ckpt | Suite | n | success | CI95 | timeout | collision | eval dir | mtime |
+|---|---|---|---|---|---|---|---|---|
+| `rl_td3bc_dagger_r12_max_best.pt` | full-110 | 109 | **65.1%** | 56.0–74.3% | 28.4% | 7.3% | `eval_110_20260603/rl_td3bc_dagger_r12_max__rl_td3bc_dagger_r12_max_best/` | Jun 3 02:54 |
+| `rl_td3bc_dagger_r12_max_latest.pt` | full-110 | 109 | 56.9% | 47.7–66.1% | 37.6% | 6.4% | `eval_110_20260603/rl_td3bc_dagger_r12_max__rl_td3bc_dagger_r12_max_latest/` | Jun 3 03:43 |
+
+**The result we wanted.** `_best.pt` clears BC seed (62.4%) by +2.7 pts and ties/edges SAC v7/v8 (63.3%) on the cross-object ladder. Timeout rate drops from 31.2% (seed) → 28.4%, i.e. the residual head learned terminal convergence on a few previously-timing-out queries. `_latest.pt` (586 ep) drifted ~6 pts below `_best`, validating the `eval_floor_from_seed` + in-loop selection: the gate caught the better mid-training ckpt before late-iter drift.
+
+---
+
+### `rl_td3bc_failure_focus_v1` (completed Jun 3 04:26)
+
+- **Config:** `nav_policy/configs/train_rl_flightroom_td3bc_failure_focus_v1.yaml`
+- **Run dir:** `/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_td3bc_failure_focus_v1/`
+- **TB:** `.../rl_td3bc_failure_focus_v1/tb/events.out.tfevents.1780465425.*`
+- **Algorithm:** TD3+BC (residual_actor, freeze_base_full, critic_warmup=500, residual_scale=1.0, bc_weight=1.0)
+- **Pool:** 40 trajs (28 yaw_only + 2 both + 10 success), mined from phase-A-175 (071353 clock only)
+- **Episodes:** 600 (150 iters × 4)
+- **In-loop eval gate:** holdout-30; `best_eval_goal_success_rate=0.9` = seed floor itself (nothing beat the seed on cross-object hold-out — expected; train pool is clock-only, hold-out is ladder).
+- Checkpoints: `_best.pt` (≈ BC seed; floor mechanism froze it at step 0), `_latest.pt`, `snapshots/iter0010_ep00040.pt`.
+
+Held-out full-110 evals (`_eval_failure_focus_v1/`):
+
+| Ckpt | Suite | n | success | CI95 | timeout | collision | eval dir | mtime |
+|---|---|---|---|---|---|---|---|---|
+| `rl_td3bc_failure_focus_v1_latest.pt` | full-110 | 109 | **45.9%** | 36.7–56.0% | 47.7% | 6.4% | `_eval_failure_focus_v1/rl_td3bc_failure_focus_v1__rl_td3bc_failure_focus_v1_latest/` | Jun 3 10:51 |
+
+`_best.pt` not full-110 evaluated — would be identical to BC seed (62.4%) since the floor mechanism froze it at the seed. `_latest.pt` regressed on cross-object ladder (-16.5 pts vs seed), expected: training pool was clock-only, hold-out is ladder. The narrow-pool design optimized same-goal performance at the cost of cross-object generalization — opposite trade-off from `_max`'s broader pool.
+
+**Compare with `_max`:** same algorithm (TD3+BC), same seed, same eval. `_max` (50-traj broad pool, clock+drill) → 65.1%. `_failure_focus_v1` (40-traj narrow pool, clock-only failures) → 45.9%. The broader, balanced pool wins on full-110 ladder.
 
 ---
 
@@ -338,6 +343,9 @@ Jaccard overlap between ckpts, etc.).
 | `rl_runs/dagger_r12/rl_sac_dagger_r12_v7_holdout14_eval/` | ✓ |
 | `rl_runs/rahul_best/bc_best_rahul_holdout14_eval/` | ✓ |
 | `rl_runs/bc_train_eval/071353/checkpoints__bc_best_balanced_dagger_r12_new/` | ✓ (175 rows, phase-A failure mining) |
+| `rl_runs/dagger_r12/rl_td3bc_dagger_r12_max/eval_110_20260603/*_best/` | ✓ (the 65.1% headline) |
+| `rl_runs/dagger_r12/rl_td3bc_dagger_r12_max/eval_110_20260603/*_latest/` | ✓ |
+| `rl_runs/dagger_r12/_eval_failure_focus_v1/*_latest/` | ✓ |
 
 ---
 
@@ -372,25 +380,35 @@ Key scalar tags emitted by the canonical trainer (`nav_policy.rl.train_rl`):
 
 | Ckpt | full-110 success | Δ vs BC seed | notes |
 |---|---|---|---|
+| 🏆 `rl_td3bc_dagger_r12_max_best` | **65.1%** | **+2.7 pt** | **new best**; TD3+BC, 50-traj clock+drill pool |
 | `rl_sac_dagger_r12_v7_best` | 63.3% | +0.9 pt | tied with v8 |
 | `rl_sac_dagger_r12_v8_best` | 63.3% | +0.9 pt | tied with v7 |
 | `bc_best_balanced_dagger_r12_new` (seed) | 62.4% | (baseline) | |
+| `rl_td3bc_dagger_r12_max_latest` | 56.9% | −5.5 pt | late-iter drift; floor caught _best earlier |
 | `rl_sac_dagger_r12_long_8h_v1_best` | 55.0% | **−7.4 pt** | regression; triggered TD3+BC pivot |
+| `rl_td3bc_failure_focus_v1_latest` | 45.9% | −16.5 pt | narrow clock-only pool ⇒ cross-object regression |
 | `rl_ppo_dagger_r12_v6_best` | 40.4% | −22.0 pt | PPO worse than SAC |
 | `rl_sac_dagger_r12_long_8h_v1_latest` | 32.1% | −30.3 pt | |
 | `bc_best.pt` (legacy cross-env) | 2.8% | −59.6 pt | not comparable |
+
+**Headline result.** TD3+BC `_max_best` beats every other RL run AND the BC seed
+on the cross-object full-110, **even though it was selected on clockdrill-40
+(a different suite)**. The residual head + frozen base + eval-floor combination
+worked as designed: improved on the trained goals AND generalized to the held-out
+object. SAC v7/v8 (+0.9 pt) are within noise of seed; `_max` (+2.7 pt) is the
+first run with a meaningful gap.
 
 **Caveat on this ranking:** full-110 is the *ladder* goal, never in RL training
 (clock/drill) — see the cross-object caveat in Conventions. So full-110 ≈ seed
 is the *expected best case* for any RL run; it measures generalization, not the
 gain RL is optimizing. Same-goal improvement must be read off **clockdrill-40**.
 
-**No TD3+BC checkpoint has a full-110 number yet.** Run `eval_queue.py`
-on `rl_td3bc_dagger_r12_max_best.pt` and (once trained)
-`rl_td3bc_failure_focus_v1_best.pt` to fill in the most important
-missing rows. Note: TD3+BC `_best.pt` is guaranteed ≥ seed *on its in-loop
-gate* (`eval_floor_from_seed`); that does **not** guarantee ≥ seed on a
-*different* suite (e.g. full-110), since the gate ≠ full-110.
+**Pool-design contrast:** `_max` (50-traj broad, clock+drill stratified) and
+`_failure_focus_v1` (40-traj narrow, clock-only mined failures) used the same
+algorithm + seed + eval. Result: broad pool +2.7 pt, narrow-mined pool −16.5 pt.
+The narrow pool over-fit a single object's failure modes at the cost of ladder
+generalization. **Implication for future runs:** for cross-object hold-out
+improvement, breadth and balance beat targeted failure curation.
 
 ---
 

@@ -1,0 +1,30 @@
+{
+  "config": "/workspace/nav_policy/configs/eval_closed_loop_flightroom_holdout_14.yaml",
+  "output_root": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_td3bc_dagger_r12_max/eval_110_20260603",
+  "rollouts_from_dir": "data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110",
+  "rollouts_limit": null,
+  "started_iso": "2026-06-03T09:05:47.058228",
+  "finished_iso": "2026-06-03T10:43:14.805270",
+  "queue_elapsed_s": 5847.746871709824,
+  "n_ckpts": 2,
+  "results": [
+    {
+      "ckpt": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_td3bc_dagger_r12_max/rl_td3bc_dagger_r12_max_best.pt",
+      "run_name": "rl_td3bc_dagger_r12_max__rl_td3bc_dagger_r12_max_best",
+      "output_dir": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_td3bc_dagger_r12_max/eval_110_20260603/rl_td3bc_dagger_r12_max__rl_td3bc_dagger_r12_max_best",
+      "status": "ok",
+      "elapsed_s": 2922.4261376857758,
+      "success_rate": 0.6513761467889908,
+      "n_rollouts": 109
+    },
+    {
+      "ckpt": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_td3bc_dagger_r12_max/rl_td3bc_dagger_r12_max_latest.pt",
+      "run_name": "rl_td3bc_dagger_r12_max__rl_td3bc_dagger_r12_max_latest",
+      "output_dir": "/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_td3bc_dagger_r12_max/eval_110_20260603/rl_td3bc_dagger_r12_max__rl_td3bc_dagger_r12_max_latest",
+      "status": "ok",
+      "elapsed_s": 2925.320336818695,
+      "success_rate": 0.5688073394495413,
+      "n_rollouts": 109
+    }
+  ]
+}

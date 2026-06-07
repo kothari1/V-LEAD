@@ -1,0 +1,2 @@
+run_name,ckpt,status,success_rate,n_rollouts,elapsed_s
+rl_td3bc_failure_focus_v1__rl_td3bc_failure_focus_v1_latest,/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_td3bc_failure_focus_v1/rl_td3bc_failure_focus_v1_latest.pt,ok,0.45871559633027525,109,2757.3919274806976

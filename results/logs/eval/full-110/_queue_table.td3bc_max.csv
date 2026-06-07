@@ -1,0 +1,3 @@
+run_name,ckpt,status,success_rate,n_rollouts,elapsed_s
+rl_td3bc_dagger_r12_max__rl_td3bc_dagger_r12_max_best,/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_td3bc_dagger_r12_max/rl_td3bc_dagger_r12_max_best.pt,ok,0.6513761467889908,109,2922.4261376857758
+rl_td3bc_dagger_r12_max__rl_td3bc_dagger_r12_max_latest,/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_td3bc_dagger_r12_max/rl_td3bc_dagger_r12_max_latest.pt,ok,0.5688073394495413,109,2925.320336818695
