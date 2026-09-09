@@ -201,7 +201,7 @@ TensorBoard (host or container; host preferred):
 ~/.local/bin/tensorboard \
     --logdir $VLEAD_RUNS/dagger_r12 \
     --port 6006
-# open http://coruscant:6006
+# open http://<gpu-host>:6006
 ```
 
 Inspect the startup perf snapshot:
