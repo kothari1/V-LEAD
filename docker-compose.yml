@@ -1,11 +1,11 @@
-# V-LEAD master container — mounts all 4 packages (FiGS, SINGER, Semantic_HSM, vlead_flight)
-# and editable-installs them. Use this when doing V-LEAD-centric work
-# (online RL, vlead policy deployment, end-to-end CS231N pipeline).
+# V-LEAD master container — mounts FiGS, SINGER, nav_policy and vlead_flight
+# and editable-installs them. Use this for V-LEAD-centric work: dataset
+# generation, BC/DAgger training, online RL, and policy deployment.
 #
 # For SINGER-only work, use SINGER/docker-compose.yml instead.
 #
 # Usage:
-#   cd /home/kothari1/autonomy_projects/V-LEAD
+#   cd /path/to/V-LEAD
 #   docker compose run --rm vlead
 
 services:
@@ -14,11 +14,9 @@ services:
     volumes:
       - ${SINGER_PATH:-./SINGER}:/workspace/SINGER
       - ${FIGS_PATH:-./FiGS-Standalone}:/workspace/FiGS-Standalone
-      - ${SEMANTIC_HSM_PATH:-./Semantic_HSM}:/workspace/Semantic_HSM
       - ${VLEAD_PATH:-./vlead}:/workspace/vlead
       - ${NAV_POLICY_PATH:-./nav_policy}:/workspace/nav_policy
-      - ${DATA_PATH:-/media/admin/data/StanfordMSL/nerf_data}:${DATA_PATH:-/media/admin/data/StanfordMSL/nerf_data}
-      - /project/kothari1:/project/kothari1
+      - ${DATA_PATH:?set DATA_PATH to your 3DGS/rollout data root}:${DATA_PATH}
       - vlead-model-cache:/root/.cache
     working_dir: /workspace/vlead
     environment:

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "vlead_flight"
 version = "0.1.0"
-description = "V-LEAD goal-conditioned visuomotor navigation for quadrotors (CS231N)"
+description = "V-LEAD goal-conditioned visuomotor navigation for quadrotors"
 requires-python = ">=3.10"
 dependencies = [
     "numpy",

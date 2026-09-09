@@ -13,7 +13,7 @@ checkpoint: data/checkpoints/bc_best_balanced_dagger_r12_new.pt
 
 rl:
   run_tag: rl_ppo_dagger_r12
-  checkpoint_dir: /project/kothari1/vlead_data/rl_runs/dagger_r12
+  checkpoint_dir: data/rl_runs/dagger_r12
   # Matched-stable config for SAC + PPO comparison:
   #   - freeze_backbone: true     (no vision-encoder drift)
   #   - init_log_std: -2.5        (very tight Gaussian noise)

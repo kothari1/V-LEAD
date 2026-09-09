@@ -7,9 +7,9 @@ reason / final distance. Saves JSON + per-episode CSV.
 Usage:
     python scripts/eval_sac.py \\
         --config configs/sac_default.yaml \\
-        --checkpoint /project/kothari1/vlead_data/rl_runs/sac_v1_seed0/best/best_model.zip \\
+        --checkpoint $VLEAD_RUNS/sac_v1_seed0/best/best_model.zip \\
         --n-episodes 20 \\
-        --output-dir /project/kothari1/vlead_data/rl_runs/sac_v1_seed0/closed_loop_eval
+        --output-dir $VLEAD_RUNS/sac_v1_seed0/closed_loop_eval
 """
 from __future__ import annotations
 

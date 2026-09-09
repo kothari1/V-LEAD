@@ -9,7 +9,7 @@ Usage examples (inside container, cwd = /workspace/nav_policy):
     # Multiple --ckpt flags
     python -m nav_policy.rl.eval_queue \\
         --config configs/eval_closed_loop_flightroom_holdout_14.yaml \\
-        --output-root /project/kothari1/vlead_data/rl_runs/dagger_r12/_eval_batch \\
+        --output-root $VLEAD_RUNS/dagger_r12/_eval_batch \\
         --rollouts-from-dir data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110 \\
         --ckpt /project/.../rl_sac_dagger_r12_v7/rl_sac_dagger_r12_v7_best.pt \\
         --ckpt /project/.../rl_sac_dagger_r12_v8/rl_sac_dagger_r12_v8_best.pt \\

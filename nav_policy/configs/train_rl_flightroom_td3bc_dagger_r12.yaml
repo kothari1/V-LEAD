@@ -22,7 +22,7 @@ checkpoint: data/checkpoints/bc_best_balanced_dagger_r12_new.pt
 
 rl:
   run_tag: rl_td3bc_dagger_r12
-  checkpoint_dir: /project/kothari1/vlead_data/rl_runs/dagger_r12
+  checkpoint_dir: data/rl_runs/dagger_r12
   algorithm: sac
 
   # Exploration noise around the (residual) mean during rollout. Tight, since

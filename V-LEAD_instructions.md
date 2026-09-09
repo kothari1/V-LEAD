@@ -24,18 +24,18 @@ The full pipeline: capture real environment → train 3DGS → generate expert r
 
 | Requirement | Detail |
 |-------------|--------|
-| Host | `coruscant`, user `kothari1` |
+| Host | Linux workstation with an NVIDIA GPU |
 | GPU | Available via Docker (no `runtime: nvidia`; use `deploy.resources.reservations.devices`) |
-| Docker | No sudo needed — `kothari1` is in `docker` group |
+| Docker | User must be in the `docker` group (no sudo required) |
 | Python | 3.10 (inside containers only — do not run pipeline scripts on host) |
-| Legacy data drive | `/data/kothari1/singer_figs_data` — old SINGER data + 3dgs scene (nearly full) |
-| **Primary output drive** | `/project/kothari1/` — 7 TB, 6.6 TB free — **all new V-LEAD outputs go here** |
-| Home disk | `/home/kothari1` is near capacity — never write large files there |
+| Legacy data drive | `$DATA_PATH` — old SINGER data + 3dgs scene (nearly full) |
+| **Primary output drive** | `$DATA_PATH/` — 7 TB, 6.6 TB free — **all new V-LEAD outputs go here** |
+| Home disk | `$HOME` is near capacity — never write large files there |
 
 ### Critical Directory Symlinks
 These symlinks redirect large data to the correct drives automatically:
-- `FiGS-Standalone/3dgs` → `/data/kothari1/singer_figs_data/3dgs` (3DGS scenes; legacy drive)
-- `SINGER/cohorts` → `/project/kothari1/vlead_data/rollouts_vlead` (V-LEAD rollout outputs; project drive)
+- `FiGS-Standalone/3dgs` → `$DATA_PATH/3dgs` (3DGS scenes; legacy drive)
+- `SINGER/cohorts` → `$DATA_PATH/rollouts_vlead` (V-LEAD rollout outputs; project drive)
 
 **Do not delete these symlinks.** They work inside Docker because both `/data/` and `/project/` are mounted at the same absolute paths inside the container (`docker-compose.yml` mounts both).
 
@@ -44,9 +44,9 @@ These symlinks redirect large data to the correct drives automatically:
 ## Environment Setup
 
 ### 1. Build the FiGS Docker Image (one-time, ~20 min)
-Only needed once. Already built on coruscant as `figs:latest`.
+Only needed once. Already built on <gpu-host> as `figs:latest`.
 ```bash
-cd /home/kothari1/autonomy_projects/V-LEAD/FiGS-Standalone
+cd $PROJECT_ROOT/V-LEAD/FiGS-Standalone
 git submodule update --init gemsplat
 CUDA_ARCHITECTURES=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | head -1 | tr -d '.') \
   docker compose build
@@ -55,7 +55,7 @@ CUDA_ARCHITECTURES=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | 
 ### 2. Install Python Dependencies (one-time per Docker volume)
 The `site-packages` Docker volume persists across runs. Run this once:
 ```bash
-cd /home/kothari1/autonomy_projects/V-LEAD/SINGER
+cd $PROJECT_ROOT/V-LEAD/SINGER
 docker compose run --rm singer bash -lc "
   python3 -m pip install typer 'transformers==4.40.0' 'huggingface_hub==0.23.0' shapely scikit-image imageio
 "
@@ -67,12 +67,12 @@ Both repos have `.env` files that must point to the data drive:
 
 **`FiGS-Standalone/.env`:**
 ```
-DATA_PATH=/data/kothari1/singer_figs_data
+DATA_PATH=$DATA_PATH
 ```
 
 **`SINGER/.env`:**
 ```
-DATA_PATH=/data/kothari1/singer_figs_data
+DATA_PATH=$DATA_PATH
 FIGS_PATH=../FiGS-Standalone
 ```
 
@@ -82,14 +82,14 @@ FIGS_PATH=../FiGS-Standalone
 
 ### FiGS Container
 ```bash
-cd /home/kothari1/autonomy_projects/V-LEAD/FiGS-Standalone
+cd $PROJECT_ROOT/V-LEAD/FiGS-Standalone
 docker compose -f docker-compose.base.yml run --rm figs
 # Working directory inside: /workspace/FiGS-Standalone
 ```
 
 ### SINGER Container (primary development environment)
 ```bash
-cd /home/kothari1/autonomy_projects/V-LEAD/SINGER
+cd $PROJECT_ROOT/V-LEAD/SINGER
 docker compose run --rm singer
 # Working directory inside: /workspace/SINGER
 # Editable installs: figs, gemsplat, sousvide
@@ -157,7 +157,7 @@ python3 notebooks/ssv_multi3dgs_campaign.py simulate \
 
 ---
 
-## V-LEAD Visuomotor Data Generation (CS231N)
+## V-LEAD Visuomotor Data Generation
 
 This pipeline generates expert demonstration data for training a goal-conditioned visuomotor policy: `(RGB frames, goal heading, distance) → velocity commands`. It extends the standard SINGER rollout generator with two key additions:
 
@@ -180,13 +180,13 @@ Before running, confirm:
 
 2. **Symlinks** exist (see Prerequisites section above):
    ```bash
-   ls -la SINGER/cohorts          # → /project/kothari1/vlead_data/rollouts_vlead
-   ls -la FiGS-Standalone/3dgs    # → /data/kothari1/singer_figs_data/3dgs
+   ls -la SINGER/cohorts          # → $DATA_PATH/rollouts_vlead
+   ls -la FiGS-Standalone/3dgs    # → $DATA_PATH/3dgs
    ```
 
 3. **Project drive** is mounted in Docker. Check `SINGER/docker-compose.yml` — it must include:
    ```yaml
-   - /project/kothari1:/project/kothari1
+   - $DATA_PATH:$DATA_PATH
    ```
 
 ---
@@ -205,7 +205,7 @@ CUDA_VISIBLE_DEVICES=1 docker compose run --rm singer bash -lc \
 
 Expected output: 5 batches (one per target object), ~2 min total. Check:
 ```bash
-ls /project/kothari1/vlead_data/rollouts_vlead/vlead_dryrun/rollout_data/
+ls $DATA_PATH/rollouts_vlead/vlead_dryrun/rollout_data/
 ```
 
 ---
@@ -275,7 +275,7 @@ Run training-mode containers in additional panes simultaneously if desired. Each
 
 Monitor progress:
 ```bash
-watch -n 30 'ls /project/kothari1/vlead_data/rollouts_vlead/vlead_flightroom/rollout_data/'
+watch -n 30 'ls $DATA_PATH/rollouts_vlead/vlead_flightroom/rollout_data/'
 ```
 
 ---
@@ -284,7 +284,7 @@ watch -n 30 'ls /project/kothari1/vlead_data/rollouts_vlead/vlead_flightroom/rol
 
 All outputs land at:
 ```
-/project/kothari1/vlead_data/rollouts_vlead/<cohort>/rollout_data/<YYYY-MM-DD_HHMMSS>/<scene>/
+$DATA_PATH/rollouts_vlead/<cohort>/rollout_data/<YYYY-MM-DD_HHMMSS>/<scene>/
 ```
 
 Each timestamped directory is one complete run. Files per batch index `id`:
@@ -344,14 +344,14 @@ To add a new object: append to `queries`, `radii`, `altitudes`, `similarities`, 
 
 The `lead_ml` env lives on the data drive (keeps `/home` free). Activate it with:
 ```bash
-conda activate /data/kothari1/singer_figs_data/conda_envs/lead_ml
+conda activate $DATA_PATH/conda_envs/lead_ml
 ```
 Packages: `torch 2.6.0+cu124`, `torchvision`, `tqdm`, `matplotlib`, `scipy`, `opencv-python`.
 
 To add new packages (always route caches to data drive):
 ```bash
-TMPDIR=/data/kothari1/singer_figs_data/.pip_tmp \
-  pip install --cache-dir /data/kothari1/singer_figs_data/.pip_cache <package>
+TMPDIR=$DATA_PATH/.pip_tmp \
+  pip install --cache-dir $DATA_PATH/.pip_cache <package>
 ```
 
 ### Running Training
@@ -359,7 +359,7 @@ TMPDIR=/data/kothari1/singer_figs_data/.pip_tmp \
 **Before running, verify CONFIG settings in `train_03.py`:**
 ```python
 CONFIG = {
-    'data_root': '/data/kothari1/singer_figs_data/rollouts_singer/smoke_test/rollout_data/flightroom_ssv_exp',
+    'data_root': '$DATA_PATH/rollouts_singer/smoke_test/rollout_data/flightroom_ssv_exp',
     'start_idx': 0,
     'end_idx': 32,   # inclusive; covers indices 00000-00032 (33 validation batches)
     ...
@@ -368,9 +368,9 @@ CONFIG = {
 
 **Run directly on the host** (interactive matplotlib loss plot included):
 ```bash
-conda activate /data/kothari1/singer_figs_data/conda_envs/lead_ml
+conda activate $DATA_PATH/conda_envs/lead_ml
 cd <path-to-Semantic_HSM>/scripts
-TORCH_HOME=/data/kothari1/singer_figs_data/.torch_hub \
+TORCH_HOME=$DATA_PATH/.torch_hub \
 CUDA_VISIBLE_DEVICES=1 \
   python3 train_03.py
 ```
@@ -486,7 +486,7 @@ For the `flightroom_ssv_exp` scene (used by all smoke tests):
 | gemsplat (older) | `trained_gsplats/flightroom_ssv_exp/gemsplat/2026-02-03_115017/` | step-000028000.ckpt |
 | splatfacto | `3dgs/workspace/outputs/flightroom/splatfacto/2024-07-12_145513/` | step-000029999.ckpt |
 
-Paths are relative to `/data/kothari1/singer_figs_data/`. The Simulator searches `FiGS-Standalone/3dgs/workspace/outputs/<scene>` first, then falls back to `$DATA_PATH/trained_gsplats/<scene>`.
+Paths are relative to `$DATA_PATH/`. The Simulator searches `FiGS-Standalone/3dgs/workspace/outputs/<scene>` first, then falls back to `$DATA_PATH/trained_gsplats/<scene>`.
 
 ---
 
@@ -533,8 +533,8 @@ Always pin: `transformers==4.40.0`. Higher versions require PyTorch ≥2.2 but t
 ### `site-packages` volume stale after image rebuild
 If the base `figs:latest` image changes, clear the cached packages: `docker compose down -v` in the SINGER directory, then re-run the one-time dependency setup.
 
-### Storage full on `/home/kothari1`
-All large outputs must go to `/data/kothari1/singer_figs_data/`. The symlinks (`SINGER/cohorts`, `FiGS-Standalone/3dgs`) ensure this automatically. Never run pipeline scripts that write to `/home/kothari1`.
+### Storage full on `$HOME`
+All large outputs must go to `$DATA_PATH/`. The symlinks (`SINGER/cohorts`, `FiGS-Standalone/3dgs`) ensure this automatically. Never run pipeline scripts that write to `$HOME`.
 
 ### Old `video_val{id}.mp4` files in output dir
 These are artifacts from earlier pipeline iterations with different naming conventions. Safe to ignore or delete. The correct validation videos are the `video_val_rollout_images_{channel}{id}.mp4` set.
@@ -572,8 +572,8 @@ python -m nav_policy.rl.train_rl \
 # Eval against held-out 14-query suite
 python scripts/eval_in_figs.py \
     --config configs/eval_closed_loop_flightroom_holdout_14.yaml \
-    --checkpoint /project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/<run_tag>_best.pt \
-    --output-dir /project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/holdout14_eval
+    --checkpoint $DATA_PATH/rl_runs/dagger_r12/<run_tag>/<run_tag>_best.pt \
+    --output-dir $DATA_PATH/rl_runs/dagger_r12/<run_tag>/holdout14_eval
 
 # Publishable: eval against the full 110-traj pool
 python scripts/eval_in_figs.py \
@@ -586,7 +586,7 @@ python scripts/eval_in_figs.py \
 # roll-up table to {output-root}/queue_table.csv. ~55 min per ckpt.
 python scripts/eval_queue.py \
     --config configs/eval_closed_loop_flightroom_holdout_14.yaml \
-    --output-root /project/kothari1/vlead_data/rl_runs/dagger_r12/_eval_batch \
+    --output-root $DATA_PATH/rl_runs/dagger_r12/_eval_batch \
     --rollouts-from-dir data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110 \
     --ckpt-list /tmp/eval_targets.txt        # or --ckpt path --ckpt path ...
 ```
@@ -594,7 +594,7 @@ python scripts/eval_queue.py \
 TensorBoard (host side):
 ```bash
 ~/.local/bin/tensorboard \
-    --logdir /project/kothari1/vlead_data/rl_runs/dagger_r12 \
+    --logdir $DATA_PATH/rl_runs/dagger_r12 \
     --port 6006
 ```
 
@@ -622,13 +622,13 @@ python3 notebooks/ssv_multi3dgs_campaign.py train-history --config-file configs/
 python3 notebooks/ssv_multi3dgs_campaign.py train-command --config-file configs/experiment/smoke_test.yml
 
 # Check output files
-ls /data/kothari1/singer_figs_data/rollouts_singer/smoke_test/rollout_data/flightroom_ssv_exp/
+ls $DATA_PATH/rollouts_singer/smoke_test/rollout_data/flightroom_ssv_exp/
 
 # Train Semantic_HSM (on host, NOT inside container — uses lead_ml conda env)
 # Semantic_HSM is not a V-LEAD submodule; clone separately and adjust path below
-conda activate /data/kothari1/singer_figs_data/conda_envs/lead_ml
+conda activate $DATA_PATH/conda_envs/lead_ml
 cd <path-to-Semantic_HSM>/scripts
-TORCH_HOME=/data/kothari1/singer_figs_data/.torch_hub CUDA_VISIBLE_DEVICES=1 python3 train_03.py
+TORCH_HOME=$DATA_PATH/.torch_hub CUDA_VISIBLE_DEVICES=1 python3 train_03.py
 
 # V-LEAD data gen — dry run (1 traj per object, ~2 min)
 cd SINGER && CUDA_VISIBLE_DEVICES=1 docker compose run --rm singer bash -lc \
@@ -641,7 +641,7 @@ cd SINGER && CUDA_VISIBLE_DEVICES=1 docker compose run --rm singer bash -lc \
    --config-file configs/experiment/vlead_flightroom.yml --validation-mode"
 
 # Check V-LEAD output
-ls /project/kothari1/vlead_data/rollouts_vlead/vlead_flightroom/rollout_data/
+ls $DATA_PATH/rollouts_vlead/vlead_flightroom/rollout_data/
 ```
 
 ---
@@ -714,7 +714,7 @@ The third element (optional) lets the scene config YAML differ from the 3DGS sce
 ### Output Directory Layout
 
 ```
-/project/kothari1/vlead_data/rollouts_vlead/
+$DATA_PATH/rollouts_vlead/
 └── <cohort>/
     └── rollout_data/
         └── <YYYY-MM-DD_HHMMSS>/      ← one per generate() call (run_ts)

@@ -123,4 +123,4 @@ Outputs:
 * `data/eval/ablation_summary.md`  -- human-readable markdown tables.
 
 Drop the markdown tables into the report or paste the relevant rows into
-`report/main.tex` (Table 7).
+the project write-up (ablation table).

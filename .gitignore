@@ -8,3 +8,6 @@ vlead/**/__pycache__/
 
 # editor
 .vscode/
+
+# local machine config
+.env

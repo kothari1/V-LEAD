@@ -46,7 +46,7 @@ FiGS-Standalone/
 │   ├── perception/
 │   │   └── perception_mode.yml         # CRITICAL: controls what the sim renders
 │   └── method/                         # SINGER data-gen parameters (used by SINGER)
-├── 3dgs/                               # Symlink → /data/kothari1/singer_figs_data/3dgs  ⚠ must be created: ln -s /data/kothari1/singer_figs_data/3dgs 3dgs
+├── 3dgs/                               # Symlink → $DATA_PATH/3dgs  ⚠ must be created: ln -s $DATA_PATH/3dgs 3dgs
 │   └── workspace/
 │       ├── {scene_name}/               # SfM data + transforms.json
 │       └── outputs/{scene_name}/       # Trained model checkpoints
@@ -81,7 +81,7 @@ CUDA_ARCHITECTURES=86 docker compose -f docker-compose.base.yml build
 
 **Key env vars set by `.env`:**
 ```
-DATA_PATH=/data/kothari1/singer_figs_data
+DATA_PATH=$DATA_PATH
 CUDA_VISIBLE_DEVICES=1
 DISPLAY=:1
 ```
@@ -655,4 +655,4 @@ ns-eval \
 | Simulation hangs or crashes | ACADOS solver not re-initialized after `del ctl` | Always `del ctl` after each simulation loop iteration |
 | Dark/wrong semantic heatmap | `perception_type: clipseg` in `perception_mode.yml` | Change to `perception_type: similarity` |
 | OOM on GPU | Running on GPU 0 (full) | Set `CUDA_VISIBLE_DEVICES=1` in `.env` |
-| `/home` partition full | Writing outputs to home | All large outputs must go to `/data/kothari1/singer_figs_data/` |
+| `/home` partition full | Writing outputs to home | All large outputs must go to `$DATA_PATH/` |

@@ -31,7 +31,7 @@ from vlead_flight.eval import summarize, print_summary
 
 app = typer.Typer(no_args_is_help=True)
 
-DEFAULT_DATA = os.environ.get("DATA_PATH", "/data/kothari1/singer_figs_data")
+DEFAULT_DATA = os.environ.get("DATA_PATH", "/data/vlead")
 DEFAULT_SCENE = "flightroom_ssv_exp/gemsplat/2026-02-28_205058"
 DEFAULT_X0 = np.array([0., 0., -1.,  0., 0., 0.,  0., 0., 0., 1.])
 

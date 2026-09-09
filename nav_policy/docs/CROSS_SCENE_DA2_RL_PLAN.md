@@ -2,7 +2,7 @@
 
 **Branch:** `feature/da2-crossattn-rl-generalization` (from `dev-rahul`)  
 **Scope:** Implementation plan for this branch. No relightable 3DGS. RL fine-tuning (PPO/SAC) implemented in `nav_policy/rl/`.  
-**Report:** Update `report/main.tex` (and figures/scripts as needed) on this branch to reflect the architecture, training split, evaluation protocol, and ablations below.
+**Report:** Keep the project write-up (architecture, training split, evaluation protocol, ablations) in sync with the plan below.
 
 **Policy I/O (unchanged):**  
 - **Inputs:** RGB frame history `T=4`, goal heading `[h_x, h_y]`, normalized distance-to-goal `d̃`  
@@ -251,7 +251,7 @@ python scripts/train_rl.py --config configs/train_rl_flightroom_sac.yaml      # 
 
 ## 11. Report updates (this branch)
 
-Update `report/main.tex` to reflect:
+Update the project write-up to reflect:
 
 1. **Architecture:** ResNet-18 + DA2-S + LayerNorm cross-attention fusion (diagram + forward pass).  
 2. **Training:** flightroom-only; expert-endpoint goals; augmentations (§4) — explicitly **no** relightable 3DGS.  

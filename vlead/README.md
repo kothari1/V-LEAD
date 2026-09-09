@@ -1,6 +1,6 @@
 # vlead_flight
 
-V-LEAD goal-conditioned visuomotor navigation deployment for quadrotors (CS231N project).
+V-LEAD goal-conditioned visuomotor navigation deployment for quadrotors.
 
 Wraps a trained PyTorch network as a duck-typed FiGS controller so the FiGS Simulator can fly a drone in a Gaussian-Splat scene using the network's velocity-command outputs — with no changes to FiGS itself.
 
@@ -40,7 +40,7 @@ next drone state
 |------|-------------|
 | V-LEAD repo cloned with submodules | `git clone --recursive https://github.com/kothari1/V-LEAD.git` |
 | `figs:latest` Docker image built | One-time `docker compose build` in `FiGS-Standalone/` |
-| `DATA_PATH` env var set | Defaults to `/data/kothari1/singer_figs_data`; override via `SINGER/.env` |
+| `DATA_PATH` env var set | Defaults to `$DATA_PATH`; override via `SINGER/.env` |
 | Trained 3DGS scene checkpoint | Lives at `$DATA_PATH/3dgs/workspace/outputs/<scene>/...` |
 | Drone frame config | Default `carl` in `FiGS-Standalone/configs/frame/carl.json` |
 
@@ -54,7 +54,7 @@ Two equivalent entry points — both land in the same `figs:latest` container wi
 
 | Use case | Command | Working dir inside container |
 |----------|---------|------------------------------|
-| **V-LEAD work** (online RL, vlead deployment, end-to-end CS231N) | `cd V-LEAD && docker compose run --rm vlead` | `/workspace/vlead` |
+| **V-LEAD work** (online RL, vlead deployment, end-to-end pipeline) | `cd V-LEAD && docker compose run --rm vlead` | `/workspace/vlead` |
 | SINGER-only work | `cd V-LEAD/SINGER && docker compose run --rm singer` | `/workspace/SINGER` |
 
 First entry into each service runs a one-time `pip install -e` for all packages (~5 min, CLIP + AlexNet downloads). Subsequent entries are instant. The two services use separate named volumes, so each installs once independently.
@@ -84,7 +84,7 @@ python -m vlead_flight.deploy rollout \
     --duration 15.0 \
     --use-depth \
     --record \
-    --output-dir /data/kothari1/singer_figs_data/vlead_runs/eval_001 \
+    --output-dir $DATA_PATH/vlead_runs/eval_001 \
     --dtype bf16 \
     --compile-network
 ```
@@ -111,7 +111,7 @@ from vlead_flight.eval import summarize, print_summary
 sim = Simulator(
     "flightroom_ssv_exp/gemsplat/2026-02-28_205058",
     "baseline", "carl",
-    gsplats_path="/data/kothari1/singer_figs_data/3dgs",
+    gsplats_path="$DATA_PATH/3dgs",
 )
 
 # 2. Load trained network (must be pickled nn.Module, NOT state_dict)
@@ -303,7 +303,7 @@ Full per-step online DAgger (expert queried *during* simulation) needs more desi
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | `ModuleNotFoundError: No module named 'figs'` | Outside container, or container started without entrypoint | Enter via `docker compose run --rm singer` (NOT `... python ...` directly — overrides command) |
-| `The search path ... did not return any configurations` | Symlink broken or `DATA_PATH` not mounted | Check `FiGS-Standalone/.env` sets `DATA_PATH=/data/kothari1/singer_figs_data`; restart container |
+| `The search path ... did not return any configurations` | Symlink broken or `DATA_PATH` not mounted | Check `FiGS-Standalone/.env` sets `DATA_PATH=$DATA_PATH`; restart container |
 | `Simulator passed icr=None to VLeadPilot.control()` | `perception_mode.yml` is set to a mode the pilot doesn't handle | Set `FiGS-Standalone/configs/perception/perception_mode.yml` to `visual_mode: rgb` |
 | `gsplat.render_rgb did not return 'depth_raw'` | Old gsplat or wrong perception_type | Use the current gemsplat fork; check `gsplat_semantic.py` returns `depth_raw` |
 | `Checkpoint must be a pickled nn.Module instance` | You saved a state_dict | Re-save with `torch.save(model, path)` after instantiating + `load_state_dict` |

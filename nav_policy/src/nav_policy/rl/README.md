@@ -185,13 +185,13 @@ Per-iter CSV tail:
 ```bash
 # host
 cd ~/autonomy_projects/V-LEAD
-tail -F /project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/<run_tag>_log.csv
+tail -F $VLEAD_RUNS/dagger_r12/<run_tag>/<run_tag>_log.csv
 ```
 
 Per-episode CSV pretty-print:
 ```bash
 column -s, -t \
-    < /project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/<run_tag>_episodes.csv \
+    < $VLEAD_RUNS/dagger_r12/<run_tag>/<run_tag>_episodes.csv \
     | tail -20
 ```
 
@@ -199,14 +199,14 @@ TensorBoard (host or container; host preferred):
 ```bash
 # host — point at the per-run-tag root to see all runs side by side
 ~/.local/bin/tensorboard \
-    --logdir /project/kothari1/vlead_data/rl_runs/dagger_r12 \
+    --logdir $VLEAD_RUNS/dagger_r12 \
     --port 6006
 # open http://coruscant:6006
 ```
 
 Inspect the startup perf snapshot:
 ```bash
-cat /project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/<run_tag>_perf.json | jq
+cat $VLEAD_RUNS/dagger_r12/<run_tag>/<run_tag>_perf.json | jq
 ```
 
 ## 4. Closed-loop eval against a fixed yaml suite
@@ -217,8 +217,8 @@ in-training eval.
 ```bash
 python scripts/eval_in_figs.py \
     --config configs/eval_closed_loop_flightroom_holdout_14.yaml \
-    --checkpoint /project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/<run_tag>_best.pt \
-    --output-dir /project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/holdout14_eval
+    --checkpoint $VLEAD_RUNS/dagger_r12/<run_tag>/<run_tag>_best.pt \
+    --output-dir $VLEAD_RUNS/dagger_r12/<run_tag>/holdout14_eval
 ```
 
 Output: `summary.json` + per-rollout artifacts under `--output-dir`.
@@ -228,8 +228,8 @@ Output: `summary.json` + per-rollout artifacts under `--output-dir`.
 ```bash
 python scripts/eval_in_figs.py \
     --config configs/eval_closed_loop_flightroom_holdout_14.yaml \
-    --checkpoint /project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/<run_tag>_best.pt \
-    --output-dir /project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/test110_eval \
+    --checkpoint $VLEAD_RUNS/dagger_r12/<run_tag>/<run_tag>_best.pt \
+    --output-dir $VLEAD_RUNS/dagger_r12/<run_tag>/test110_eval \
     --rollouts-from-dir data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110
 ```
 
@@ -251,7 +251,7 @@ Same script, point at the BC ckpt directly:
 python scripts/eval_in_figs.py \
     --config configs/eval_closed_loop_flightroom_holdout_14.yaml \
     --checkpoint data/checkpoints/bc_best_balanced_dagger_r12_new.pt \
-    --output-dir /project/kothari1/vlead_data/rl_runs/bc_baseline/holdout14_eval \
+    --output-dir $VLEAD_RUNS/bc_baseline/holdout14_eval \
     --rollouts-from-dir data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110
 ```
 
@@ -267,10 +267,10 @@ under `--output-root`.
 # Option A: pass --ckpt repeatedly
 python scripts/eval_queue.py \
     --config configs/eval_closed_loop_flightroom_holdout_14.yaml \
-    --output-root /project/kothari1/vlead_data/rl_runs/dagger_r12/_eval_batch_$(date +%Y%m%d) \
+    --output-root $VLEAD_RUNS/dagger_r12/_eval_batch_$(date +%Y%m%d) \
     --rollouts-from-dir data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110 \
-    --ckpt /project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_v7/rl_sac_dagger_r12_v7_best.pt \
-    --ckpt /project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_v8/rl_sac_dagger_r12_v8_best.pt \
+    --ckpt $VLEAD_RUNS/dagger_r12/rl_sac_dagger_r12_v7/rl_sac_dagger_r12_v7_best.pt \
+    --ckpt $VLEAD_RUNS/dagger_r12/rl_sac_dagger_r12_v8/rl_sac_dagger_r12_v8_best.pt \
     --ckpt data/checkpoints/bc_best_balanced_dagger_r12_new.pt
 ```
 
@@ -280,13 +280,13 @@ cat > /tmp/eval_targets.txt <<'EOF'
 # BC baseline
 data/checkpoints/bc_best_balanced_dagger_r12_new.pt
 # SAC v7 / v8 best ckpts
-/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_v7/rl_sac_dagger_r12_v7_best.pt
-/project/kothari1/vlead_data/rl_runs/dagger_r12/rl_sac_dagger_r12_v8/rl_sac_dagger_r12_v8_best.pt
+$VLEAD_RUNS/dagger_r12/rl_sac_dagger_r12_v7/rl_sac_dagger_r12_v7_best.pt
+$VLEAD_RUNS/dagger_r12/rl_sac_dagger_r12_v8/rl_sac_dagger_r12_v8_best.pt
 EOF
 
 python scripts/eval_queue.py \
     --config configs/eval_closed_loop_flightroom_holdout_14.yaml \
-    --output-root /project/kothari1/vlead_data/rl_runs/dagger_r12/_eval_batch_$(date +%Y%m%d) \
+    --output-root $VLEAD_RUNS/dagger_r12/_eval_batch_$(date +%Y%m%d) \
     --rollouts-from-dir data/raw/flightroom_ssv_exp_2026-05-22_071733_trajs-110 \
     --ckpt-list /tmp/eval_targets.txt
 ```
@@ -318,7 +318,7 @@ The RL checkpoint pickle includes the meta dict written at save time
 python - <<'PY'
 import torch
 ckpt = torch.load(
-    "/project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/<run_tag>_best.pt",
+    "$VLEAD_RUNS/dagger_r12/<run_tag>/<run_tag>_best.pt",
     weights_only=False, map_location="cpu",
 )
 m = ckpt.get("rl_meta", {})
@@ -336,7 +336,7 @@ PY
 python - <<'PY'
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 import glob
-tb_dirs = sorted(glob.glob("/project/kothari1/vlead_data/rl_runs/dagger_r12/<run_tag>/tb"))
+tb_dirs = sorted(glob.glob("$VLEAD_RUNS/dagger_r12/<run_tag>/tb"))
 ea = EventAccumulator(tb_dirs[-1], size_guidance={"scalars": 0}); ea.Reload()
 for k in ("rollout/mean_return", "rollout/success_rate", "eval/goal_success_rate",
           "train/ref_kl", "train/policy_log_std_mean"):

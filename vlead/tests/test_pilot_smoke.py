@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-DATA_PATH = Path(os.environ.get("DATA_PATH", "/data/kothari1/singer_figs_data"))
+DATA_PATH = Path(os.environ.get("DATA_PATH", "/data/vlead"))
 SCENE = "flightroom_ssv_exp/gemsplat/2026-02-28_205058"
 X0 = np.array([0., 0., -1.,  0., 0., 0.,  0., 0., 0., 1.])
 

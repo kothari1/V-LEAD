@@ -93,7 +93,7 @@ sac:
   target_update_interval: 1
 
 warm_start:
-  bc_checkpoint: /project/kothari1/vlead_data/checkpoints/bc_best.pt
+  bc_checkpoint: data/checkpoints/bc_best.pt
   # If true, copies BC head's Linear layers into SAC actor.latent_pi + actor.mu
   # so the actor's initial action mean matches BC's t=0 velocity command (not
   # just the encoder). Requires model.actor_mlp == BC config's mlp_hidden.

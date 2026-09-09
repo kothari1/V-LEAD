@@ -13,7 +13,7 @@ checkpoint: data/checkpoints/bc_best_balanced_dagger_r12_new.pt
 
 rl:
   run_tag: rl_sac_dagger_r12
-  checkpoint_dir: /project/kothari1/vlead_data/rl_runs/dagger_r12
+  checkpoint_dir: data/rl_runs/dagger_r12
   # v4 SAC actor diverged catastrophically by iter 19 (mean_return -19287,
   # q1_loss 4 -> 150, alpha stuck at 0.98, 0% success). Stabilization
   # adopts Rahul's stable PPO config style:
