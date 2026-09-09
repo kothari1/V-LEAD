@@ -126,6 +126,10 @@ the binding constraint on how many RL episodes and eval rollouts are affordable.
 
 ## Policy architecture
 
+![Policy architecture](docs/figures/policy_architecture.png)
+
+The same thing in text, including the RL heads:
+
 ```
 RGB history [B,4,3,224,224]
    |                    \
@@ -150,6 +154,10 @@ RGB history [B,4,3,224,224]
                                     v
                           execute first step; re-plan next tick
 ```
+
+During RL fine-tuning the whole stack above is **frozen**. The 288-D context `z` feeds
+two additional heads that are the only trainable parameters: a zero-initialized residual
+actor head, and twin Q-critics taking `[z ‖ a]`.
 
 Two details that matter:
 

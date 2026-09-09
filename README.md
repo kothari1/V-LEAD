@@ -10,13 +10,10 @@ The policy maps a 4-frame RGB history plus a 3-D goal vector to a 10-step horizo
 velocity commands at 20 Hz. Depth comes from a *frozen* Depth Anything V2 branch rather
 than a sensor, so the deployed observation stays RGB-only.
 
-```
-RGB history (4 × 224×224)  ─┐
-                            ├─→  ResNet-18 ⨯ DA2-S cross-attention → GRU → MLP → [10 × 4]
-goal vector (heading, dist) ─┘                                                     │
-                                                                                   ▼
-                                        velocity controller → body rates → ACADOS integrator
-```
+![Onboard POV frames from a rollout, ending at the leafblower goal](docs/figures/figs_rollout_pov.png)
+
+*What the policy actually sees: 3DGS-rendered onboard frames over the course of one
+rollout. No depth sensor, no pose, no map — just this stream and a goal vector.*
 
 ![Policy vs. expert trajectories on three semantic goals](docs/figures/trajectory_semantic_targets.png)
 
@@ -114,8 +111,27 @@ tuning.
 
 The seed's own failures are near-misses: of 42, **34 are timeouts** with median final
 position error 0.94 m and none reaching the goal. The drone gets ~90% of the way and
-cannot settle inside the 0.5 m radius in time. Residual yaw alignment, not obstacle
-avoidance, is the dominant remaining failure mode.
+cannot settle inside the 0.5 m radius in time.
+
+![BC seed vs PPO on a subset of ladder spawns](docs/figures/bc_vs_ppo_ladder_spawns.png)
+
+*BC + DAgger seed (left) vs PPO (right) on a **subset** of ladder spawns. Green reaches
+the goal, orange times out, red collides. On this subset PPO removes the seed's
+collisions entirely and fails only by timeout, and spawns south of the goal succeed
+almost always while northern ones do not.*
+
+That figure is worth reading carefully, because it is where a much rosier PPO number
+comes from. Scored on **this spawn subset** PPO looks strong; scored on the **full 110-query
+suite** it lands at 40.4% with a *higher* collision rate than the seed (10.1% vs 6.4%).
+Both measurements are real — they are just not the same measurement, and only the second
+one is a held-out suite of fixed composition. The table above uses the full suite
+throughout for exactly that reason.
+
+Yaw alignment, not obstacle avoidance, is the dominant remaining failure mode. Mining the
+seed's failures on the training pool puts **56% on yaw alone** and 68% involving yaw,
+against only 4% collisions:
+
+![BC failure modes by category](results/phase_a_pie.png)
 
 ### Why residual TD3+BC over vanilla SAC
 
@@ -193,6 +209,18 @@ The goal vector is what makes mapless goal-seeking possible: an image sequence e
 neither *where to go* nor *how far is left*. The heading supplies direction, and the
 normalized distance supplies a deceleration signal — both computable from the drone's
 state and the mission objective, with no map.
+
+**Network.**
+
+![Policy architecture](docs/figures/policy_architecture.png)
+
+Each of the 4 frames is encoded independently by ResNet-18 (ImageNet init, stem and
+`layer1` frozen) into 512-D, while a frozen DA2-S branch produces a monocular depth map
+that a small strided CNN encodes to 256-D. Both are LayerNormed and fused by 4-head
+cross-attention with RGB as the query. A 1-layer GRU (hidden 256) pools the sequence into
+a visual context, which concatenates with a 32-D goal embedding to give the 288-D vector
+feeding the actor head — and, during RL, the twin Q-critics. The base is frozen entirely
+during RL fine-tuning; only the residual head and critics train.
 
 **Training stages.**
 
