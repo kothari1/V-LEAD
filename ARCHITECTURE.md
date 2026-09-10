@@ -93,7 +93,9 @@ dynamics.
 
 ## Control loop
 
-One iteration at 20 Hz:
+![Training and deployment pipeline](docs/figures/high_level.png)
+
+One iteration of the deployment loop, at 20 Hz:
 
 ```
 ACADOS integrator          x_{k+1} = f(x_k, u_k)

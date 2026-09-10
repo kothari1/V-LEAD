@@ -1,24 +1,27 @@
 # V-LEAD — Vision-Only Quadrotor Navigation in 3D Gaussian Splats
 
-Goal-conditioned quadrotor navigation from **monocular RGB alone** — no map, no depth
-sensor, no state estimate. A privileged MPC expert flies photorealistic 3D Gaussian
+Goal-conditioned quadrotor navigation from **monocular RGB** — no map, no depth sensor,
+and no full state estimate. A privileged MPC expert flies photorealistic 3D Gaussian
 Splatting reconstructions of a real flight room; a compact vision policy is distilled
 from it by behavior cloning, corrected by DAgger with an MPC re-solve oracle, and then
 improved past the demonstrator with online reinforcement learning.
 
 The policy maps a 4-frame RGB history plus a 3-D goal vector to a 10-step horizon of
 velocity commands at 20 Hz. Depth comes from a *frozen* Depth Anything V2 branch rather
-than a sensor, so the deployed observation stays RGB-only.
+than a sensor, so the deployed sensing stays RGB-only. The only non-visual input is the
+goal vector — a unit heading and a normalized distance, which is all the localization the
+policy gets.
+
+![Goal-conditioned quadrotor navigation in FiGS](docs/figures/hero_figure.png)
+
+*(A)* A rollout to a mannequin goal, with the onboard RGB the policy actually consumed.
+*(B)* The RGB-to-velocity policy: frozen ResNet-18 + DA2 encoders, trainable conv head and
+GRU. *(C)* The same goal reached from many different start points. *(D–F)* Policy (solid)
+against the privileged expert (dashed) for clock, drill, and leaf-blower goals.
 
 ![Onboard POV frames from a rollout, ending at the leafblower goal](docs/figures/figs_rollout_pov.png)
 
-*What the policy actually sees: 3DGS-rendered onboard frames over the course of one
-rollout. No depth sensor, no pose, no map — just this stream and a goal vector.*
-
-![Policy vs. expert trajectories on three semantic goals](docs/figures/trajectory_semantic_targets.png)
-
-*Closed-loop rollouts (solid) against the privileged MPC expert (dashed) for three goal
-objects. All three reach the goal.*
+*The observation stream over one rollout — this, plus three numbers, is the entire input.*
 
 ---
 
@@ -222,7 +225,9 @@ a visual context, which concatenates with a 32-D goal embedding to give the 288-
 feeding the actor head — and, during RL, the twin Q-critics. The base is frozen entirely
 during RL fine-tuning; only the residual head and critics train.
 
-**Training stages.**
+**Training and deployment.**
+
+![Training and deployment pipeline](docs/figures/high_level.png)
 
 | Stage | What it does |
 |---|---|
